@@ -1,0 +1,560 @@
+import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
+import { supabase } from '../lib/supabase'
+import { League, ChessPlayer } from '../types'
+import { Crown, Users, Trophy, Calendar, Plus, Search, Copy } from 'lucide-react'
+
+const JoinLeague: React.FC = () => {
+  const { user } = useAuth()
+  const navigate = useNavigate()
+  const [activeTab, setActiveTab] = useState<'create' | 'public' | 'code'>('create')
+  const [publicLeagues, setPublicLeagues] = useState<League[]>([])
+  const [joinCode, setJoinCode] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  // Create league form state
+  const [leagueName, setLeagueName] = useState('')
+  const [leagueDescription, setLeagueDescription] = useState('')
+  const [buyIn, setBuyIn] = useState(10)
+  const [isPublic, setIsPublic] = useState(true)
+  const [startDate, setStartDate] = useState('')
+
+  useEffect(() => {
+    if (activeTab === 'public') {
+      loadPublicLeagues()
+    }
+  }, [activeTab])
+
+  const loadPublicLeagues = async () => {
+    try {
+      const { data: leagues } = await supabase
+        .from('leagues')
+        .select('*')
+        .eq('is_public', true)
+        .gte('start_date', new Date().toISOString().split('T')[0])
+        .order('created_at', { ascending: false })
+
+      if (leagues) {
+        setPublicLeagues(leagues)
+      }
+    } catch (error) {
+      console.error('Error loading public leagues:', error)
+    }
+  }
+
+  const generateJoinCode = () => {
+    return Math.random().toString(36).substring(2, 8).toUpperCase()
+  }
+
+  const createLeague = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!user) return
+
+    try {
+      setLoading(true)
+      setError('')
+
+      // Validate buy-in
+      if (buyIn < 1) {
+        setError('Buy-in must be at least 1 coin')
+        return
+      }
+
+      // Check if user has enough coins
+      const { data: userData } = await supabase
+        .from('users')
+        .select('coins')
+        .eq('id', user.id)
+        .single()
+
+      if (!userData || userData.coins < buyIn) {
+        setError('You don\'t have enough coins for this buy-in')
+        return
+      }
+
+      const joinCode = generateJoinCode()
+      const endDate = new Date(startDate)
+      endDate.setMonth(endDate.getMonth() + 1)
+      endDate.setDate(0) // Last day of the month
+
+      const { data: league, error: leagueError } = await supabase
+        .from('leagues')
+        .insert({
+          name: leagueName,
+          description: leagueDescription,
+          is_public: isPublic,
+          buy_in: buyIn,
+          start_date: startDate,
+          end_date: endDate.toISOString().split('T')[0],
+          join_code: joinCode,
+          creator_id: user.id,
+          member_ids: [user.id],
+          draft_order: [user.id],
+          current_draft_turn: 0,
+          draft_completed: false
+        })
+        .select()
+        .single()
+
+      if (leagueError) throw leagueError
+
+      // Get user's display name from Auth metadata
+      let displayName = user.email || user.id.slice(0, 6);
+      try {
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        if (authUser?.user_metadata?.display_name) {
+          displayName = authUser.user_metadata.display_name;
+        } else if (authUser?.user_metadata?.full_name) {
+          displayName = authUser.user_metadata.full_name;
+        }
+      } catch (err) {
+        console.log('Could not get user metadata, using email as display name');
+      }
+
+      // Add creator to league_members table
+      const { error: memberError } = await supabase
+        .from('league_members')
+        .insert({
+          league_id: league.id,
+          user_id: user.id,
+          display_name: displayName,
+          email: user.email
+        })
+        .single()
+
+      if (memberError) {
+        console.error('Error adding creator to league_members:', memberError)
+        // Continue anyway - the league was created successfully
+      }
+
+      // Deduct coins from user
+      await supabase
+        .from('users')
+        .update({ coins: userData.coins - buyIn })
+        .eq('id', user.id)
+
+      navigate(`/league/${league.id}`)
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to create league')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const joinLeagueWithCode = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!user || !joinCode.trim()) return
+
+    try {
+      setLoading(true)
+      setError('')
+
+      const { data: league, error: leagueError } = await supabase
+        .from('leagues')
+        .select('*')
+        .eq('join_code', joinCode.toUpperCase())
+        .single()
+
+      if (leagueError || !league) {
+        setError('Invalid join code')
+        return
+      }
+
+      if (league.member_ids.includes(user.id)) {
+        setError('You are already a member of this league')
+        return
+      }
+
+      if (league.member_ids.length >= 20) {
+        setError('League is full')
+        return
+      }
+
+      // Check if user has enough coins
+      const { data: userData } = await supabase
+        .from('users')
+        .select('coins')
+        .eq('id', user.id)
+        .single()
+
+      if (!userData || userData.coins < league.buy_in) {
+        setError('You don\'t have enough coins for this league')
+        return
+      }
+
+      // Get user's display name from Auth metadata
+      let displayName = user.email || user.id.slice(0, 6);
+      try {
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        if (authUser?.user_metadata?.display_name) {
+          displayName = authUser.user_metadata.display_name;
+        } else if (authUser?.user_metadata?.full_name) {
+          displayName = authUser.user_metadata.full_name;
+        }
+      } catch (err) {
+        console.log('Could not get user metadata, using email as display name');
+      }
+
+      // Add user to league_members table first
+      const { error: memberError } = await supabase
+        .from('league_members')
+        .insert({
+          league_id: league.id,
+          user_id: user.id,
+          display_name: displayName,
+          email: user.email
+        })
+        .single()
+
+      if (memberError) {
+        console.error('Error adding user to league_members:', memberError)
+        // Continue anyway - the league update might still work
+      }
+
+      // Add user to league
+      const updatedMemberIds = [...league.member_ids, user.id]
+      const updatedDraftOrder = [...league.draft_order, user.id]
+
+      const { error: updateError } = await supabase
+        .from('leagues')
+        .update({
+          member_ids: updatedMemberIds,
+          draft_order: updatedDraftOrder
+        })
+        .eq('id', league.id)
+
+      if (updateError) throw updateError
+
+      // Deduct coins from user
+      await supabase
+        .from('users')
+        .update({ coins: userData.coins - league.buy_in })
+        .eq('id', user.id)
+
+      navigate(`/league/${league.id}`)
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to join league')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const joinPublicLeague = async (league: League) => {
+    if (!user) return
+
+    try {
+      setLoading(true)
+      setError('')
+
+      if (league.member_ids.includes(user.id)) {
+        setError('You are already a member of this league')
+        return
+      }
+
+      // Check if user has enough coins
+      const { data: userData } = await supabase
+        .from('users')
+        .select('coins')
+        .eq('id', user.id)
+        .single()
+
+      if (!userData || userData.coins < league.buy_in) {
+        setError('You don\'t have enough coins for this league')
+        return
+      }
+
+      // Get user's display name from Auth metadata
+      let displayName = user.email || user.id.slice(0, 6);
+      try {
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        if (authUser?.user_metadata?.display_name) {
+          displayName = authUser.user_metadata.display_name;
+        } else if (authUser?.user_metadata?.full_name) {
+          displayName = authUser.user_metadata.full_name;
+        }
+      } catch (err) {
+        console.log('Could not get user metadata, using email as display name');
+      }
+
+      // Add user to league_members table first
+      const { error: memberError } = await supabase
+        .from('league_members')
+        .insert({
+          league_id: league.id,
+          user_id: user.id,
+          display_name: displayName,
+          email: user.email
+        })
+        .single()
+
+      if (memberError) {
+        console.error('Error adding user to league_members:', memberError)
+        // Continue anyway - the league update might still work
+      }
+
+      // Add user to league
+      const updatedMemberIds = [...league.member_ids, user.id]
+      const updatedDraftOrder = [...league.draft_order, user.id]
+
+      const { error: updateError } = await supabase
+        .from('leagues')
+        .update({
+          member_ids: updatedMemberIds,
+          draft_order: updatedDraftOrder
+        })
+        .eq('id', league.id)
+
+      if (updateError) throw updateError
+
+      // Deduct coins from user
+      await supabase
+        .from('users')
+        .update({ coins: userData.coins - league.buy_in })
+        .eq('id', user.id)
+
+      navigate(`/league/${league.id}`)
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to join league')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const copyJoinCode = (code: string) => {
+    navigator.clipboard.writeText(code)
+  }
+
+  return (
+    <div className="w-full max-w-6xl mx-auto">
+      <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-6 lg:mb-8">Join a League</h1>
+
+      {/* Tab Navigation */}
+      <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg mb-6 lg:mb-8">
+        <button
+          onClick={() => setActiveTab('create')}
+          className={`flex-1 py-2 px-3 lg:px-4 rounded-md font-medium transition-colors text-sm lg:text-base ${
+            activeTab === 'create'
+              ? 'bg-white text-blue-600 shadow-sm'
+              : 'text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          Create League
+        </button>
+        <button
+          onClick={() => setActiveTab('public')}
+          className={`flex-1 py-2 px-3 lg:px-4 rounded-md font-medium transition-colors text-sm lg:text-base ${
+            activeTab === 'public'
+              ? 'bg-white text-blue-600 shadow-sm'
+              : 'text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          Public Leagues
+        </button>
+        <button
+          onClick={() => setActiveTab('code')}
+          className={`flex-1 py-2 px-3 lg:px-4 rounded-md font-medium transition-colors text-sm lg:text-base ${
+            activeTab === 'code'
+              ? 'bg-white text-blue-600 shadow-sm'
+              : 'text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          Join with Code
+        </button>
+      </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+          {error}
+        </div>
+      )}
+
+      {/* Create League Tab */}
+      {activeTab === 'create' && (
+        <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6">
+          <h2 className="text-xl lg:text-2xl font-bold mb-4 lg:mb-6">Create Your Own League</h2>
+          <form onSubmit={createLeague} className="space-y-4 lg:space-y-6">
+            <div>
+              <label htmlFor="leagueName" className="block text-sm font-medium text-gray-700 mb-2">
+                League Name *
+              </label>
+              <input
+                type="text"
+                id="leagueName"
+                value={leagueName}
+                onChange={(e) => setLeagueName(e.target.value)}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
+                placeholder="Enter league name"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="leagueDescription" className="block text-sm font-medium text-gray-700 mb-2">
+                Description
+              </label>
+              <textarea
+                id="leagueDescription"
+                value={leagueDescription}
+                onChange={(e) => setLeagueDescription(e.target.value)}
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
+                placeholder="Optional description for your league"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
+              <div>
+                <label htmlFor="buyIn" className="block text-sm font-medium text-gray-700 mb-2">
+                  Buy-in (coins) *
+                </label>
+                <input
+                  type="number"
+                  id="buyIn"
+                  value={buyIn}
+                  onChange={(e) => setBuyIn(parseInt(e.target.value) || 0)}
+                  min="1"
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 mb-2">
+                  Start Date (first of month) *
+                </label>
+                <input
+                  type="date"
+                  id="startDate"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="isPublic"
+                checked={isPublic}
+                onChange={(e) => setIsPublic(e.target.checked)}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <label htmlFor="isPublic" className="ml-2 block text-sm text-gray-900">
+                Make this league public (others can find and join it)
+              </label>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white py-3 px-4 rounded-lg font-semibold"
+            >
+              {loading ? 'Creating...' : 'Create League'}
+            </button>
+          </form>
+        </div>
+      )}
+
+      {/* Public Leagues Tab */}
+      {activeTab === 'public' && (
+        <div className="space-y-4 lg:space-y-6">
+          <h2 className="text-xl lg:text-2xl font-bold">Public Leagues</h2>
+          {publicLeagues.length === 0 ? (
+            <div className="text-center py-8 lg:py-12 bg-white rounded-lg shadow-lg">
+              <Search className="h-8 w-8 lg:h-12 lg:w-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-600 text-sm lg:text-base">No public leagues available at the moment.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
+              {publicLeagues.map((league) => (
+                <div key={league.id} className="bg-white rounded-lg shadow-lg p-4 lg:p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-base lg:text-lg font-semibold text-gray-900">{league.name}</h3>
+                    <button
+                      onClick={() => copyJoinCode(league.join_code)}
+                      className="text-blue-600 hover:text-blue-800"
+                      title="Copy join code"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </button>
+                  </div>
+                  
+                  {league.description && (
+                    <p className="text-gray-600 text-xs lg:text-sm mb-4">{league.description}</p>
+                  )}
+                  
+                  <div className="space-y-2 mb-4">
+                    <div className="flex items-center space-x-2">
+                      <Users className="h-4 w-4 text-gray-500" />
+                      <span className="text-xs lg:text-sm text-gray-600">
+                        {league.member_ids.length} members
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Trophy className="h-4 w-4 text-gray-500" />
+                      <span className="text-xs lg:text-sm text-gray-600">
+                        {league.buy_in} coins buy-in
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Calendar className="h-4 w-4 text-gray-500" />
+                      <span className="text-xs lg:text-sm text-gray-600">
+                        Starts {new Date(league.start_date).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <button
+                    onClick={() => joinPublicLeague(league)}
+                    disabled={loading}
+                    className="w-full bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white py-2 px-4 rounded-lg font-medium text-sm lg:text-base"
+                  >
+                    {loading ? 'Joining...' : 'Join League'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Join with Code Tab */}
+      {activeTab === 'code' && (
+        <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6">
+          <h2 className="text-xl lg:text-2xl font-bold mb-4 lg:mb-6">Join with Code</h2>
+          <form onSubmit={joinLeagueWithCode} className="space-y-4 lg:space-y-6">
+            <div>
+              <label htmlFor="joinCode" className="block text-sm font-medium text-gray-700 mb-2">
+                League Join Code *
+              </label>
+              <input
+                type="text"
+                id="joinCode"
+                value={joinCode}
+                onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
+                placeholder="Enter 6-character code"
+                maxLength={6}
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white py-3 px-4 rounded-lg font-semibold"
+            >
+              {loading ? 'Joining...' : 'Join League'}
+            </button>
+          </form>
+        </div>
+      )}
+    </div>
+  )
+}
+
+export default JoinLeague 

@@ -1,0 +1,74 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
+
+  try {
+    // Get environment variables
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
+
+    // Get the current date and calculate the most recent Tuesday
+    const now = new Date()
+    const dayOfWeek = now.getDay() // 0 = Sunday, 2 = Tuesday
+    const daysSinceTuesday = (now.getDay() - 2 + 7) % 7
+    const lastTuesday = new Date(now)
+    lastTuesday.setDate(now.getDate() - daysSinceTuesday)
+    
+    // Format as YYYY-MM-DD
+    const tuesdayDate = lastTuesday.toISOString().split('T')[0]
+    
+    console.log(`Processing weekly results for ${tuesdayDate}`)
+
+    // Call the enhanced process_weekly_results function
+    const { data, error } = await supabase.rpc('process_weekly_results_enhanced', {
+      week_date: tuesdayDate
+    })
+
+    if (error) {
+      console.error('Error processing weekly results:', error)
+      return new Response(
+        JSON.stringify({ error: error.message }),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
+    }
+
+    console.log(`Successfully processed weekly results for ${tuesdayDate}`)
+    
+    return new Response(
+      JSON.stringify({ 
+        success: true, 
+        date: tuesdayDate,
+        message: `Processed weekly results for ${tuesdayDate}`
+      }),
+      { 
+        status: 200, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      }
+    )
+
+  } catch (error) {
+    console.error('Unexpected error:', error)
+    return new Response(
+      JSON.stringify({ error: 'Internal server error' }),
+      { 
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      }
+    )
+  }
+}) 

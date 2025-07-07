@@ -1,0 +1,30 @@
+name: Process Weekly Results
+
+on:
+  schedule:
+    # Runs every Wednesday at 6 AM UTC (after Tuesday's tournament)
+    - cron: '0 6 * * 3'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  process-results:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        
+    - name: Install dependencies
+      run: npm install
+      
+    - name: Process weekly results
+      env:
+        SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      run: |
+        node scripts/process-weekly-results.js 
