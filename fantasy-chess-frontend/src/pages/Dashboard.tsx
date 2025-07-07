@@ -280,7 +280,7 @@ const Dashboard: React.FC = () => {
                 <p className="text-gray-600">Make sure your lineup is set before the tournament starts!</p>
               </div>
               <a
-                href="https://www.chess.com/tournaments/titled-tuesday"
+                href="https://www.chess.com/tournament/live/titled-tuesdays"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg"

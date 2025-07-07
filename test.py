@@ -1,76 +1,32 @@
-import requests
-from typing import Optional
-from supabase import create_client, Client
-from dotenv import load_dotenv
-import os
+import chess.pgn
+
+def convert(pgn_file):
+    with open(pgn_file, encoding="utf-8") as pgn:
+        game_number = 0
+        processed_games = set()  # Track processed games to avoid duplicates
+        
+        while True:
+            game = chess.pgn.read_game(pgn)
+            if game is None:
+                break  # End of file reached
+
+            game_number += 1
+            
+            # Create a unique identifier for this game to check for duplicates
+            game_id = f"{game.headers.get('White', 'N/A')}_{game.headers.get('Black', 'N/A')}_{game.headers.get('Date', 'N/A')}_{game.headers.get('Round', 'N/A')}"
+            
+            if game_id in processed_games:
+                print(f"Skipping duplicate game {game_number}: {game_id}")
+                continue
+                
+            processed_games.add(game_id)
+            print(f"Processing Game {game_number}: {game.headers.get('White', 'N/A')} vs {game.headers.get('Black', 'N/A')}")
+
+            event = game.headers.get('Event', 'N/A')    
+            early_late = "early" if "early" in event.lower() else "late"
+            
+            print(f"Processing Game {game_number}: early/late: {early_late}, Event: {event}")
+
+convert("Early-Titled-Tuesday-Blitz-July-01-2025_2025-07-01-08-00.pgn")
 
 
-load_dotenv()
-url: str = os.getenv("SB_URL")
-key: str = os.getenv("SB_KEY")
-supabase: Client = create_client(url, key)
-
-CHESSCOM_STATS_URL = "https://api.chess.com/pub/player/{username}/stats"
-HEADERS = {
-    # A polite User‑Agent helps you avoid 429 blocks
-    "User-Agent": "blitz-fetcher/1.0 (contact: sohampjoshi@gmail.com)"
-}
-
-
-def get_blitz_elo(username: str, timeout: float = 5.0) -> Optional[int]:
-    """
-    Fetch the latest blitz rating for a Chess.com player.
-
-    Parameters
-    ----------
-    username : str
-        The player's Chess.com username (case‑insensitive).
-    timeout : float, optional
-        Seconds to wait for the server before aborting (default = 5).
-
-    Returns
-    -------
-    int | None
-        The player's current blitz Elo, or None if unavailable.
-
-    Raises
-    ------
-    requests.HTTPError
-        For non‑200 responses other than 404.
-    requests.RequestException
-        For network issues, timeouts, etc.
-    """
-    url = CHESSCOM_STATS_URL.format(username=username.lower())
-    try:
-        resp = requests.get(url, headers=HEADERS, timeout=timeout)
-        if resp.status_code == 404:        # unknown user or no stats yet
-            return None
-        resp.raise_for_status()            # bubble up other HTTP errors
-
-        data = resp.json()
-        blitz_info = data.get("chess_blitz")
-        if blitz_info and "last" in blitz_info:
-            return blitz_info["last"]["rating"]
-        return None                        # user has no blitz games recorded
-    except requests.RequestException:
-        # In a real app you might log the error here
-        raise
-
-def get_username():
-    response = supabase.table("chess_players").select("name").execute().data
-    response = [item['name'] for item in response]
-    return response
-
-def upload_to_supabase(name, elo):
-    response = supabase.table("chess_players").update({"elo": elo}).match({"name": name}).execute()
-    return response
-
-names = get_username()
-
-for name in names:
-    elo = get_blitz_elo(name)  # Call the function with the username
-    if elo is not None:  # Only update if we got a valid rating
-        response = upload_to_supabase(name, elo)
-        print(f"Updated {name}: {elo}")
-    else:
-        print(f"No rating found for {name}")
