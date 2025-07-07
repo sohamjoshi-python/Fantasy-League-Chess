@@ -16,4 +16,4 @@ jobs:
         run: |
           curl -X POST \
             -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
-            https://wdbwzvnkfbyzazodfhsw.functions.supabase.co/process-weekly-results
+            https://wdbwzvnkfbyzazodfhsw.supabase.co/functions/v1/process-weekly-results
