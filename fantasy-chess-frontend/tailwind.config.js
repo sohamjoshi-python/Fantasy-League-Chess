@@ -7,11 +7,14 @@ export default {
   theme: {
     extend: {
       colors: {
-        gold: '#E6B84A', // Pawn Royale gold
-        navy: '#101426', // Pawn Royale navy
-        // Optionally, add lighter/darker shades if needed
-        'gold-light': '#F5D88C',
-        'navy-dark': '#0A0D18',
+        primary: '#181C2A', // Deep Blue
+        gold: '#FFD700',    // Rich Gold
+        white: '#F7F7FA',   // Soft White
+        slate: '#6B7280',   // Slate Gray
+        purple: '#7C3AED',  // Royal Purple
+        'primary-dark': '#131624',
+        'gold-dark': '#B89B2B',
+        'purple-light': '#A78BFA',
       },
     },
   },

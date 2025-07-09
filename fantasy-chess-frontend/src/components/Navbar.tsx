@@ -19,7 +19,7 @@ const Navbar: React.FC = () => {
   }
 
   return (
-    <nav className="bg-navy shadow-lg sticky top-0 z-50">
+    <nav className="bg-primary shadow-lg sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex justify-between h-16">
           <div className="flex items-center">
@@ -34,25 +34,25 @@ const Navbar: React.FC = () => {
               <>
                 <Link
                   to="/dashboard"
-                  className="text-gold hover:text-gold-light px-3 py-2 rounded-md text-sm font-medium"
+                  className="text-gold hover:text-purple px-3 py-2 rounded-md text-sm font-medium transition-colors"
                 >
                   Dashboard
                 </Link>
                 <Link
                   to="/join-league"
-                  className="text-gold hover:text-gold-light px-3 py-2 rounded-md text-sm font-medium"
+                  className="text-gold hover:text-purple px-3 py-2 rounded-md text-sm font-medium transition-colors"
                 >
                   Join League
                 </Link>
                 <Link
                   to="/profile"
-                  className="text-gold hover:text-gold-light px-3 py-2 rounded-md text-sm font-medium"
+                  className="text-gold hover:text-purple px-3 py-2 rounded-md text-sm font-medium transition-colors"
                 >
                   Profile
                 </Link>
                 <Link
                   to="/help"
-                  className="text-gold hover:text-gold-light px-3 py-2 rounded-md text-sm font-medium flex items-center"
+                  className="text-gold hover:text-purple px-3 py-2 rounded-md text-sm font-medium flex items-center transition-colors"
                 >
                   <HelpCircle className="h-4 w-4 mr-1" />
                   Help
@@ -61,7 +61,7 @@ const Navbar: React.FC = () => {
                   <span className="text-sm text-gold">{user.email}</span>
                   <button
                     onClick={handleSignOut}
-                    className="flex items-center space-x-1 text-gold hover:text-red-400 px-3 py-2 rounded-md text-sm font-medium"
+                    className="flex items-center space-x-1 text-gold hover:text-red-400 px-3 py-2 rounded-md text-sm font-medium transition-colors"
                   >
                     <LogOut className="h-4 w-4" />
                     <span>Sign Out</span>
@@ -75,7 +75,7 @@ const Navbar: React.FC = () => {
                     setIsSignUp(false)
                     setShowAuthModal(true)
                   }}
-                  className="flex items-center space-x-1 bg-gold hover:bg-gold-light text-navy px-4 py-2 rounded-md text-sm font-medium font-bold"
+                  className="flex items-center space-x-1 bg-gold hover:bg-purple text-primary px-4 py-2 rounded-md text-sm font-bold shadow transition-colors"
                 >
                   <LogIn className="h-4 w-4" />
                   <span>Sign In</span>
@@ -85,7 +85,7 @@ const Navbar: React.FC = () => {
                     setIsSignUp(true)
                     setShowAuthModal(true)
                   }}
-                  className="flex items-center space-x-1 bg-gold hover:bg-gold-light text-navy px-4 py-2 rounded-md text-sm font-medium font-bold"
+                  className="flex items-center space-x-1 bg-purple hover:bg-gold text-white hover:text-primary px-4 py-2 rounded-md text-sm font-bold shadow transition-colors"
                 >
                   <UserPlus className="h-4 w-4" />
                   <span>Sign Up</span>
