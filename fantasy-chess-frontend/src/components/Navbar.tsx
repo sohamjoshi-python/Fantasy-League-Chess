@@ -2,7 +2,8 @@ import React, { useState } from 'react'
 import ReactDOM from 'react-dom'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { Crown, LogIn, LogOut, UserPlus, HelpCircle } from 'lucide-react'
+import { LogIn, LogOut, UserPlus, HelpCircle } from 'lucide-react'
+import logo from '../assets/pawn-royale-logo.png'
 
 const Navbar: React.FC = () => {
   const { user, signOut } = useAuth()
@@ -18,13 +19,13 @@ const Navbar: React.FC = () => {
   }
 
   return (
-    <nav className="bg-white shadow-lg sticky top-0 z-50">
+    <nav className="bg-navy shadow-lg sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex justify-between h-16">
           <div className="flex items-center">
             <Link to="/" className="flex items-center space-x-2">
-              <Crown className="h-8 w-8 text-blue-600" />
-              <span className="text-xl font-bold text-gray-900">Fantasy Chess</span>
+              <img src={logo} alt="Pawn Royale Logo" className="h-10 w-10" />
+              <span className="text-2xl font-extrabold text-gold tracking-wide font-serif drop-shadow">PAWN ROYALE</span>
             </Link>
           </div>
 
@@ -33,34 +34,34 @@ const Navbar: React.FC = () => {
               <>
                 <Link
                   to="/dashboard"
-                  className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
+                  className="text-gold hover:text-gold-light px-3 py-2 rounded-md text-sm font-medium"
                 >
                   Dashboard
                 </Link>
                 <Link
                   to="/join-league"
-                  className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
+                  className="text-gold hover:text-gold-light px-3 py-2 rounded-md text-sm font-medium"
                 >
                   Join League
                 </Link>
                 <Link
                   to="/profile"
-                  className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
+                  className="text-gold hover:text-gold-light px-3 py-2 rounded-md text-sm font-medium"
                 >
                   Profile
                 </Link>
                 <Link
                   to="/help"
-                  className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium flex items-center"
+                  className="text-gold hover:text-gold-light px-3 py-2 rounded-md text-sm font-medium flex items-center"
                 >
                   <HelpCircle className="h-4 w-4 mr-1" />
                   Help
                 </Link>
                 <div className="flex items-center space-x-2">
-                  <span className="text-sm text-gray-700">{user.email}</span>
+                  <span className="text-sm text-gold">{user.email}</span>
                   <button
                     onClick={handleSignOut}
-                    className="flex items-center space-x-1 text-gray-700 hover:text-red-600 px-3 py-2 rounded-md text-sm font-medium"
+                    className="flex items-center space-x-1 text-gold hover:text-red-400 px-3 py-2 rounded-md text-sm font-medium"
                   >
                     <LogOut className="h-4 w-4" />
                     <span>Sign Out</span>
@@ -74,7 +75,7 @@ const Navbar: React.FC = () => {
                     setIsSignUp(false)
                     setShowAuthModal(true)
                   }}
-                  className="flex items-center space-x-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+                  className="flex items-center space-x-1 bg-gold hover:bg-gold-light text-navy px-4 py-2 rounded-md text-sm font-medium font-bold"
                 >
                   <LogIn className="h-4 w-4" />
                   <span>Sign In</span>
@@ -84,7 +85,7 @@ const Navbar: React.FC = () => {
                     setIsSignUp(true)
                     setShowAuthModal(true)
                   }}
-                  className="flex items-center space-x-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+                  className="flex items-center space-x-1 bg-gold hover:bg-gold-light text-navy px-4 py-2 rounded-md text-sm font-medium font-bold"
                 >
                   <UserPlus className="h-4 w-4" />
                   <span>Sign Up</span>
