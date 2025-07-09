@@ -443,7 +443,7 @@ const LeaguePage: React.FC = () => {
       }
       
       // Update the league with new member and draft order
-      const { data, error } = await supabase.from('leagues').update({ 
+      const { error } = await supabase.from('leagues').update({ 
         member_ids: updatedMemberIds,
         draft_order: updatedDraftOrder,
         current_draft_turn: 0
@@ -566,15 +566,6 @@ const LeaguePage: React.FC = () => {
     
     
     try {
-      // First, let's check if the table exists by querying it
-      const { data: tableCheck, error: tableError } = await supabase
-        .from('league_members')
-        .select('count')
-        .limit(1);
-      
-      
-      
-      
       const { data: members, error } = await supabase
         .from('league_members')
         .select('user_id, display_name, email')
