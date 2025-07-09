@@ -2,3 +2,6 @@
   "buildCommand": "npm install && npm run build",
   "ignoreCommand": "false"
 }
+
+{ "routes": [{ "src": "/[^.]+", "dest": "/", "status": 200 }] }
+
