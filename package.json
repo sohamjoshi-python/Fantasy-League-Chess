@@ -1,11 +1,19 @@
 {
+  // you can (should) also add "name", "version", "scripts", etc.,
+  // but ONLY the block below is essential to fix Rollup.
+
   "dependencies": {
     "@supabase/supabase-js": "^2.50.3",
-    "aiohttp": "^3.9.1",
+    "aiohttp": "^3.9.1",          // <-- Python package; npm will ignore this
     "axios": "^1.10.0",
     "cheerio": "^1.1.0",
     "chess-web-api": "^1.2.0",
     "dotenv": "^17.0.1",
     "p-limit": "^6.2.0"
+  },
+
+  "optionalDependencies": {
+    "@rollup/rollup-linux-arm64-gnu": "^4.0.0",
+    "@rollup/rollup-linux-x64-gnu": "^4.0.0"   // add x64 too—Vercel builds on x64
   }
 }
