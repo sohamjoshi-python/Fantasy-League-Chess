@@ -51,19 +51,19 @@ const Dashboard: React.FC = () => {
       if (error) {
         setAvailableWeeks([]);
         setSelectedWeek(null);
-        console.log('fetchAvailableWeeks - error:', error);
+        
         return;
       }
       // Get unique dates
       const uniqueDates = Array.from(new Set((data || []).map(l => l.week_start_date.replace(/-/g, '.'))));
-      console.log('fetchAvailableWeeks - uniqueDates:', uniqueDates);
+      
       setAvailableWeeks(uniqueDates);
       if (uniqueDates.length > 0) {
         setSelectedWeek(uniqueDates[uniqueDates.length - 1]);
-        console.log('fetchAvailableWeeks - setSelectedWeek:', uniqueDates[uniqueDates.length - 1]);
+        
       } else {
         setSelectedWeek(null);
-        console.log('fetchAvailableWeeks - setSelectedWeek: null');
+        
       }
     }
     fetchAvailableWeeks();

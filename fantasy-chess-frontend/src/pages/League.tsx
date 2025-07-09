@@ -61,19 +61,19 @@ const LeaguePage: React.FC = () => {
       if (error) {
         setAvailableWeeks([]);
         setSelectedWeek(null);
-        console.log('fetchAvailableWeeks - error:', error);
+        
         return;
       }
       // Get unique dates
       const uniqueDates = Array.from(new Set((data || []).map(l => l.week_start_date.replace(/-/g, '.'))));
-      console.log('fetchAvailableWeeks - uniqueDates:', uniqueDates);
+      
       setAvailableWeeks(uniqueDates);
       if (uniqueDates.length > 0) {
         setSelectedWeek(uniqueDates[uniqueDates.length - 1]);
-        console.log('fetchAvailableWeeks - setSelectedWeek:', uniqueDates[uniqueDates.length - 1]);
+        
       } else {
         setSelectedWeek(null);
-        console.log('fetchAvailableWeeks - setSelectedWeek: null');
+        
       }
     }
     fetchAvailableWeeks();
@@ -104,7 +104,6 @@ const LeaguePage: React.FC = () => {
         !league.payout_processed
       ) {
         // Call the payout function
-        console.log('Triggering process_league_payouts() for league', league.id);
         await supabase.rpc('process_league_payouts');
         // Optionally, reload league data to reflect payout_processed
         // You may want to call loadLeagueData() here
@@ -124,7 +123,6 @@ const LeaguePage: React.FC = () => {
 
     try {
       setLoading(true)
-      console.log('loadLeagueData - fetching league data for leagueId:', leagueId)
 
       // Get league data
       const { data: leagueData, error: leagueError } = await supabase
@@ -138,10 +136,6 @@ const LeaguePage: React.FC = () => {
         setError('League not found')
         return
       }
-
-      console.log('loadLeagueData - fetched league data:', leagueData)
-      console.log('loadLeagueData - member_ids:', leagueData.member_ids)
-      console.log('loadLeagueData - member_ids length:', leagueData.member_ids.length)
 
       setLeague(leagueData)
       // Combine all relevant user IDs
@@ -294,17 +288,6 @@ const LeaguePage: React.FC = () => {
 
   const isUserTurn = () => {
     if (!league || !user) return false
-    console.log('Draft debug - currentTurn:', league.current_draft_turn)
-    console.log('Draft debug - draftOrder:', league.draft_order)
-    console.log('Draft debug - memberIds:', league.member_ids)
-    console.log('Draft debug - currentUserId:', user.id)
-    console.log('Draft debug - currentTurnUser:', league.draft_order[league.current_draft_turn])
-    console.log('Draft debug - isUserTurn:', league.draft_order[league.current_draft_turn] === user.id)
-    console.log('Draft debug - expected snake order for 2 users:', generateSnakeDraftOrder(league.member_ids, 10))
-    console.log('Draft debug - memberIds length:', league.member_ids.length)
-    console.log('Draft debug - draftOrder length:', league.draft_order.length)
-    console.log('Draft debug - actual memberIds:', JSON.stringify(league.member_ids))
-    console.log('Draft debug - actual draftOrder:', JSON.stringify(league.draft_order))
     return league.draft_order[league.current_draft_turn] === user.id
   }
 
@@ -400,7 +383,6 @@ const LeaguePage: React.FC = () => {
     if (!league) return
     try {
       const fullDraftOrder = generateSnakeDraftOrder(league.member_ids, 10)
-      console.log('Fixing draft order to:', fullDraftOrder)
       await supabase.from('leagues').update({ 
         draft_order: fullDraftOrder,
         current_draft_turn: 0
@@ -420,14 +402,9 @@ const LeaguePage: React.FC = () => {
     
     try {
       setLoading(true)
-      console.log('=== ADD USER TO LEAGUE START ===')
-      console.log('Adding user to league - league.id:', league.id)
-      console.log('Adding user to league - current member_ids:', league.member_ids)
-      console.log('Adding user to league - user.id:', user.id)
       
       // Check if user is already a member
       if (league.member_ids && league.member_ids.includes(user.id)) {
-        console.log('Adding user to league - user is already a member!')
         return
       }
       
@@ -441,15 +418,13 @@ const LeaguePage: React.FC = () => {
           displayName = authUser.user_metadata.full_name;
         }
       } catch (err) {
-        console.log('Could not get user metadata, using email as display name');
+        
       }
       
       const updatedMemberIds = [...(league.member_ids || []), user.id]
       const updatedDraftOrder = generateSnakeDraftOrder(updatedMemberIds, 10)
       
-      console.log('Adding user to league - displayName:', displayName)
-      console.log('Adding user to league - updatedMemberIds:', updatedMemberIds)
-      console.log('Adding user to league - updatedDraftOrder:', updatedDraftOrder)
+
       
       // Add user to league_members table first
       const { error: memberError } = await supabase
@@ -479,7 +454,7 @@ const LeaguePage: React.FC = () => {
         throw error
       }
       
-      console.log('Adding user to league - update successful, data:', data)
+
       
       // Update local state immediately
       if (league) {
@@ -491,12 +466,11 @@ const LeaguePage: React.FC = () => {
         }
         setLeague(updatedLeague)
         fetchUserMap(updatedMemberIds)
-        console.log('Updated local league state:', updatedLeague)
       }
       
 
       
-      console.log('=== ADD USER TO LEAGUE END ===')
+
       
     } catch (err) {
       console.error('Failed to add user to league:', err)
@@ -588,8 +562,8 @@ const LeaguePage: React.FC = () => {
   const fetchUserMap = async (ids: string[]) => {
     if (!ids.length || !leagueId) return;
     
-    console.log('fetchUserMap - starting with ids:', ids);
-    console.log('fetchUserMap - leagueId:', leagueId);
+    
+    
     
     try {
       // First, let's check if the table exists by querying it
@@ -598,8 +572,8 @@ const LeaguePage: React.FC = () => {
         .select('count')
         .limit(1);
       
-      console.log('fetchUserMap - table check:', tableCheck);
-      console.log('fetchUserMap - table error:', tableError);
+      
+      
       
       const { data: members, error } = await supabase
         .from('league_members')
@@ -607,9 +581,9 @@ const LeaguePage: React.FC = () => {
         .eq('league_id', leagueId)
         .in('user_id', ids);
       
-      console.log('fetchUserMap - members:', members);
-      console.log('fetchUserMap - error:', error);
-      console.log('fetchUserMap - query params:', { leagueId, ids });
+      
+      
+      
       
       if (members && !error && members.length > 0) {
         const map: { [id: string]: string } = {};
@@ -620,16 +594,16 @@ const LeaguePage: React.FC = () => {
             : member.email || member.user_id.slice(0, 6);
           map[member.user_id] = displayName;
         });
-        console.log('fetchUserMap - created map:', map);
+        
         setUserMap(map);
       } else {
-        console.log('No members found in league_members table, using fallback...');
+        
         // Fallback: create a simple map with user IDs
         const fallbackMap: { [id: string]: string } = {};
         ids.forEach(id => {
           fallbackMap[id] = id.slice(0, 6);
         });
-        console.log('fetchUserMap - using fallback map:', fallbackMap);
+        
         setUserMap(fallbackMap);
       }
     } catch (err) {
@@ -639,7 +613,7 @@ const LeaguePage: React.FC = () => {
       ids.forEach(id => {
         fallbackMap[id] = id.slice(0, 6);
       });
-      console.log('fetchUserMap - using fallback map after error:', fallbackMap);
+      
       setUserMap(fallbackMap);
     }
   };
@@ -953,13 +927,7 @@ const LeaguePage: React.FC = () => {
           </div>
 
           {/* Draft Section */}
-          {(() => {
-            console.log('League.tsx - draft section condition:', {
-              draft_completed: league.draft_completed,
-              should_show_draft: !league.draft_completed
-            })
-            return null
-          })()}
+
           {!league.draft_completed && (
             <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6">
               <h3 className="text-lg lg:text-xl font-bold mb-4 text-gray-900">Draft</h3>
@@ -983,23 +951,10 @@ const LeaguePage: React.FC = () => {
                 </div>
               )}
               {/* Draft UI if started */}
-              {(() => {
-                console.log('League.tsx - draft started condition:', {
-                  draftStarted,
-                  draft_started: league.draft_started,
-                  should_show_draft_ui: draftStarted
-                })
-                return null
-              })()}
+
               {draftStarted && (
                 <>
                   {/* Debug/Fix buttons */}
-                  {console.log('League.tsx - checking if user is member:', {
-                    user_id: user?.id,
-                    member_ids: league.member_ids,
-                    is_member: league.member_ids.includes(user?.id || ''),
-                    should_show_join: !league.member_ids.includes(user?.id || '')
-                  })}
                   {!league.member_ids.includes(user?.id || '') && (
                     <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
                       <p className="text-red-800 text-sm mb-2">You are not a member of this league. Click to join:</p>
@@ -1068,7 +1023,7 @@ const LeaguePage: React.FC = () => {
                         (() => {
                           const currentDraftUserId = league.draft_order[league.current_draft_turn];
                           const displayName = userMap[currentDraftUserId] || 'Unknown Player';
-                          console.log('Draft UI: currentDraftUserId:', currentDraftUserId, 'userMap:', userMap, 'displayName:', displayName);
+                          
                           return (
                             <p className="text-gray-600 text-sm lg:text-base">
                               Waiting for {displayName} to draft...

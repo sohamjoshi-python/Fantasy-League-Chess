@@ -140,7 +140,7 @@ const JoinLeague: React.FC = () => {
           displayName = authUser.user_metadata.full_name;
         }
       } catch (err) {
-        console.log('Could not get user metadata, using email as display name');
+        
       }
 
       // Add creator to league_members table
@@ -231,7 +231,7 @@ const JoinLeague: React.FC = () => {
           displayName = authUser.user_metadata.full_name;
         }
       } catch (err) {
-        console.log('Could not get user metadata, using email as display name');
+        
       }
 
       // Add user to league_members table first
@@ -319,7 +319,7 @@ const JoinLeague: React.FC = () => {
           displayName = authUser.user_metadata.full_name;
         }
       } catch (err) {
-        console.log('Could not get user metadata, using email as display name');
+        
       }
 
       // Add user to league_members table first

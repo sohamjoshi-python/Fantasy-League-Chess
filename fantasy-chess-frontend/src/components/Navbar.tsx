@@ -126,7 +126,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ isSignUp, onClose, onToggleMode }
 
     try {
       if (isSignUp) {
-        console.log('Attempting signup with:', email, password, displayName)
         await signUp(email, password, displayName)
         // Wait for Supabase to create the user session
         setTimeout(async () => {
@@ -143,7 +142,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ isSignUp, onClose, onToggleMode }
           }
         }, 500)
       } else {
-        console.log('Attempting login with:', email, password)
         await signIn(email, password)
         setSuccess('Logged in!')
         setTimeout(() => {

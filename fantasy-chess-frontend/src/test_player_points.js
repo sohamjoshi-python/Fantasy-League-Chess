@@ -15,7 +15,6 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 async function main() {
   const [,, userEmailArg, dateArg] = process.argv;
   if (!userEmailArg || !dateArg) {
-    console.log('Usage: node src/test_player_points.js <userEmail> <date>');
     process.exit(1);
   }
   const userEmail = userEmailArg;
@@ -79,11 +78,7 @@ async function main() {
       return sum;
     }, 0);
     lineupTotal += playerPoints;
-    console.log(`Player: ${player.name}`);
-    console.log('  Matched games:', playerGames);
-    console.log('  Total points:', playerPoints);
   }
-  console.log('Lineup total points:', lineupTotal);
 }
 
 main(); 
