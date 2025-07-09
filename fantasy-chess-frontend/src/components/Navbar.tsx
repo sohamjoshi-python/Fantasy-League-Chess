@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import ReactDOM from 'react-dom'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { Crown, LogIn, LogOut, UserPlus } from 'lucide-react'
+import { Crown, LogIn, LogOut, UserPlus, HelpCircle } from 'lucide-react'
 
 const Navbar: React.FC = () => {
   const { user, signOut } = useAuth()
@@ -48,6 +48,13 @@ const Navbar: React.FC = () => {
                   className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
                 >
                   Profile
+                </Link>
+                <Link
+                  to="/help"
+                  className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium flex items-center"
+                >
+                  <HelpCircle className="h-4 w-4 mr-1" />
+                  Help
                 </Link>
                 <div className="flex items-center space-x-2">
                   <span className="text-sm text-gray-700">{user.email}</span>

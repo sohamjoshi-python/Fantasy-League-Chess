@@ -28,8 +28,6 @@ serve(async (req) => {
     
     // Format as YYYY-MM-DD
     const tuesdayDate = lastTuesday.toISOString().split('T')[0]
-    
-    console.log(`Processing weekly results for ${tuesdayDate}`)
 
     // Call the enhanced process_weekly_results function
     const { data, error } = await supabase.rpc('process_weekly_results_enhanced', {
@@ -47,7 +45,7 @@ serve(async (req) => {
       )
     }
 
-    console.log(`Successfully processed weekly results for ${tuesdayDate}`)
+
     
     return new Response(
       JSON.stringify({ 

@@ -1,6 +1,6 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
-import { Crown, Users, Trophy, Calendar, Star, Swords, Shield } from 'lucide-react'
+import { Crown, Users, Trophy, Calendar, Star, Swords, Shield, HelpCircle } from 'lucide-react'
 
 const accentBlue = 'text-[#4F6DF5]'
 const accentGold = 'text-[#FFD600]'
@@ -18,7 +18,10 @@ const Home: React.FC = () => {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to="/join-league" className="px-8 py-3 rounded-lg bg-[#4F6DF5] text-white font-semibold text-lg shadow hover:bg-blue-700 transition">Join a League</Link>
-            <Link to="/" className="px-8 py-3 rounded-lg bg-[#FFD600] text-gray-900 font-semibold text-lg shadow hover:bg-yellow-400 transition">Learn More</Link>
+            <Link to="/help" className="px-8 py-3 rounded-lg bg-[#FFD600] text-gray-900 font-semibold text-lg shadow hover:bg-yellow-400 transition flex items-center">
+              <HelpCircle className="w-5 h-5 mr-2" />
+              How to Play
+            </Link>
           </div>
         </div>
       </section>
