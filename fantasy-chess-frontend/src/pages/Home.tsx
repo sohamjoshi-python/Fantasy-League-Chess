@@ -4,7 +4,6 @@ import { Users, Trophy, Calendar, Star, Swords, Shield, HelpCircle } from 'lucid
 import logo from '../assets/pawn-royale-logo.png'
 
 const accentGold = 'text-gold'
-const accentNavy = 'text-navy'
 
 const Home: React.FC = () => {
   return (
