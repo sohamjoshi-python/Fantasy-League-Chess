@@ -87,6 +87,16 @@ const Help: React.FC = () => {
               <div className="flex items-start">
                 <ArrowRight className="w-5 h-5 text-green-600 mt-0.5 mr-3 flex-shrink-0" />
                 <div>
+                  <h3 className="font-semibold text-gray-900">Wait for All Members</h3>
+                  <p className="text-gray-700">
+                    <strong>Important:</strong> Only start the draft once ALL intended members have joined your league. 
+                    Once the draft begins, no new players can join, and the draft order is locked in place.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start">
+                <ArrowRight className="w-5 h-5 text-green-600 mt-0.5 mr-3 flex-shrink-0" />
+                <div>
                   <h3 className="font-semibold text-gray-900">Snake Draft Format</h3>
                   <p className="text-gray-700">Draft players in a snake format - the order reverses each round:</p>
                   <ul className="list-disc list-inside text-gray-600 mt-2 space-y-1">
@@ -109,6 +119,12 @@ const Help: React.FC = () => {
                   <h3 className="font-semibold text-gray-900">Build Your Team</h3>
                   <p className="text-gray-700">You'll draft 10 players total. These form your roster for the entire league season.</p>
                 </div>
+              </div>
+              <div className="bg-red-50 p-4 rounded-lg">
+                <p className="text-sm text-red-800">
+                  <strong>⚠️ Critical:</strong> Make sure all your intended league members have joined before starting the draft. 
+                  Once started, the draft cannot be paused and no new members can join!
+                </p>
               </div>
               <div className="bg-green-50 p-4 rounded-lg">
                 <p className="text-sm text-green-800">
@@ -239,7 +255,16 @@ const Help: React.FC = () => {
             <BarChart3 className="w-6 h-6 mr-2 text-blue-500" />
             Pro Tips & Strategies
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+              <h3 className="font-semibold text-gray-900 mb-2">League Management</h3>
+              <ul className="space-y-2 text-gray-700">
+                <li>• <strong>Wait for all intended members before starting draft</strong></li>
+                <li>• Communicate with league members about draft timing</li>
+                <li>• Set clear expectations for league participation</li>
+                <li>• Consider league size when setting buy-in amounts</li>
+              </ul>
+            </div>
             <div>
               <h3 className="font-semibold text-gray-900 mb-2">Draft Strategy</h3>
               <ul className="space-y-2 text-gray-700">
@@ -312,6 +337,13 @@ const Help: React.FC = () => {
             <div>
               <h3 className="font-semibold text-gray-900">What if a player doesn't compete?</h3>
               <p className="text-gray-700">Players who don't compete in a given week score 0 points for that week.</p>
+            </div>
+            <div>
+              <h3 className="font-semibold text-gray-900">When should I start the draft?</h3>
+              <p className="text-gray-700">
+                <strong>Only start the draft after ALL intended members have joined.</strong> Once the draft begins, 
+                no new players can join the league, and the draft order is permanently locked in place.
+              </p>
             </div>
           </div>
         </div>
