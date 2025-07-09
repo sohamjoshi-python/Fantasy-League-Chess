@@ -34,25 +34,25 @@ const Navbar: React.FC = () => {
               <>
                 <Link
                   to="/dashboard"
-                  className="text-gold hover:text-purple px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                  className="text-gold hover:underline hover:underline-offset-4 px-3 py-2 rounded-md text-sm font-medium transition-colors"
                 >
                   Dashboard
                 </Link>
                 <Link
                   to="/join-league"
-                  className="text-gold hover:text-purple px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                  className="text-gold hover:underline hover:underline-offset-4 px-3 py-2 rounded-md text-sm font-medium transition-colors"
                 >
                   Join League
                 </Link>
                 <Link
                   to="/profile"
-                  className="text-gold hover:text-purple px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                  className="text-gold hover:underline hover:underline-offset-4 px-3 py-2 rounded-md text-sm font-medium transition-colors"
                 >
                   Profile
                 </Link>
                 <Link
                   to="/help"
-                  className="text-gold hover:text-purple px-3 py-2 rounded-md text-sm font-medium flex items-center transition-colors"
+                  className="text-gold hover:underline hover:underline-offset-4 px-3 py-2 rounded-md text-sm font-medium flex items-center transition-colors"
                 >
                   <HelpCircle className="h-4 w-4 mr-1" />
                   Help
@@ -75,7 +75,7 @@ const Navbar: React.FC = () => {
                     setIsSignUp(false)
                     setShowAuthModal(true)
                   }}
-                  className="flex items-center space-x-1 bg-gold hover:bg-purple text-primary px-4 py-2 rounded-md text-sm font-bold shadow transition-colors"
+                  className="flex items-center space-x-1 bg-gold hover:bg-yellow-600 text-primary px-4 py-2 rounded-md text-sm font-bold shadow transition-colors"
                 >
                   <LogIn className="h-4 w-4" />
                   <span>Sign In</span>
@@ -85,7 +85,7 @@ const Navbar: React.FC = () => {
                     setIsSignUp(true)
                     setShowAuthModal(true)
                   }}
-                  className="flex items-center space-x-1 bg-purple hover:bg-gold text-white hover:text-primary px-4 py-2 rounded-md text-sm font-bold shadow transition-colors"
+                  className="flex items-center space-x-1 bg-purple hover:bg-purple-700 text-white px-4 py-2 rounded-md text-sm font-bold shadow transition-colors"
                 >
                   <UserPlus className="h-4 w-4" />
                   <span>Sign Up</span>
