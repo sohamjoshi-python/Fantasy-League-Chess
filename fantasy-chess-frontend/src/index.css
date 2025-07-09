@@ -96,13 +96,14 @@ body {
   min-width: 320px;
   min-height: 100vh;
   font-family: 'Inter', system-ui, sans-serif;
-  background: #f8fafc;
+  background: linear-gradient(to bottom right, #e0f2f7, #f0f4f8);
   color: #111827; /* text-gray-900 */
 }
 
 #root {
   width: 100%;
   margin: 0 auto;
+  padding: 1rem;
 }
 
 .card {
