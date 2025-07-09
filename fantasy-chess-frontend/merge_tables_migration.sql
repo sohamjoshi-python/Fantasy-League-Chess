@@ -163,3 +163,57 @@ BEGIN
     END LOOP;
 END;
 $$ LANGUAGE plpgsql; 
+
+-- Add payout_processed flag to leagues
+ALTER TABLE leagues ADD COLUMN IF NOT EXISTS payout_processed boolean NOT NULL DEFAULT false;
+
+-- Add balance column to users
+ALTER TABLE users ADD COLUMN IF NOT EXISTS balance numeric NOT NULL DEFAULT 0;
+
+-- Create payouts table
+CREATE TABLE IF NOT EXISTS payouts (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  league_id uuid REFERENCES leagues(id),
+  user_id uuid REFERENCES users(id),
+  amount numeric NOT NULL,
+  processed_at timestamp NOT NULL DEFAULT now()
+);
+
+-- Function to process league payouts
+CREATE OR REPLACE FUNCTION process_league_payouts()
+RETURNS void AS $$
+DECLARE
+  league_row RECORD;
+  winner_id uuid;
+  prize numeric;
+BEGIN
+  FOR league_row IN
+    SELECT * FROM leagues
+    WHERE end_date < now() AND payout_processed = false
+  LOOP
+    -- Find winner (user with most total points)
+    SELECT user_id
+    INTO winner_id
+    FROM lineups
+    WHERE league_id = league_row.id
+    GROUP BY user_id
+    ORDER BY SUM(total_points) DESC
+    LIMIT 1;
+
+    -- Calculate prize
+    prize := league_row.buy_in * COALESCE(array_length(league_row.member_ids, 1), 0);
+
+    -- Award prize: record payout
+    INSERT INTO payouts (league_id, user_id, amount)
+    VALUES (league_row.id, winner_id, prize);
+
+    -- Update user balance
+    UPDATE users SET balance = balance + prize WHERE id = winner_id;
+
+    -- Mark payout as processed
+    UPDATE leagues SET payout_processed = true WHERE id = league_row.id;
+  END LOOP;
+END;
+$$ LANGUAGE plpgsql;
+
+-- (Optional) You can schedule this function to run daily using GitHub Actions or another scheduler. 

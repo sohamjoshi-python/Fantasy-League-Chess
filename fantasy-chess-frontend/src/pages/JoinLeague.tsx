@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
-import { League, ChessPlayer } from '../types'
-import { Crown, Users, Trophy, Calendar, Plus, Search, Copy } from 'lucide-react'
+import { League } from '../types'
+import { Users, Trophy, Calendar, Search, Copy } from 'lucide-react'
 
 const JoinLeague: React.FC = () => {
   const { user } = useAuth()
@@ -13,6 +13,7 @@ const JoinLeague: React.FC = () => {
   const [joinCode, setJoinCode] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [userLeagues, setUserLeagues] = useState<League[]>([]);
 
   // Create league form state
   const [leagueName, setLeagueName] = useState('')
@@ -26,6 +27,23 @@ const JoinLeague: React.FC = () => {
       loadPublicLeagues()
     }
   }, [activeTab])
+
+  useEffect(() => {
+    async function fetchUserLeagues() {
+      if (!user) return;
+      const { data: leagues } = await supabase
+        .from('leagues')
+        .select('*')
+        .contains('member_ids', [user.id]);
+      if (leagues) setUserLeagues(leagues);
+    }
+    fetchUserLeagues();
+  }, [user]);
+
+  // Helper to check for overlapping dates
+  function hasDateOverlap(startA: string, endA: string, startB: string, endB: string) {
+    return !(endA < startB || endB < startA);
+  }
 
   const loadPublicLeagues = async () => {
     try {
@@ -60,6 +78,18 @@ const JoinLeague: React.FC = () => {
       if (buyIn < 1) {
         setError('Buy-in must be at least 1 coin')
         return
+      }
+
+      // Check for overlapping active leagues
+      const newStart = startDate;
+      const endDateObj = new Date(startDate);
+      endDateObj.setMonth(endDateObj.getMonth() + 1);
+      endDateObj.setDate(0);
+      const newEnd = endDateObj.toISOString().split('T')[0];
+      const overlap = userLeagues.some(l => hasDateOverlap(newStart, newEnd, l.start_date, l.end_date) && l.end_date >= new Date().toISOString().split('T')[0]);
+      if (overlap) {
+        setError('You cannot create a league that overlaps with another active league you are in.');
+        return;
       }
 
       // Check if user has enough coins
@@ -162,6 +192,13 @@ const JoinLeague: React.FC = () => {
         return
       }
 
+      // Check for overlapping active leagues
+      const overlap = userLeagues.some(l => hasDateOverlap(league.start_date, league.end_date, l.start_date, l.end_date) && l.end_date >= new Date().toISOString().split('T')[0]);
+      if (overlap) {
+        setError('You cannot join a league that overlaps with another active league you are in.');
+        return;
+      }
+
       if (league.member_ids.includes(user.id)) {
         setError('You are already a member of this league')
         return
@@ -247,6 +284,13 @@ const JoinLeague: React.FC = () => {
     try {
       setLoading(true)
       setError('')
+
+      // Check for overlapping active leagues
+      const overlap = userLeagues.some(l => hasDateOverlap(league.start_date, league.end_date, l.start_date, l.end_date) && l.end_date >= new Date().toISOString().split('T')[0]);
+      if (overlap) {
+        setError('You cannot join a league that overlaps with another active league you are in.');
+        return;
+      }
 
       if (league.member_ids.includes(user.id)) {
         setError('You are already a member of this league')

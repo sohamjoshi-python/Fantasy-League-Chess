@@ -35,6 +35,7 @@ export interface League {
   created_at: string
   draft_started?: boolean
   draft_start_time?: string
+  payout_processed?: boolean
 }
 
 export interface LeagueMember {

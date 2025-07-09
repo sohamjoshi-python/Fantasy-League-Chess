@@ -4,16 +4,32 @@ import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { League, Team, Lineup, ChessPlayer } from '../types'
 import { Crown, Users, Trophy, Calendar, Plus, ExternalLink } from 'lucide-react'
+import { fetchLineupPlayerBreakdown } from '../lib/supabase';
+
+function getCurrentTuesday() {
+  const now = new Date();
+  const day = now.getDay();
+  // 2 = Tuesday (0=Sunday, 1=Monday, 2=Tuesday, ...)
+  const diff = (day >= 2) ? day - 2 : 6 + day;
+  const tuesday = new Date(now);
+  tuesday.setDate(now.getDate() - diff);
+  return tuesday.toISOString().split('T')[0].replace(/-/g, '.');
+}
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth()
   const [currentLeague, setCurrentLeague] = useState<League | null>(null)
   const [userTeam, setUserTeam] = useState<Team | null>(null)
-  const [teamPlayers, setTeamPlayers] = useState<ChessPlayer[]>([])
   const [currentLineup, setCurrentLineup] = useState<Lineup | null>(null)
   const [lineupPlayers, setLineupPlayers] = useState<ChessPlayer[]>([])
   const [pastLeagues, setPastLeagues] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [playerBreakdown, setPlayerBreakdown] = useState<any[]>([])
+  const [breakdownLoading, setBreakdownLoading] = useState(false)
+  const [breakdownError, setBreakdownError] = useState('')
+  const [availableWeeks, setAvailableWeeks] = useState<string[]>([]);
+  const [selectedWeek, setSelectedWeek] = useState<string | null>(null);
+  const [activeLeagues, setActiveLeagues] = useState<League[]>([]);
 
   useEffect(() => {
     if (user) {
@@ -21,75 +37,105 @@ const Dashboard: React.FC = () => {
     }
   }, [user])
 
+  useEffect(() => {
+    async function fetchAvailableWeeks() {
+      if (!currentLeague || !user) return;
+      // Fetch all weeks from lineups table where user has a lineup with points > 0
+      const { data, error } = await supabase
+        .from('lineups')
+        .select('week_start_date')
+        .eq('user_id', user.id)
+        .eq('league_id', currentLeague.id)
+        .gt('total_points', 0)
+        .order('week_start_date', { ascending: true });
+      if (error) {
+        setAvailableWeeks([]);
+        setSelectedWeek(null);
+        console.log('fetchAvailableWeeks - error:', error);
+        return;
+      }
+      // Get unique dates
+      const uniqueDates = Array.from(new Set((data || []).map(l => l.week_start_date.replace(/-/g, '.'))));
+      console.log('fetchAvailableWeeks - uniqueDates:', uniqueDates);
+      setAvailableWeeks(uniqueDates);
+      if (uniqueDates.length > 0) {
+        setSelectedWeek(uniqueDates[uniqueDates.length - 1]);
+        console.log('fetchAvailableWeeks - setSelectedWeek:', uniqueDates[uniqueDates.length - 1]);
+      } else {
+        setSelectedWeek(null);
+        console.log('fetchAvailableWeeks - setSelectedWeek: null');
+      }
+    }
+    fetchAvailableWeeks();
+  }, [currentLeague, user]);
+
+  useEffect(() => {
+    async function loadBreakdown() {
+      if (!user || !currentLeague || !selectedWeek) return;
+      setBreakdownLoading(true);
+      setBreakdownError('');
+      try {
+        const data = await fetchLineupPlayerBreakdown(user.id, currentLeague.id, selectedWeek.replace(/\./g, '-'));
+        setPlayerBreakdown(data);
+      } catch (e: any) {
+        setBreakdownError('Could not load point breakdown');
+      } finally {
+        setBreakdownLoading(false);
+      }
+    }
+    loadBreakdown();
+  }, [user, currentLeague, selectedWeek]);
+
   const loadDashboardData = async () => {
     if (!user) return
 
     try {
       setLoading(true)
 
-      // Get current league - try different approaches
-      console.log('Dashboard - searching for leagues with user.id:', user.id)
-      
-      // First try: get all leagues and filter in JavaScript
+      // Get all leagues where user is a member
       const { data: allLeagues, error: allLeaguesError } = await supabase
         .from('leagues')
         .select('*')
-        .gte('end_date', new Date().toISOString().split('T')[0])
         .order('start_date', { ascending: true })
 
       if (allLeaguesError) {
         console.error('Dashboard - all leagues query error:', allLeaguesError)
       }
-      
-      console.log('Dashboard - all leagues:', allLeagues)
-      
-      // Debug: show the member_ids for each league
-      allLeagues?.forEach((league, index) => {
-        console.log(`Dashboard - League ${index}:`, {
-          id: league.id,
-          name: league.name,
-          member_ids: league.member_ids,
-          member_ids_type: typeof league.member_ids,
-          member_ids_length: league.member_ids?.length
-        })
-      })
-      
+
       // Filter leagues where user is a member
       const leagues = allLeagues?.filter(league => {
         const isMember = league.member_ids && league.member_ids.includes(user.id)
-        console.log(`Dashboard - Checking league ${league.id}: member_ids=${JSON.stringify(league.member_ids)}, user.id=${user.id}, isMember=${isMember}`)
         return isMember
       }) || []
-      
-      console.log('Dashboard - filtered leagues where user is member:', leagues)
 
-      if (leagues && leagues.length > 0) {
-        const league = leagues[0]
-        setCurrentLeague(league)
+      // Split into active and past leagues
+      const todayStr = new Date().toISOString().split('T')[0];
+      const active = leagues.filter(l => l.end_date >= todayStr);
+      const past = leagues.filter(l => l.end_date < todayStr);
+      setActiveLeagues(active);
 
-        // Get user's team
+      // Set currentLeague to the first active league (if any)
+      setCurrentLeague(active.length > 0 ? active[0] : null);
+
+      // Get user's team for the current league (if any)
+      if (active.length > 0) {
+        const league = active[0];
         const { data: teams } = await supabase
           .from('teams')
           .select('*')
           .eq('user_id', user.id)
           .eq('league_id', league.id)
           .single()
-
         if (teams) {
           setUserTeam(teams)
-
-          // Get team players
           const { data: players } = await supabase
             .from('chess_players')
             .select('*')
             .in('id', teams.player_ids)
-
           if (players) {
-            setTeamPlayers(players)
+            // setTeamPlayers(players) // This line was removed as per the edit hint
           }
-
-          // Get current lineup
-          const currentWeek = getCurrentWeekStart()
+          const currentWeek = getCurrentTuesday()
           const { data: lineups } = await supabase
             .from('lineups')
             .select('*')
@@ -97,16 +143,12 @@ const Dashboard: React.FC = () => {
             .eq('league_id', league.id)
             .eq('week_start_date', currentWeek)
             .single()
-
           if (lineups) {
             setCurrentLineup(lineups)
-
-            // Get lineup players
             const { data: lineupPlayerData } = await supabase
               .from('chess_players')
               .select('*')
               .in('id', lineups.player_ids)
-
             if (lineupPlayerData) {
               setLineupPlayers(lineupPlayerData)
             }
@@ -114,48 +156,36 @@ const Dashboard: React.FC = () => {
         }
       }
 
-      // Get past league performance
-      const { data: pastLeagueData } = await supabase
-        .from('leagues')
-        .select(`
-          *,
-          teams!inner(user_id, player_ids),
-          lineups!inner(user_id, total_points, week_start_date)
-        `)
-        .contains('member_ids', [user.id])
-        .lt('end_date', new Date().toISOString().split('T')[0])
-        .order('end_date', { ascending: false })
-
-      if (pastLeagueData) {
-        // Process past league data to get standings
-        const processedPastLeagues = pastLeagueData.map(league => {
-          const userLineups = league.lineups.filter((l: any) => l.user_id === user.id)
-          const totalPoints = userLineups.reduce((sum: number, l: any) => sum + l.total_points, 0)
-          
-          return {
-            league_id: league.id,
-            league_name: league.name,
-            total_points: totalPoints,
-            rank: 0, // Would need to calculate actual rank
-            end_date: league.end_date
-          }
-        })
-        setPastLeagues(processedPastLeagues)
+      // Get past league performance for all past leagues
+      if (past.length > 0) {
+        const pastLeagueIds = past.map(l => l.id);
+        const { data: pastLeagueData } = await supabase
+          .from('leagues')
+          .select(`*, lineups!inner(user_id, total_points, week_start_date)`)
+          .in('id', pastLeagueIds)
+          .order('end_date', { ascending: false })
+        if (pastLeagueData) {
+          // Process past league data to get standings
+          const processedPastLeagues = pastLeagueData.map(league => {
+            const userLineups = league.lineups.filter((l: any) => l.user_id === user.id)
+            const totalPoints = userLineups.reduce((sum: number, l: any) => sum + l.total_points, 0)
+            return {
+              league_id: league.id,
+              league_name: league.name,
+              total_points: totalPoints,
+              end_date: league.end_date
+            }
+          })
+          setPastLeagues(processedPastLeagues)
+        }
+      } else {
+        setPastLeagues([])
       }
     } catch (error) {
       console.error('Error loading dashboard data:', error)
     } finally {
       setLoading(false)
     }
-  }
-
-  const getCurrentWeekStart = () => {
-    const now = new Date()
-    const dayOfWeek = now.getDay()
-    const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1 // Monday is 1, Sunday is 0
-    const monday = new Date(now)
-    monday.setDate(now.getDate() - daysToSubtract)
-    return monday.toISOString().split('T')[0]
   }
 
   const getNextTitledTuesday = () => {
@@ -178,7 +208,7 @@ const Dashboard: React.FC = () => {
     <div className="w-full max-w-6xl mx-auto">
       <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-6 lg:mb-8">Dashboard</h1>
 
-      {!currentLeague ? (
+      {activeLeagues.length === 0 ? (
         <div className="text-center py-12 lg:py-16">
           <div className="bg-white rounded-lg shadow-lg p-6 lg:p-8 max-w-md mx-auto">
             <Crown className="h-12 w-12 lg:h-16 lg:w-16 text-blue-600 mx-auto mb-4" />
@@ -198,49 +228,46 @@ const Dashboard: React.FC = () => {
       ) : (
         <div className="space-y-6 lg:space-y-8">
           {/* Current League Info */}
-          <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-4">
-              <h2 className="text-xl lg:text-2xl font-bold text-gray-900 mb-2 lg:mb-0">{currentLeague.name}</h2>
-              <Link
-                to={`/league/${currentLeague.id}`}
-                className="text-blue-600 hover:text-blue-800 font-medium text-sm lg:text-base"
-              >
-                View League →
-              </Link>
+          {currentLeague && (
+            <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-4">
+                <h2 className="text-xl lg:text-2xl font-bold text-gray-900 mb-2 lg:mb-0">{currentLeague.name}</h2>
+                <Link
+                  to={`/league/${currentLeague.id}`}
+                  className="text-blue-600 hover:text-blue-800 font-medium text-sm lg:text-base"
+                >
+                  View League →
+                </Link>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6">
+                <div className="flex items-center space-x-3">
+                  <Users className="h-5 w-5 lg:h-6 lg:w-6 text-gray-500" />
+                  <div>
+                    <p className="text-xs lg:text-sm text-gray-600">Members</p>
+                    <p className="font-semibold text-sm lg:text-base">{currentLeague.member_ids.length}</p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <Trophy className="h-5 w-5 lg:h-6 lg:w-6 text-gray-500" />
+                  <div>
+                    <p className="text-xs lg:text-sm text-gray-600">Buy-in</p>
+                    <p className="font-semibold text-sm lg:text-base">{currentLeague.buy_in} coins</p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <Calendar className="h-5 w-5 lg:h-6 lg:w-6 text-gray-500" />
+                  <div>
+                    <p className="text-xs lg:text-sm text-gray-600">End Date</p>
+                    <p className="font-semibold text-sm lg:text-base">{new Date(currentLeague.end_date).toLocaleDateString()}</p>
+                  </div>
+                </div>
+              </div>
             </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6">
-              <div className="flex items-center space-x-3">
-                <Users className="h-5 w-5 lg:h-6 lg:w-6 text-gray-500" />
-                <div>
-                  <p className="text-xs lg:text-sm text-gray-600">Members</p>
-                  <p className="font-semibold text-sm lg:text-base">{currentLeague.member_ids.length}</p>
-                </div>
-              </div>
-              
-              <div className="flex items-center space-x-3">
-                <Trophy className="h-5 w-5 lg:h-6 lg:w-6 text-gray-500" />
-                <div>
-                  <p className="text-xs lg:text-sm text-gray-600">Buy-in</p>
-                  <p className="font-semibold text-sm lg:text-base">{currentLeague.buy_in} coins</p>
-                </div>
-              </div>
-              
-              <div className="flex items-center space-x-3">
-                <Calendar className="h-5 w-5 lg:h-6 lg:w-6 text-gray-500" />
-                <div>
-                  <p className="text-xs lg:text-sm text-gray-600">End Date</p>
-                  <p className="font-semibold text-sm lg:text-base">{new Date(currentLeague.end_date).toLocaleDateString()}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
+          )}
           {/* Current Lineup */}
           {userTeam && (
             <div className="bg-white rounded-lg shadow-lg p-6">
               <h3 className="text-xl font-bold mb-4">Current Lineup</h3>
-              
               {currentLineup && lineupPlayers.length > 0 ? (
                 <div className="grid md:grid-cols-5 gap-4">
                   {lineupPlayers.map((player) => (
@@ -253,17 +280,64 @@ const Dashboard: React.FC = () => {
               ) : (
                 <div className="text-center py-8">
                   <p className="text-gray-600 mb-4">No lineup set for this week</p>
-                  <Link
-                    to={`/league/${currentLeague.id}`}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
-                  >
-                    Set Lineup
-                  </Link>
+                  {currentLeague && (
+                    <Link
+                      to={`/league/${currentLeague.id}`}
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+                    >
+                      Set Lineup
+                    </Link>
+                  )}
                 </div>
               )}
             </div>
           )}
-
+          {/* Point Breakdown Table */}
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <div className="mb-2 flex items-center space-x-2">
+              <h3 className="text-xl font-bold">Point Breakdown</h3>
+              {availableWeeks.length > 0 && (
+                <select
+                  className="ml-2 border rounded px-2 py-1 text-sm"
+                  value={selectedWeek || ''}
+                  onChange={e => setSelectedWeek(e.target.value)}
+                >
+                  {availableWeeks.map(week => (
+                    <option key={week} value={week}>{week}</option>
+                  ))}
+                </select>
+              )}
+              <span className="text-xs text-gray-500">(Select week)</span>
+            </div>
+            {breakdownLoading ? (
+              <div>Loading breakdown...</div>
+            ) : breakdownError ? (
+              <div className="text-red-600">{breakdownError}</div>
+            ) : playerBreakdown && playerBreakdown.length > 0 ? (
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr>
+                    <th className="text-left px-2 py-1">Player</th>
+                    <th className="text-right px-2 py-1">Points</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {playerBreakdown.map((row) => (
+                    <tr key={row.player_id || row.player_name}>
+                      <td className="px-2 py-1">{row.player_name}</td>
+                      <td className="px-2 py-1 text-right">{Number(row.player_points).toFixed(2)}</td>
+                    </tr>
+                  ))}
+                  <tr className="font-bold border-t">
+                    <td className="px-2 py-1">TOTAL</td>
+                    <td className="px-2 py-1 text-right">{playerBreakdown.reduce((sum, p) => sum + Number(p.player_points), 0).toFixed(2)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            ) : (
+              <div>No breakdown available for this week.</div>
+            )}
+          </div>
           {/* Next Titled Tuesday */}
           <div className="bg-white rounded-lg shadow-lg p-6">
             <h3 className="text-xl font-bold mb-4">Next Titled Tuesday</h3>
@@ -313,6 +387,34 @@ const Dashboard: React.FC = () => {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Past Leagues Section */}
+      {pastLeagues.length > 0 && (
+        <div className="bg-white rounded-lg shadow-lg p-6 mt-8">
+          <h2 className="text-xl font-bold mb-4">Past Leagues</h2>
+          <div className="space-y-3">
+            {pastLeagues.map((league) => (
+              <div key={league.league_id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <div>
+                  <h4 className="font-semibold">{league.league_name}</h4>
+                  <p className="text-sm text-gray-600">
+                    Ended: {new Date(league.end_date).toLocaleDateString()}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    Your Points: {league.total_points}
+                  </p>
+                </div>
+                <Link
+                  to={`/league/${league.league_id}`}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold"
+                >
+                  View League
+                </Link>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

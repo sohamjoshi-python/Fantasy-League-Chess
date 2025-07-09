@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
-import { League, Team, Lineup, ChessPlayer, User as AppUser } from '../types'
-import { Crown, Users, Trophy, Calendar, Edit, Check, X, RefreshCw } from 'lucide-react'
+import { League, Team, Lineup, ChessPlayer } from '../types'
+import { Crown, Trophy, Calendar, Edit, Check, X, RefreshCw } from 'lucide-react'
+import { fetchLineupPlayerBreakdown } from '../lib/supabase';
 
 const LeaguePage: React.FC = () => {
   const { leagueId } = useParams<{ leagueId: string }>()
@@ -17,10 +18,6 @@ const LeaguePage: React.FC = () => {
   const [standings, setStandings] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-
-  // Draft state
-  const [isDrafting, setIsDrafting] = useState(false)
-  const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null)
 
   // Lineup editing state
   const [isEditingLineup, setIsEditingLineup] = useState(false)
@@ -42,7 +39,79 @@ const LeaguePage: React.FC = () => {
   const [selectedUserTeam, setSelectedUserTeam] = useState<ChessPlayer[]>([])
   const [selectedUserLineup, setSelectedUserLineup] = useState<ChessPlayer[]>([])
 
+  const [playerBreakdown, setPlayerBreakdown] = useState<any[]>([]);
+  const [breakdownLoading, setBreakdownLoading] = useState(false);
+  const [breakdownError, setBreakdownError] = useState('');
+  const [availableWeeks, setAvailableWeeks] = useState<string[]>([]);
+  const [selectedWeek, setSelectedWeek] = useState<string | null>(null);
+  const [payout, setPayout] = useState<any | null>(null);
+  const [winnerName, setWinnerName] = useState<string>('');
 
+  useEffect(() => {
+    async function fetchAvailableWeeks() {
+      if (!league || !user) return;
+      // Fetch all weeks from lineups table where user has a lineup with points > 0
+      const { data, error } = await supabase
+        .from('lineups')
+        .select('week_start_date')
+        .eq('user_id', user.id)
+        .eq('league_id', league.id)
+        .gt('total_points', 0)
+        .order('week_start_date', { ascending: true });
+      if (error) {
+        setAvailableWeeks([]);
+        setSelectedWeek(null);
+        console.log('fetchAvailableWeeks - error:', error);
+        return;
+      }
+      // Get unique dates
+      const uniqueDates = Array.from(new Set((data || []).map(l => l.week_start_date.replace(/-/g, '.'))));
+      console.log('fetchAvailableWeeks - uniqueDates:', uniqueDates);
+      setAvailableWeeks(uniqueDates);
+      if (uniqueDates.length > 0) {
+        setSelectedWeek(uniqueDates[uniqueDates.length - 1]);
+        console.log('fetchAvailableWeeks - setSelectedWeek:', uniqueDates[uniqueDates.length - 1]);
+      } else {
+        setSelectedWeek(null);
+        console.log('fetchAvailableWeeks - setSelectedWeek: null');
+      }
+    }
+    fetchAvailableWeeks();
+  }, [league, user]);
+
+  useEffect(() => {
+    async function loadBreakdown() {
+      if (!user || !league || !selectedWeek) return;
+      setBreakdownLoading(true);
+      setBreakdownError('');
+      try {
+        const data = await fetchLineupPlayerBreakdown(user.id, league.id, selectedWeek.replace(/\./g, '-'));
+        setPlayerBreakdown(data);
+      } catch (e: any) {
+        setBreakdownError('Could not load point breakdown');
+      } finally {
+        setBreakdownLoading(false);
+      }
+    }
+    loadBreakdown();
+  }, [user, league, selectedWeek]);
+
+  useEffect(() => {
+    async function maybeProcessPayout() {
+      if (
+        league &&
+        new Date(league.end_date) < new Date() &&
+        !league.payout_processed
+      ) {
+        // Call the payout function
+        console.log('Triggering process_league_payouts() for league', league.id);
+        await supabase.rpc('process_league_payouts');
+        // Optionally, reload league data to reflect payout_processed
+        // You may want to call loadLeagueData() here
+      }
+    }
+    maybeProcessPayout();
+  }, [league]);
 
   useEffect(() => {
     if (leagueId && user) {
@@ -243,13 +312,6 @@ const LeaguePage: React.FC = () => {
     if (!league || !user || !isUserTurn()) return
     try {
       setLoading(true)
-      
-      // Get player info for notification
-      const { data: playerData } = await supabase
-        .from('chess_players')
-        .select('name')
-        .eq('id', playerId)
-        .single()
       
       // Ensure team exists
       let team = userTeam
@@ -582,6 +644,45 @@ const LeaguePage: React.FC = () => {
     }
   };
 
+  // Fetch payout and winner info if league ended and payout processed
+  useEffect(() => {
+    async function fetchPayoutAndWinner() {
+      if (
+        league &&
+        new Date(league.end_date) < new Date() &&
+        league.payout_processed
+      ) {
+        const { data: payoutData } = await supabase
+          .from('payouts')
+          .select('user_id, amount, processed_at')
+          .eq('league_id', league.id)
+          .single();
+        setPayout(payoutData);
+        if (payoutData) {
+          // Try to get display name from userMap or fallback to user_id
+          let displayName = '';
+          if (userMap[payoutData.user_id]) {
+            displayName = userMap[payoutData.user_id];
+          } else {
+            // Fetch from league_members
+            const { data: member } = await supabase
+              .from('league_members')
+              .select('display_name')
+              .eq('league_id', league.id)
+              .eq('user_id', payoutData.user_id)
+              .single();
+            displayName = member?.display_name || payoutData.user_id;
+          }
+          setWinnerName(displayName);
+        }
+      } else {
+        setPayout(null);
+        setWinnerName('');
+      }
+    }
+    fetchPayoutAndWinner();
+  }, [league, userMap]);
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -603,7 +704,14 @@ const LeaguePage: React.FC = () => {
       {/* League Header */}
       <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6 mb-6 lg:mb-8">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-4">
-          <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-2 lg:mb-0">{league.name}</h1>
+          <div className="flex items-center space-x-2">
+            <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-2 lg:mb-0">{league.name}</h1>
+            {new Date(league.end_date) < new Date() && (
+              <span className="ml-2 px-2 py-1 bg-red-200 text-red-800 rounded text-xs font-bold">
+                League Ended
+              </span>
+            )}
+          </div>
           <div className="flex items-center space-x-4">
             <button type="button" onClick={handleReload} className="flex items-center px-3 py-1 bg-gray-100 rounded hover:bg-gray-200 text-gray-700 text-sm font-medium">
               <RefreshCw className="w-4 h-4 mr-1" /> Reload
@@ -620,7 +728,14 @@ const LeaguePage: React.FC = () => {
         {league.description && (
           <p className="text-gray-600 mb-4 text-sm lg:text-base">{league.description}</p>
         )}
-
+        {/* Winner and payout display */}
+        {new Date(league.end_date) < new Date() && league.payout_processed && payout && (
+          <div className="bg-green-100 rounded-lg p-4 my-4">
+            <h3 className="font-bold text-lg">🏆 Winner: {winnerName}</h3>
+            <p>Prize: {payout.amount} coins</p>
+            <p>Payout processed: {new Date(payout.processed_at).toLocaleString()}</p>
+          </div>
+        )}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="flex items-center space-x-2">
             <Calendar className="h-4 w-4 lg:h-5 lg:w-5 text-gray-500" />
@@ -787,6 +902,53 @@ const LeaguePage: React.FC = () => {
                   </div>
                 ))}
               </div>
+            )}
+          </div>
+
+          {/* Point Breakdown Table */}
+          <div className="mt-6">
+            <div className="mb-2 flex items-center space-x-2">
+              <h4 className="font-semibold">Point Breakdown</h4>
+              {availableWeeks.length > 0 && (
+                <select
+                  className="ml-2 border rounded px-2 py-1 text-sm"
+                  value={selectedWeek || ''}
+                  onChange={e => setSelectedWeek(e.target.value)}
+                >
+                  {availableWeeks.map(week => (
+                    <option key={week} value={week}>{week}</option>
+                  ))}
+                </select>
+              )}
+              <span className="text-xs text-gray-500">(Select week)</span>
+            </div>
+            {breakdownLoading ? (
+              <div>Loading breakdown...</div>
+            ) : breakdownError ? (
+              <div className="text-red-600">{breakdownError}</div>
+            ) : playerBreakdown && playerBreakdown.length > 0 ? (
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr>
+                    <th className="text-left px-2 py-1">Player</th>
+                    <th className="text-right px-2 py-1">Points</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {playerBreakdown.map((row) => (
+                    <tr key={row.player_id || row.player_name}>
+                      <td className="px-2 py-1">{row.player_name}</td>
+                      <td className="px-2 py-1 text-right">{Number(row.player_points).toFixed(2)}</td>
+                    </tr>
+                  ))}
+                  <tr className="font-bold border-t">
+                    <td className="px-2 py-1">TOTAL</td>
+                    <td className="px-2 py-1 text-right">{playerBreakdown.reduce((sum, p) => sum + Number(p.player_points), 0).toFixed(2)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            ) : (
+              <div>No breakdown available for this week.</div>
             )}
           </div>
 
