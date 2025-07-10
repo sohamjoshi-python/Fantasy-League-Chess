@@ -7,14 +7,12 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: '#181C2A', // Deep Blue
-        gold: '#FFD700',    // Rich Gold
-        white: '#F7F7FA',   // Soft White
-        slate: '#6B7280',   // Slate Gray
-        purple: '#7C3AED',  // Royal Purple
-        'primary-dark': '#131624',
-        'gold-dark': '#B89B2B',
-        'purple-light': '#A78BFA',
+        primary: '#F7FAFC', // Very light gray, almost white
+        accent: '#007BFF',  // Modern blue
+        white: '#F7F7FA',   // Soft White (keeping as is)
+        'neutral-100': '#F3F4F6', // Light neutral gray
+        'neutral-500': '#6B7280', // Medium neutral gray
+        'neutral-900': '#1F2937', // Dark neutral gray
       },
     },
   },

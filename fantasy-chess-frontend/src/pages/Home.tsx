@@ -3,19 +3,16 @@ import { Link } from 'react-router-dom'
 import { Users, Trophy, Calendar, Star, Swords, Shield, HelpCircle } from 'lucide-react'
 import logo from '../assets/pawn-royale-logo.png'
 
-const accentGold = 'text-gold'
-
 const Home: React.FC = () => {
   return (
     <div className="w-full min-h-screen bg-primary flex flex-col items-center font-sans pt-20">
       {/* Hero Section */}
-      <section className="w-full bg-primary py-16 shadow-sm border-b border-gold">
-        <div className="max-w-3xl mx-auto flex flex-col items-center text-center px-4">
+      <section className="w-full bg-primary py-20 shadow-sm border-b border-neutral-300">
+        <div className="max-w-4xl mx-auto flex flex-col items-center text-center px-4">
           <img src={logo} alt="Pawn Royale Logo" className="w-20 h-20 mb-4" />
-          <h1 className="text-5xl font-extrabold text-gold mb-4 tracking-tight font-serif drop-shadow">Pawn Royale</h1>
-          <p className="text-lg text-white mb-8 max-w-xl">
-            The ultimate fantasy sports experience for chess fans. Draft titled players, set your lineup, and compete for glory every Titled Tuesday.
-          </p>
+          <h1 className="text-5xl font-extrabold text-neutral-900 mb-4 tracking-tight font-serif drop-shadow">Pawn Royale</h1>
+          <p className="text-lg text-neutral-900 mb-10 max-w-xl">
+            The ultimate fantasy sports experience for chess fans. Draft titled players, set your lineup, and compete for glory every Titled Tuesday.</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to="/join-league" className="px-8 py-3 rounded-lg bg-gold text-primary font-semibold text-lg shadow hover:bg-purple hover:text-white transition">Join a League</Link>
             <Link to="/help" className="px-8 py-3 rounded-lg bg-white border-2 border-gold text-gold font-semibold text-lg shadow hover:bg-gold hover:text-primary transition flex items-center">

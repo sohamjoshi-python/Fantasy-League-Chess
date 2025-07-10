@@ -496,13 +496,13 @@ const JoinLeague: React.FC = () => {
               type="submit"
               disabled={loading}
               className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white py-3 px-4 rounded-lg font-semibold"
+ className="w-full bg-accent hover:bg-blue-700 disabled:bg-blue-400 text-white py-3 px-4 rounded-lg font-semibold"
             >
               {loading ? 'Creating...' : 'Create League'}
             </button>
           </form>
         </div>
       )}
-
       {/* Public Leagues Tab */}
       {activeTab === 'public' && (
         <div className="space-y-4 lg:space-y-6">
@@ -556,6 +556,7 @@ const JoinLeague: React.FC = () => {
                     onClick={() => joinPublicLeague(league)}
                     disabled={loading}
                     className="w-full bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white py-2 px-4 rounded-lg font-medium text-sm lg:text-base"
+ className="w-full bg-accent hover:bg-green-700 disabled:bg-green-400 text-white py-2 px-4 rounded-lg font-medium text-sm lg:text-base"
                   >
                     {loading ? 'Joining...' : 'Join League'}
                   </button>

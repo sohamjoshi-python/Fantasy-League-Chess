@@ -3,18 +3,18 @@ import { ArrowRight, Trophy, Users, Target, BarChart3, HelpCircle, Play } from '
 
 const Help: React.FC = () => {
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-neutral-100 py-8">
       <div className="max-w-4xl mx-auto px-4">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">How to Play Fantasy Chess</h1>
-          <p className="text-lg text-gray-600">Your complete guide to mastering Fantasy Chess</p>
+          <h1 className="text-3xl font-bold text-neutral-900 mb-4">How to Play Fantasy Chess</h1>
+          <p className="text-lg text-neutral-500">Your complete guide to mastering Fantasy Chess</p>
         </div>
 
         {/* Quick Overview */}
         <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center">
-            <Trophy className="w-6 h-6 mr-2 text-yellow-500" />
+          <h2 className="text-2xl font-bold text-neutral-900 mb-4 flex items-center">
+            <Trophy className="w-6 h-6 mr-2 text-accent" />
             What is Fantasy Chess?
           </h2>
           <p className="text-gray-700 mb-4">
@@ -22,18 +22,18 @@ const Help: React.FC = () => {
             in actual chess tournaments. Build your dream team, set weekly lineups, and compete against other players for prizes!
           </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-            <div className="text-center p-4 bg-blue-50 rounded-lg">
-              <Users className="w-8 h-8 mx-auto mb-2 text-blue-600" />
-              <h3 className="font-semibold text-blue-900">Draft Players</h3>
-              <p className="text-sm text-blue-700">Select from real chess players</p>
+            <div className="text-center p-4 bg-neutral-100 rounded-lg">
+              <Users className="w-8 h-8 mx-auto mb-2 text-accent" />
+              <h3 className="font-semibold text-neutral-900">Draft Players</h3>
+              <p className="text-sm text-neutral-500">Select from real chess players</p>
             </div>
-            <div className="text-center p-4 bg-green-50 rounded-lg">
-              <Target className="w-8 h-8 mx-auto mb-2 text-green-600" />
-              <h3 className="font-semibold text-green-900">Set Lineups</h3>
-              <p className="text-sm text-green-700">Choose your weekly team</p>
+            <div className="text-center p-4 bg-neutral-100 rounded-lg">
+              <Target className="w-8 h-8 mx-auto mb-2 text-accent" />
+              <h3 className="font-semibold text-neutral-900">Set Lineups</h3>
+              <p className="text-sm text-neutral-500">Choose your weekly team</p>
             </div>
-            <div className="text-center p-4 bg-purple-50 rounded-lg">
-              <Trophy className="w-8 h-8 mx-auto mb-2 text-purple-600" />
+            <div className="text-center p-4 bg-neutral-100 rounded-lg">
+              <Trophy className="w-8 h-8 mx-auto mb-2 text-accent" />
               <h3 className="font-semibold text-purple-900">Win Prizes</h3>
               <p className="text-sm text-purple-700">Compete for coin rewards</p>
             </div>
@@ -45,15 +45,15 @@ const Help: React.FC = () => {
           {/* Step 1: Joining a League */}
           <div className="bg-white rounded-lg shadow-lg p-6">
             <div className="flex items-center mb-4">
-              <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold mr-4">1</div>
-              <h2 className="text-xl font-bold text-gray-900">Join or Create a League</h2>
+              <div className="w-8 h-8 bg-accent text-white rounded-full flex items-center justify-center font-bold mr-4">1</div>
+              <h2 className="text-xl font-bold text-neutral-900">Join or Create a League</h2>
             </div>
             <div className="ml-12 space-y-4">
               <div className="flex items-start">
-                <ArrowRight className="w-5 h-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0" />
+                <ArrowRight className="w-5 h-5 text-accent mt-0.5 mr-3 flex-shrink-0" />
                 <div>
                   <h3 className="font-semibold text-gray-900">Create a New League</h3>
-                  <p className="text-gray-700">Click "Create League" and set your league details:</p>
+                  <p className="text-neutral-900">Click "Create League" and set your league details:</p>
                   <ul className="list-disc list-inside text-gray-600 mt-2 space-y-1">
                     <li>League name and description</li>
                     <li>Buy-in amount (in coins)</li>
@@ -63,14 +63,14 @@ const Help: React.FC = () => {
                 </div>
               </div>
               <div className="flex items-start">
-                <ArrowRight className="w-5 h-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0" />
+                <ArrowRight className="w-5 h-5 text-accent mt-0.5 mr-3 flex-shrink-0" />
                 <div>
                   <h3 className="font-semibold text-gray-900">Join an Existing League</h3>
-                  <p className="text-gray-700">Use the join code provided by the league creator or browse public leagues.</p>
+                  <p className="text-neutral-900">Use the join code provided by the league creator or browse public leagues.</p>
                 </div>
               </div>
               <div className="bg-blue-50 p-4 rounded-lg">
-                <p className="text-sm text-blue-800">
+                <p className="text-sm text-neutral-900">
                   <strong>Tip:</strong> You can join multiple leagues, but they cannot overlap in time. Each league costs coins to join!
                 </p>
               </div>
@@ -81,11 +81,11 @@ const Help: React.FC = () => {
           <div className="bg-white rounded-lg shadow-lg p-6">
             <div className="flex items-center mb-4">
               <div className="w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center font-bold mr-4">2</div>
-              <h2 className="text-xl font-bold text-gray-900">Participate in the Draft</h2>
+              <h2 className="text-xl font-bold text-neutral-900">Participate in the Draft</h2>
             </div>
             <div className="ml-12 space-y-4">
               <div className="flex items-start">
-                <ArrowRight className="w-5 h-5 text-green-600 mt-0.5 mr-3 flex-shrink-0" />
+                <ArrowRight className="w-5 h-5 text-accent mt-0.5 mr-3 flex-shrink-0" />
                 <div>
                   <h3 className="font-semibold text-gray-900">Wait for All Members</h3>
                   <p className="text-gray-700">
@@ -95,9 +95,9 @@ const Help: React.FC = () => {
                 </div>
               </div>
               <div className="flex items-start">
-                <ArrowRight className="w-5 h-5 text-green-600 mt-0.5 mr-3 flex-shrink-0" />
+                <ArrowRight className="w-5 h-5 text-accent mt-0.5 mr-3 flex-shrink-0" />
                 <div>
-                  <h3 className="font-semibold text-gray-900">Snake Draft Format</h3>
+                  <h3 className="font-semibold text-neutral-900">Snake Draft Format</h3>
                   <p className="text-gray-700">Draft players in a snake format - the order reverses each round:</p>
                   <ul className="list-disc list-inside text-gray-600 mt-2 space-y-1">
                     <li>Round 1: Player 1, Player 2, Player 3, Player 4</li>
@@ -107,26 +107,26 @@ const Help: React.FC = () => {
                 </div>
               </div>
               <div className="flex items-start">
-                <ArrowRight className="w-5 h-5 text-green-600 mt-0.5 mr-3 flex-shrink-0" />
+                <ArrowRight className="w-5 h-5 text-accent mt-0.5 mr-3 flex-shrink-0" />
                 <div>
                   <h3 className="font-semibold text-gray-900">Choose Your Players</h3>
                   <p className="text-gray-700">Select from real chess players with different ELO ratings. Higher ELO generally means better performance potential.</p>
                 </div>
               </div>
               <div className="flex items-start">
-                <ArrowRight className="w-5 h-5 text-green-600 mt-0.5 mr-3 flex-shrink-0" />
+                <ArrowRight className="w-5 h-5 text-accent mt-0.5 mr-3 flex-shrink-0" />
                 <div>
                   <h3 className="font-semibold text-gray-900">Build Your Team</h3>
                   <p className="text-gray-700">You'll draft 10 players total. These form your roster for the entire league season.</p>
                 </div>
               </div>
-              <div className="bg-red-50 p-4 rounded-lg">
+              <div className="bg-neutral-100 p-4 rounded-lg text-red-700 border border-red-200">
                 <p className="text-sm text-red-800">
                   <strong>⚠️ Critical:</strong> Make sure all your intended league members have joined before starting the draft. 
                   Once started, the draft cannot be paused and no new members can join!
                 </p>
               </div>
-              <div className="bg-green-50 p-4 rounded-lg">
+              <div className="bg-neutral-100 p-4 rounded-lg text-neutral-900">
                 <p className="text-sm text-green-800">
                   <strong>Strategy:</strong> Consider player consistency, recent form, and upcoming tournaments when drafting!
                 </p>
@@ -138,25 +138,25 @@ const Help: React.FC = () => {
           <div className="bg-white rounded-lg shadow-lg p-6">
             <div className="flex items-center mb-4">
               <div className="w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center font-bold mr-4">3</div>
-              <h2 className="text-xl font-bold text-gray-900">Set Your Weekly Lineup</h2>
+              <h2 className="text-xl font-bold text-neutral-900">Set Your Weekly Lineup</h2>
             </div>
             <div className="ml-12 space-y-4">
               <div className="flex items-start">
-                <ArrowRight className="w-5 h-5 text-purple-600 mt-0.5 mr-3 flex-shrink-0" />
+                <ArrowRight className="w-5 h-5 text-accent mt-0.5 mr-3 flex-shrink-0" />
                 <div>
-                  <h3 className="font-semibold text-gray-900">Choose 5 Players</h3>
-                  <p className="text-gray-700">Each week, select 5 players from your 10-player roster to start in your lineup.</p>
+                  <h3 className="font-semibold text-neutral-900">Choose 5 Players</h3>
+                  <p className="text-neutral-900">Each week, select 5 players from your 10-player roster to start in your lineup.</p>
                 </div>
               </div>
               <div className="flex items-start">
-                <ArrowRight className="w-5 h-5 text-purple-600 mt-0.5 mr-3 flex-shrink-0" />
+                <ArrowRight className="w-5 h-5 text-accent mt-0.5 mr-3 flex-shrink-0" />
                 <div>
-                  <h3 className="font-semibold text-gray-900">Weekly Deadlines</h3>
-                  <p className="text-gray-700">Lineups lock at the start of each week (Monday). Make sure to set your lineup before the deadline!</p>
+                  <h3 className="font-semibold text-neutral-900">Weekly Deadlines</h3>
+                  <p className="text-neutral-900">Lineups lock at the start of each week (Monday). Make sure to set your lineup before the deadline!</p>
                 </div>
               </div>
               <div className="flex items-start">
-                <ArrowRight className="w-5 h-5 text-purple-600 mt-0.5 mr-3 flex-shrink-0" />
+                <ArrowRight className="w-5 h-5 text-accent mt-0.5 mr-3 flex-shrink-0" />
                 <div>
                   <h3 className="font-semibold text-gray-900">Strategic Decisions</h3>
                   <p className="text-gray-700">Consider which players are competing in tournaments that week and their recent performance.</p>
@@ -174,14 +174,14 @@ const Help: React.FC = () => {
           <div className="bg-white rounded-lg shadow-lg p-6">
             <div className="flex items-center mb-4">
               <div className="w-8 h-8 bg-orange-600 text-white rounded-full flex items-center justify-center font-bold mr-4">4</div>
-              <h2 className="text-xl font-bold text-gray-900">Understanding Scoring</h2>
+              <h2 className="text-xl font-bold text-neutral-900">Understanding Scoring</h2>
             </div>
             <div className="ml-12 space-y-4">
               <div className="flex items-start">
-                <ArrowRight className="w-5 h-5 text-orange-600 mt-0.5 mr-3 flex-shrink-0" />
+                <ArrowRight className="w-5 h-5 text-accent mt-0.5 mr-3 flex-shrink-0" />
                 <div>
-                  <h3 className="font-semibold text-gray-900">Player Performance Points</h3>
-                  <p className="text-gray-700">Players earn points based on their actual chess game results:</p>
+                  <h3 className="font-semibold text-neutral-900">Player Performance Points</h3>
+                  <p className="text-neutral-900">Players earn points based on their actual chess game results:</p>
                   <ul className="list-disc list-inside text-gray-600 mt-2 space-y-1">
                     <li><strong>Win:</strong> 3 points</li>
                     <li><strong>Draw:</strong> 1 point</li>
@@ -191,7 +191,7 @@ const Help: React.FC = () => {
                 </div>
               </div>
               <div className="flex items-start">
-                <ArrowRight className="w-5 h-5 text-orange-600 mt-0.5 mr-3 flex-shrink-0" />
+                <ArrowRight className="w-5 h-5 text-accent mt-0.5 mr-3 flex-shrink-0" />
                 <div>
                   <h3 className="font-semibold text-gray-900">Weekly Totals</h3>
                   <p className="text-gray-700">Your lineup's total points are the sum of all 5 players' points for that week.</p>
@@ -199,9 +199,9 @@ const Help: React.FC = () => {
               </div>
               <div className="flex items-start">
                 <ArrowRight className="w-5 h-5 text-orange-600 mt-0.5 mr-3 flex-shrink-0" />
-                <div>
-                  <h3 className="font-semibold text-gray-900">Season Long Competition</h3>
-                  <p className="text-gray-700">Points accumulate throughout the league season. The player with the most total points at the end wins!</p>
+                <div className="text-neutral-900">
+                  <h3 className="font-semibold">Season Long Competition</h3>
+                  <p className="text-neutral-900">Points accumulate throughout the league season. The player with the most total points at the end wins!</p>
                 </div>
               </div>
               <div className="bg-orange-50 p-4 rounded-lg">
@@ -216,25 +216,25 @@ const Help: React.FC = () => {
           <div className="bg-white rounded-lg shadow-lg p-6">
             <div className="flex items-center mb-4">
               <div className="w-8 h-8 bg-yellow-600 text-white rounded-full flex items-center justify-center font-bold mr-4">5</div>
-              <h2 className="text-xl font-bold text-gray-900">Winning and Prizes</h2>
+              <h2 className="text-xl font-bold text-neutral-900">Winning and Prizes</h2>
             </div>
             <div className="ml-12 space-y-4">
               <div className="flex items-start">
-                <ArrowRight className="w-5 h-5 text-yellow-600 mt-0.5 mr-3 flex-shrink-0" />
+                <ArrowRight className="w-5 h-5 text-accent mt-0.5 mr-3 flex-shrink-0" />
                 <div>
-                  <h3 className="font-semibold text-gray-900">League Champion</h3>
-                  <p className="text-gray-700">The player with the highest total points at the end of the league season wins the championship!</p>
+                  <h3 className="font-semibold text-neutral-900">League Champion</h3>
+                  <p className="text-neutral-900">The player with the highest total points at the end of the league season wins the championship!</p>
                 </div>
               </div>
               <div className="flex items-start">
-                <ArrowRight className="w-5 h-5 text-yellow-600 mt-0.5 mr-3 flex-shrink-0" />
+                <ArrowRight className="w-5 h-5 text-accent mt-0.5 mr-3 flex-shrink-0" />
                 <div>
-                  <h3 className="font-semibold text-gray-900">Prize Pool</h3>
-                  <p className="text-gray-700">The winner receives coins equal to the total buy-ins from all league members.</p>
+                  <h3 className="font-semibold text-neutral-900">Prize Pool</h3>
+                  <p className="text-neutral-900">The winner receives coins equal to the total buy-ins from all league members.</p>
                 </div>
               </div>
               <div className="flex items-start">
-                <ArrowRight className="w-5 h-5 text-yellow-600 mt-0.5 mr-3 flex-shrink-0" />
+                <ArrowRight className="w-5 h-5 text-accent mt-0.5 mr-3 flex-shrink-0" />
                 <div>
                   <h3 className="font-semibold text-gray-900">Automatic Payout</h3>
                   <p className="text-gray-700">Prizes are automatically processed when the league ends and distributed to the winner.</p>
@@ -252,13 +252,13 @@ const Help: React.FC = () => {
         {/* Tips and Strategies */}
         <div className="bg-white rounded-lg shadow-lg p-6 mt-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center">
-            <BarChart3 className="w-6 h-6 mr-2 text-blue-500" />
+            <BarChart3 className="w-6 h-6 mr-2 text-accent" />
             Pro Tips & Strategies
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
               <h3 className="font-semibold text-gray-900 mb-2">League Management</h3>
-              <ul className="space-y-2 text-gray-700">
+              <ul className="space-y-2 text-neutral-900">
                 <li>• <strong>Wait for all intended members before starting draft</strong></li>
                 <li>• Communicate with league members about draft timing</li>
                 <li>• Set clear expectations for league participation</li>
@@ -267,7 +267,7 @@ const Help: React.FC = () => {
             </div>
             <div>
               <h3 className="font-semibold text-gray-900 mb-2">Draft Strategy</h3>
-              <ul className="space-y-2 text-gray-700">
+              <ul className="space-y-2 text-neutral-900">
                 <li>• Balance high-ELO players with consistent performers</li>
                 <li>• Consider players who compete frequently</li>
                 <li>• Don't overlook lower-rated players with good form</li>
@@ -276,7 +276,7 @@ const Help: React.FC = () => {
             </div>
             <div>
               <h3 className="font-semibold text-gray-900 mb-2">Lineup Management</h3>
-              <ul className="space-y-2 text-gray-700">
+              <ul className="space-y-2 text-neutral-900">
                 <li>• Check which players are competing each week</li>
                 <li>• Monitor player form and recent results</li>
                 <li>• Don't be afraid to bench high-ELO players</li>
@@ -288,7 +288,7 @@ const Help: React.FC = () => {
 
         {/* Getting Started */}
         <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg shadow-lg p-6 mt-8 text-white">
-          <h2 className="text-2xl font-bold mb-4 flex items-center">
+          <h2 className="text-2xl font-bold mb-4 flex items-center text-white">
             <Play className="w-6 h-6 mr-2" />
             Ready to Start?
           </h2>
@@ -299,14 +299,14 @@ const Help: React.FC = () => {
             <a
               href="/join-league"
               className="bg-white text-blue-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors text-center"
-            >
-              Join a League
+            >Join a League
             </a>
             <a
               href="/dashboard"
               className="bg-transparent border-2 border-white text-white px-6 py-3 rounded-lg font-semibold hover:bg-white hover:text-blue-600 transition-colors text-center"
             >
               Go to Dashboard
+
             </a>
           </div>
         </div>
