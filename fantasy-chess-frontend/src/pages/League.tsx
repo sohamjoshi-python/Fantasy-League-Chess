@@ -54,7 +54,7 @@ const ExpandablePlayerName: React.FC<{
 
   const content = (
     <span
-      className="truncate overflow-hidden whitespace-nowrap block font-medium text-xs lg:text-sm text-gold hover:text-purple hover:underline cursor-pointer"
+      className={`truncate overflow-hidden whitespace-nowrap block font-medium text-xs lg:text-sm text-gold hover:text-purple hover:underline cursor-pointer ${className}`}
       style={{ maxWidth, cursor: "pointer" }}
       title={playerName}
       onMouseEnter={() => setHovered(true)}
@@ -74,7 +74,7 @@ const ExpandablePlayerName: React.FC<{
 
   if (href) {
     return (
-      <div className="relative inline-block" style={{ maxWidth }}>
+      <div className={`relative inline-block ${className}`} style={{ maxWidth }}>
         <a
           href={href}
           target="_blank"
@@ -88,7 +88,7 @@ const ExpandablePlayerName: React.FC<{
   }
 
   return (
-    <div className="relative inline-block" style={{ maxWidth }}>
+    <div className={`relative inline-block ${className}`} style={{ maxWidth }}>
       {content}
     </div>
   );
