@@ -12,8 +12,8 @@ const ExpandableUsername: React.FC<{
   username: string;
   isCurrentUser?: boolean;
   className?: string;
-  maxWidth?: string; // e.g., "120px"
-}> = ({ username, isCurrentUser = false, className = "", maxWidth = "120px" }) => {
+  maxWidth?: string; // e.g., "100px"
+}> = ({ username, isCurrentUser = false, className = "", maxWidth = "100px" }) => {
   const [hovered, setHovered] = React.useState(false);
   const displayText = username + (isCurrentUser ? " (You)" : "");
 
@@ -48,8 +48,8 @@ const ExpandablePlayerName: React.FC<{
   playerName: string;
   className?: string;
   href?: string;
-  maxWidth?: string; // e.g., "100px"
-}> = ({ playerName, className = "", href, maxWidth = "100px" }) => {
+  maxWidth?: string; // e.g., "80px"
+}> = ({ playerName, className = "", href, maxWidth = "80px" }) => {
   const [hovered, setHovered] = React.useState(false);
 
   const content = (
