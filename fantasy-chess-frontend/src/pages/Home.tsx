@@ -1,4 +1,4 @@
-import React from 'react'
+import * as React from 'react'
 import { Link } from 'react-router-dom'
 import { Users, Trophy, Calendar, Star, Swords, Shield, HelpCircle } from 'lucide-react'
 import logo from '../assets/pawn-royale-logo.png'
@@ -37,7 +37,7 @@ const Home: React.FC = () => {
       <section className="w-full py-12 bg-primary flex justify-center">
         <div className="max-w-5xl w-full grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="bg-white rounded-xl shadow p-6 flex flex-col items-center border border-gold">
-            <Users className={`w-10 h-10 mb-3 ${accentGold}`} />
+            <Users className="w-10 h-10 mb-3 text-gold" />
             <h3 className="font-semibold text-lg mb-2 text-primary">Join a League</h3>
             <p className="text-slate text-center text-sm">Create or join a league. Each league is a month-long competition with a buy-in and prizes.</p>
           </div>
@@ -58,14 +58,14 @@ const Home: React.FC = () => {
       <section className="w-full py-12 flex justify-center bg-primary">
         <div className="max-w-5xl w-full grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="bg-white rounded-xl shadow p-6 flex items-center gap-4 border border-gold">
-            <Star className={`w-8 h-8 ${accentGold}`} />
+            <Star className="w-8 h-8 text-gold" />
             <div>
               <h4 className="font-semibold text-base mb-1 text-primary">Real-Time Scoring</h4>
               <p className="text-slate text-sm">Points update automatically after each Titled Tuesday.</p>
             </div>
           </div>
           <div className="bg-white rounded-xl shadow p-6 flex items-center gap-4 border border-gold">
-            <Swords className={`w-8 h-8 ${accentGold}`} />
+            <Swords className="w-8 h-8 text-gold" />
             <div>
               <h4 className="font-semibold text-base mb-1 text-primary">Snake Draft</h4>
               <p className="text-slate text-sm">Fair, competitive drafting for balanced teams.</p>
