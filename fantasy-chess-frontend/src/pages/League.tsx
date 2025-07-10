@@ -8,59 +8,74 @@ import { Crown, Trophy, Calendar, Edit, Check, X, RefreshCw } from 'lucide-react
 import { fetchLineupPlayerBreakdown } from '../lib/supabase';
 
 // Expandable username component
-const ExpandableUsername: React.FC<{ 
-  username: string; 
+const ExpandableUsername: React.FC<{
+  username: string;
   isCurrentUser?: boolean;
   className?: string;
-}> = ({ username, isCurrentUser = false, className = "" }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const displayText = username + (isCurrentUser ? ' (You)' : '');
-  
+  maxWidth?: string; // e.g., "120px"
+}> = ({ username, isCurrentUser = false, className = "", maxWidth = "120px" }) => {
+  const [hovered, setHovered] = React.useState(false);
+  const displayText = username + (isCurrentUser ? " (You)" : "");
+
   return (
-    <div className="relative">
-      <p 
-        className={`font-medium text-sm lg:text-base text-neutral-900 truncate cursor-help transition-all duration-200 ${className} ${
-          isExpanded 
-            ? 'overflow-visible whitespace-normal bg-white shadow-lg rounded px-2 py-1 z-10 absolute min-w-max -top-1 -left-2' 
-            : ''
-        }`}
-        onMouseEnter={() => setIsExpanded(true)}
-        onMouseLeave={() => setIsExpanded(false)}
-        title={username}
+    <div
+      className={`relative inline-block ${className}`}
+      style={{ maxWidth }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <span
+        className="truncate overflow-hidden whitespace-nowrap block text-neutral-900 font-medium text-sm lg:text-base"
+        style={{ maxWidth, cursor: "pointer" }}
+        title={displayText}
       >
         {displayText}
-      </p>
+      </span>
+      {hovered && (
+        <div
+          className="absolute left-1/2 -translate-x-1/2 -top-8 z-50 bg-white text-neutral-900 px-3 py-1 rounded shadow-lg border border-gold text-xs font-medium whitespace-normal"
+          style={{ minWidth: "max-content", maxWidth: "300px" }}
+        >
+          {displayText}
+        </div>
+      )}
     </div>
   );
 };
 
 // Expandable player name component
-const ExpandablePlayerName: React.FC<{ 
-  playerName: string; 
+const ExpandablePlayerName: React.FC<{
+  playerName: string;
   className?: string;
   href?: string;
-}> = ({ playerName, className = "", href }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-  
+  maxWidth?: string; // e.g., "100px"
+}> = ({ playerName, className = "", href, maxWidth = "100px" }) => {
+  const [hovered, setHovered] = React.useState(false);
+
   const content = (
-    <span 
-      className={`font-medium text-xs lg:text-sm text-gold hover:text-purple hover:underline cursor-pointer truncate transition-all duration-200 ${className} ${
-        isExpanded 
-          ? 'overflow-visible whitespace-normal bg-white shadow-lg rounded px-2 py-1 z-10 absolute min-w-max -top-1 -left-2' 
-          : ''
-      }`}
-      onMouseEnter={() => setIsExpanded(true)}
-      onMouseLeave={() => setIsExpanded(false)}
+    <span
+      className="truncate overflow-hidden whitespace-nowrap block font-medium text-xs lg:text-sm text-gold hover:text-purple hover:underline cursor-pointer"
+      style={{ maxWidth, cursor: "pointer" }}
       title={playerName}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
     >
       {playerName}
+      {hovered && (
+        <div
+          className="absolute left-1/2 -translate-x-1/2 -top-8 z-50 bg-white text-neutral-900 px-3 py-1 rounded shadow-lg border border-gold text-xs font-medium whitespace-normal"
+          style={{ minWidth: "max-content", maxWidth: "300px" }}
+        >
+          {playerName}
+        </div>
+      )}
     </span>
   );
 
   if (href) {
     return (
-      <div className="relative">
-        <a 
+      <div className="relative inline-block" style={{ maxWidth }}>
+        <a
           href={href}
           target="_blank"
           rel="noopener noreferrer"
@@ -73,7 +88,7 @@ const ExpandablePlayerName: React.FC<{
   }
 
   return (
-    <div className="relative">
+    <div className="relative inline-block" style={{ maxWidth }}>
       {content}
     </div>
   );
