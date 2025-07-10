@@ -102,16 +102,7 @@ const ExpandablePlayerName: React.FC<{
   );
 };
 
-// Fetch function for league data
-const fetchLeague = async (leagueId: string): Promise<League> => {
-  const { data, error } = await supabase
-    .from('leagues')
-    .select('*')
-    .eq('id', leagueId)
-    .single();
-  if (error || !data) throw new Error('League not found');
-  return data as League;
-};
+// Remove the fetchLeague function entirely
 
 const LeaguePage: React.FC = () => {
   const { leagueId } = useParams<{ leagueId: string }>()
