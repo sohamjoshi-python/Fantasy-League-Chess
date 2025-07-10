@@ -7,12 +7,6 @@ import { League, Team, Lineup, ChessPlayer } from '../types'
 import { Crown, Trophy, Calendar, Edit, Check, X, RefreshCw } from 'lucide-react'
 import { fetchLineupPlayerBreakdown } from '../lib/supabase';
 
-// Utility function to truncate long usernames
-const truncateUsername = (username: string, maxLength: number = 20) => {
-  if (username.length <= maxLength) return username;
-  return username.substring(0, maxLength - 3) + '...';
-};
-
 // Expandable username component
 const ExpandableUsername: React.FC<{ 
   username: string; 
