@@ -903,7 +903,7 @@ const LeaguePage: React.FC = () => {
                 <div className="mt-6">
                   <h3 className="text-base font-semibold mb-2 text-neutral-900">Other Players</h3>
                   <div className="space-y-2">
-                    {standings.slice(3).map((standing, index) => (
+                    {standings.slice(3).map((standing) => (
                       <div
                         key={standing.user_id}
                         className="flex items-center justify-between p-2 rounded bg-neutral-50 border border-neutral-200"
