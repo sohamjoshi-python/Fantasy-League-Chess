@@ -496,7 +496,7 @@ const JoinLeague: React.FC = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gold hover:bg-purple disabled:bg-neutral-400 text-white py-3 px-4 rounded-lg font-semibold shadow-lg transition-colors"
+              className="w-full bg-[#1e293b] hover:bg-gold disabled:bg-neutral-400 text-white py-3 px-4 rounded-lg font-semibold shadow-lg transition-colors"
             >
               {loading ? 'Creating...' : 'Create League'}
             </button>
@@ -555,7 +555,7 @@ const JoinLeague: React.FC = () => {
                   <button
                     onClick={() => joinPublicLeague(league)}
                     disabled={loading}
-                    className="w-full bg-gold hover:bg-purple disabled:bg-neutral-400 text-white py-2 px-4 rounded-lg font-medium text-sm lg:text-base shadow-lg transition-colors"
+                    className="w-full bg-[#1e293b] hover:bg-gold disabled:bg-neutral-400 text-white py-2 px-4 rounded-lg font-medium text-sm lg:text-base shadow-lg transition-colors"
                   >
                     {loading ? 'Joining...' : 'Join League'}
                   </button>
@@ -590,7 +590,7 @@ const JoinLeague: React.FC = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gold hover:bg-purple disabled:bg-neutral-400 text-white py-3 px-4 rounded-lg font-semibold shadow-lg transition-colors"
+              className="w-full bg-[#1e293b] hover:bg-gold disabled:bg-neutral-400 text-white py-3 px-4 rounded-lg font-semibold shadow-lg transition-colors"
             >
               {loading ? 'Joining...' : 'Join League'}
             </button>

@@ -78,7 +78,7 @@ const Navbar: React.FC = () => {
                     setIsSignUp(false)
                     setShowAuthModal(true)
                   }}
-                  className="flex items-center space-x-1 bg-gold hover:bg-purple text-white px-4 py-2 rounded-md text-sm font-bold shadow-lg transition-colors"
+                  className="flex items-center space-x-1 bg-[#1e293b] hover:bg-gold text-white px-4 py-2 rounded-md text-sm font-bold shadow-lg transition-colors"
                 >
                   <LogIn className="h-4 w-4" />
                   <span>Sign In</span>
@@ -227,7 +227,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isSignUp, onClose, onToggleMode }
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-gold hover:bg-purple disabled:bg-neutral-400 text-white py-2 px-4 rounded-md font-medium shadow-lg transition-colors"
+          className="w-full bg-[#1e293b] hover:bg-gold disabled:bg-neutral-400 text-white py-2 px-4 rounded-md font-medium shadow-lg transition-colors"
         >
           {loading ? 'Loading...' : (isSignUp ? 'Sign Up' : 'Sign In')}
         </button>

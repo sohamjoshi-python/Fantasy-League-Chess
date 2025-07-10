@@ -218,7 +218,7 @@ const Dashboard: React.FC = () => {
             </p>
             <Link
               to="/join-league"
-              className="inline-flex items-center space-x-2 bg-gold hover:bg-purple text-white px-4 lg:px-6 py-3 rounded-lg font-semibold transition-colors shadow-lg"
+              className="inline-flex items-center space-x-2 bg-[#1e293b] hover:bg-gold text-white px-4 lg:px-6 py-3 rounded-lg font-semibold transition-colors shadow-lg"
             >
               <Plus className="h-5 w-5" />
               <span>Join a League</span>
@@ -283,7 +283,7 @@ const Dashboard: React.FC = () => {
                   {currentLeague && (
                     <Link
                       to={`/league/${currentLeague.id}`}
-                      className="bg-gold hover:bg-purple text-white px-4 py-2 rounded-lg shadow-lg transition-colors"
+                      className="bg-[#1e293b] hover:bg-gold text-white px-4 py-2 rounded-lg shadow-lg transition-colors"
                     >
                       Set Lineup
                     </Link>
@@ -357,7 +357,7 @@ const Dashboard: React.FC = () => {
                 href="https://www.chess.com/tournament/live/titled-tuesdays"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center space-x-2 bg-gold hover:bg-purple text-white px-4 py-2 rounded-lg transition-colors shadow-lg"
+                className="flex items-center space-x-2 bg-[#1e293b] hover:bg-gold text-white px-4 py-2 rounded-lg transition-colors shadow-lg"
               >
                 <ExternalLink className="h-4 w-4" />
                 <span>Watch Live</span>
@@ -408,7 +408,7 @@ const Dashboard: React.FC = () => {
                 </div>
                 <Link
                   to={`/league/${league.league_id}`}
-                  className="bg-gold hover:bg-purple text-white px-4 py-2 rounded-lg font-semibold transition-colors shadow-lg"
+                  className="bg-[#1e293b] hover:bg-gold text-white px-4 py-2 rounded-lg font-semibold transition-colors shadow-lg"
                 >
                   View League
                 </Link>

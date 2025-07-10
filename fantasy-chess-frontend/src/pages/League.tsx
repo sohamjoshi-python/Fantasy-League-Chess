@@ -1025,7 +1025,7 @@ const LeaguePage: React.FC = () => {
                     type="button"
                     onClick={saveLineup}
                     disabled={selectedLineupPlayers.length !== 5}
-                    className="flex items-center space-x-1 bg-gold hover:bg-purple disabled:bg-neutral-400 text-white px-3 lg:px-4 py-2 rounded-lg text-sm lg:text-base shadow-lg transition-colors"
+                    className="flex items-center space-x-1 bg-[#1e293b] hover:bg-gold disabled:bg-neutral-400 text-white px-3 lg:px-4 py-2 rounded-lg text-sm lg:text-base shadow-lg transition-colors"
                   >
                     <Check className="h-4 w-4" />
                     <span>Save Lineup</span>
@@ -1117,7 +1117,7 @@ const LeaguePage: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleStartDraft}
-                  className="mb-4 px-6 py-2 bg-gold hover:bg-purple text-white rounded-lg font-semibold shadow-lg transition-colors"
+                  className="mb-4 px-6 py-2 bg-[#1e293b] hover:bg-gold text-white rounded-lg font-semibold shadow-lg transition-colors"
                   disabled={loading}
                 >
                   Start Draft

@@ -88,7 +88,7 @@ const Profile: React.FC = () => {
         <button
           type="submit"
           disabled={saving}
-          className="w-full bg-gold hover:bg-purple text-white py-2 px-4 rounded-md font-semibold text-sm lg:text-base shadow-lg transition-colors"
+          className="w-full bg-[#1e293b] hover:bg-gold text-white py-2 px-4 rounded-md font-semibold text-sm lg:text-base shadow-lg transition-colors"
         >
           {saving ? 'Saving...' : 'Save Changes'}
         </button>
