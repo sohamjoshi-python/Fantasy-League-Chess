@@ -115,12 +115,15 @@ const LeaguePage: React.FC = () => {
     data: league,
     isLoading: leagueLoading,
     error: leagueError,
-    refetch: refetchLeague
-  } = useQuery<League>(['league', leagueId], () => fetchLeague(leagueId!), {
-    enabled: !!leagueId,
-    staleTime: 1000 * 60 * 10, // 10 minutes
-    cacheTime: 1000 * 60 * 60, // 1 hour
-  });
+  } = useQuery<League | undefined>(
+    ['league', leagueId],
+    () => (leagueId ? fetchLeague(leagueId) : undefined),
+    {
+      enabled: !!leagueId,
+      staleTime: 1000 * 60 * 10, // 10 minutes
+      cacheTime: 1000 * 60 * 60, // 1 hour
+    }
+  );
 
   // TODO: Refactor other fetches (team, players, standings, etc.) to use React Query
 
