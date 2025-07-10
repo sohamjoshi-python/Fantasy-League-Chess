@@ -7,6 +7,12 @@ import { League, Team, Lineup, ChessPlayer } from '../types'
 import { Crown, Trophy, Calendar, Edit, Check, X, RefreshCw } from 'lucide-react'
 import { fetchLineupPlayerBreakdown } from '../lib/supabase';
 
+// Utility function to truncate long usernames
+const truncateUsername = (username: string, maxLength: number = 20) => {
+  if (username.length <= maxLength) return username;
+  return username.substring(0, maxLength - 3) + '...';
+};
+
 const LeaguePage: React.FC = () => {
   const { leagueId } = useParams<{ leagueId: string }>()
   const { user } = useAuth()
@@ -737,20 +743,23 @@ const LeaguePage: React.FC = () => {
                 }`}
                 onClick={() => handleUserClick(standing)}
               >
-                <div className="flex items-center space-x-3">
-                  <div className={`w-6 h-6 lg:w-8 lg:h-8 rounded-full flex items-center justify-center text-xs lg:text-sm font-bold ${
+                <div className="flex items-center space-x-3 min-w-0 flex-1">
+                  <div className={`w-6 h-6 lg:w-8 lg:h-8 rounded-full flex items-center justify-center text-xs lg:text-sm font-bold flex-shrink-0 ${
                     index < 3 ? 'bg-gold text-white' : 'bg-neutral-300 text-neutral-700'
                   }`}>
                     {standing.rank}
                   </div>
-                  <div>
-                    <p className="font-medium text-sm lg:text-base text-neutral-900">
-                      {standing.display_name || standing.user_email}
+                  <div className="min-w-0 flex-1">
+                    <p 
+                      className="font-medium text-sm lg:text-base text-neutral-900 truncate"
+                      title={standing.display_name || standing.user_email}
+                    >
+                      {truncateUsername(standing.display_name || standing.user_email, 25)}
                       {standing.user_id === user?.id && ' (You)'}
                     </p>
                   </div>
                 </div>
-                <div className="text-right">
+                <div className="text-right flex-shrink-0 ml-2">
                   <p className="font-semibold text-sm lg:text-base text-neutral-900">{standing.total_points} points</p>
                 </div>
               </div>
@@ -774,8 +783,9 @@ const LeaguePage: React.FC = () => {
                       target="_blank"
                       rel="noopener noreferrer"
                       className="font-medium text-xs lg:text-sm text-gold hover:text-purple hover:underline cursor-pointer"
+                      title={player.name}
                     >
-                      {player.name}
+                      {truncateUsername(player.name)}
                     </a>
                     <div className="text-xs text-neutral-600">ELO: {player.elo}</div>
                     {player.accuracy !== undefined && player.accuracy !== null && (
@@ -824,7 +834,7 @@ const LeaguePage: React.FC = () => {
                           : 'border-neutral-200 hover:border-gold'
                       }`}
                     >
-                      <div className="font-medium text-sm lg:text-base text-neutral-900">{player.name}</div>
+                      <div className="font-medium text-sm lg:text-base text-neutral-900">{truncateUsername(player.name)}</div>
                       <div className="text-xs lg:text-sm text-neutral-600">ELO: {player.elo}</div>
                     </button>
                   ))}
@@ -853,7 +863,7 @@ const LeaguePage: React.FC = () => {
                 </div>
               </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                 {lineupPlayers.map((player) => (
                   <div key={player.id} className="bg-neutral-50 rounded-lg p-3 text-center border border-gold">
                     <a 
@@ -861,8 +871,9 @@ const LeaguePage: React.FC = () => {
                       target="_blank"
                       rel="noopener noreferrer"
                       className="font-medium text-xs lg:text-sm text-gold hover:text-purple hover:underline cursor-pointer"
+                      title={player.name}
                     >
-                      {player.name}
+                      {truncateUsername(player.name)}
                     </a>
                     <div className="text-xs text-neutral-600">ELO: {player.elo}</div>
                   </div>
@@ -903,7 +914,7 @@ const LeaguePage: React.FC = () => {
                 <tbody>
                   {playerBreakdown.map((row) => (
                     <tr key={row.player_id || row.player_name}>
-                      <td className="px-2 py-1 text-neutral-700">{row.player_name}</td>
+                      <td className="px-2 py-1 text-neutral-700">{truncateUsername(row.player_name)}</td>
                       <td className="px-2 py-1 text-right text-neutral-700">{Number(row.player_points).toFixed(2)}</td>
                     </tr>
                   ))}
@@ -999,7 +1010,7 @@ const LeaguePage: React.FC = () => {
                                   className="text-gold hover:text-purple hover:underline"
                                   onClick={(e) => e.stopPropagation()}
                                 >
-                                  {player.name}
+                                  {truncateUsername(player.name)}
                                 </a>
                               </div>
                               <div className="text-xs lg:text-sm text-neutral-600">ELO: {player.elo}</div>
@@ -1018,7 +1029,7 @@ const LeaguePage: React.FC = () => {
                           
                           return (
                             <p className="text-neutral-600 text-sm lg:text-base">
-                              Waiting for {displayName} to draft...
+                              Waiting for {truncateUsername(displayName, 25)} to draft...
                             </p>
                           );
                         })()
@@ -1038,8 +1049,11 @@ const LeaguePage: React.FC = () => {
           <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border-2 border-gold">
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-neutral-900">
-                  {selectedUser.display_name || selectedUser.user_email}
+                <h2 
+                  className="text-xl font-bold text-neutral-900 truncate"
+                  title={selectedUser.display_name || selectedUser.user_email}
+                >
+                  {truncateUsername(selectedUser.display_name || selectedUser.user_email, 30)}
                   {selectedUser.user_id === user?.id && ' (You)'}
                 </h2>
                 <button
@@ -1066,7 +1080,7 @@ const LeaguePage: React.FC = () => {
                           rel="noopener noreferrer"
                           className="font-medium text-sm text-gold hover:text-purple hover:underline cursor-pointer"
                         >
-                          {player.name}
+                          {truncateUsername(player.name)}
                         </a>
                         <div className="text-xs text-neutral-600">ELO: {player.elo}</div>
                         {player.accuracy !== undefined && player.accuracy !== null && (
@@ -1093,7 +1107,7 @@ const LeaguePage: React.FC = () => {
                           rel="noopener noreferrer"
                           className="font-medium text-sm text-gold hover:text-purple hover:underline cursor-pointer"
                         >
-                          {player.name}
+                          {truncateUsername(player.name)}
                         </a>
                         <div className="text-xs text-neutral-600">ELO: {player.elo}</div>
                       </div>
