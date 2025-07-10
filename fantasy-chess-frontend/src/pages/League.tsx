@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase'
 import { League, Team, Lineup, ChessPlayer } from '../types'
 import { Crown, Trophy, Calendar, Edit, Check, X, RefreshCw } from 'lucide-react'
 import { fetchLineupPlayerBreakdown } from '../lib/supabase';
+import { useQuery } from '@tanstack/react-query';
 
 // Expandable username component
 const ExpandableUsername: React.FC<{
@@ -94,10 +95,35 @@ const ExpandablePlayerName: React.FC<{
   );
 };
 
+// Fetch function for league data
+const fetchLeague = async (leagueId: string): Promise<League> => {
+  const { data, error } = await supabase
+    .from('leagues')
+    .select('*')
+    .eq('id', leagueId)
+    .single();
+  if (error || !data) throw new Error('League not found');
+  return data as League;
+};
+
 const LeaguePage: React.FC = () => {
   const { leagueId } = useParams<{ leagueId: string }>()
   const { user } = useAuth()
-  const [league, setLeague] = useState<League | null>(null)
+
+  // React Query for league data
+  const {
+    data: league,
+    isLoading: leagueLoading,
+    error: leagueError,
+    refetch: refetchLeague
+  } = useQuery<League>(['league', leagueId], () => fetchLeague(leagueId!), {
+    enabled: !!leagueId,
+    staleTime: 1000 * 60 * 10, // 10 minutes
+    cacheTime: 1000 * 60 * 60, // 1 hour
+  });
+
+  // TODO: Refactor other fetches (team, players, standings, etc.) to use React Query
+
   const [userTeam, setUserTeam] = useState<Team | null>(null)
   const [teamPlayers, setTeamPlayers] = useState<ChessPlayer[]>([])
   const [availablePlayers, setAvailablePlayers] = useState<ChessPlayer[]>([])
@@ -112,11 +138,11 @@ const LeaguePage: React.FC = () => {
   const [selectedLineupPlayers, setSelectedLineupPlayers] = useState<string[]>([])
 
   // Helper: is current user the league owner?
-  const isOwner = user && league && user.id === league.creator_id
+  const isOwner = user && league && user.id === league?.creator_id;
   // Helper: is draft started?
-  const draftStarted = !!league?.draft_started
+  const draftStarted = !!league?.draft_started;
   // Helper: is it before league start date?
-  const beforeStartDate = league && new Date() < new Date(league.start_date)
+  const beforeStartDate = league && new Date() < new Date(league?.start_date);
 
   const [userMap, setUserMap] = useState<{ [id: string]: string }>({})
   const [search, setSearch] = useState('')
@@ -143,7 +169,7 @@ const LeaguePage: React.FC = () => {
         .from('lineups')
         .select('week_start_date')
         .eq('user_id', user.id)
-        .eq('league_id', league.id)
+        .eq('league_id', league?.id)
         .gt('total_points', 0)
         .order('week_start_date', { ascending: true });
       if (error) {
@@ -173,7 +199,7 @@ const LeaguePage: React.FC = () => {
       setBreakdownLoading(true);
       setBreakdownError('');
       try {
-        const data = await fetchLineupPlayerBreakdown(user.id, league.id, selectedWeek.replace(/\./g, '-'));
+        const data = await fetchLineupPlayerBreakdown(user.id, league?.id, selectedWeek.replace(/\./g, '-'));
         setPlayerBreakdown(data);
       } catch (e: any) {
         setBreakdownError('Could not load point breakdown');
@@ -188,8 +214,8 @@ const LeaguePage: React.FC = () => {
     async function maybeProcessPayout() {
       if (
         league &&
-        new Date(league.end_date) < new Date() &&
-        !league.payout_processed
+        new Date(league?.end_date) < new Date() &&
+        !league?.payout_processed
       ) {
         // Call the payout function
         await supabase.rpc('process_league_payouts');
@@ -225,7 +251,7 @@ const LeaguePage: React.FC = () => {
         return
       }
 
-      setLeague(leagueData)
+      // setLeague(leagueData) // This line is removed as league is now managed by React Query
       // Combine all relevant user IDs
       const allUserIds = Array.from(new Set([
         ...(leagueData.member_ids || []),
@@ -389,7 +415,7 @@ const LeaguePage: React.FC = () => {
       if (!team) {
         const { data: newTeam, error: teamError } = await supabase
           .from('teams')
-          .insert({ user_id: user.id, league_id: league.id, player_ids: [] })
+          .insert({ user_id: user.id, league_id: league?.id, player_ids: [] })
           .select()
           .single()
         if (teamError) throw teamError
@@ -435,7 +461,7 @@ const LeaguePage: React.FC = () => {
         .from('lineups')
         .upsert({
           user_id: user.id,
-          league_id: league.id,
+          league_id: league?.id,
           week_start_date: currentWeek,
           player_ids: selectedLineupPlayers,
           total_points: 0
@@ -552,8 +578,8 @@ const LeaguePage: React.FC = () => {
           draft_order: updatedDraftOrder,
           current_draft_turn: 0
         }
-        setLeague(updatedLeague)
-        fetchUserMap(updatedMemberIds)
+        // setLeague(updatedLeague) // This line is removed as league is now managed by React Query
+        // fetchUserMap(updatedMemberIds) // This line is removed as league is now managed by React Query
       }
       
 
@@ -702,8 +728,8 @@ const LeaguePage: React.FC = () => {
     async function fetchPayoutAndWinner() {
       if (
         league &&
-        new Date(league.end_date) < new Date() &&
-        league.payout_processed
+        new Date(league?.end_date) < new Date() &&
+        league?.payout_processed
       ) {
         const { data: payoutData } = await supabase
           .from('payouts')
@@ -736,7 +762,7 @@ const LeaguePage: React.FC = () => {
     fetchPayoutAndWinner();
   }, [league, userMap]);
 
-  if (loading) {
+  if (leagueLoading) {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="text-xl">Loading...</div>
@@ -744,10 +770,10 @@ const LeaguePage: React.FC = () => {
     )
   }
 
-  if (error || !league) {
+  if (leagueError || !league) {
     return (
       <div className="text-center py-16">
-        <div className="text-red-600 text-xl">{error || 'League not found'}</div>
+        <div className="text-red-600 text-xl">{leagueError?.message || 'League not found'}</div>
       </div>
     )
   }
