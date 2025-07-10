@@ -13,6 +13,9 @@ export default {
         'neutral-100': '#F3F4F6', // Light neutral gray
         'neutral-500': '#6B7280', // Medium neutral gray
         'neutral-900': '#1F2937', // Dark neutral gray
+        gold: '#D4AF37', // Pawn Royale gold
+        purple: '#8B5CF6', // Pawn Royale purple
+        slate: '#64748B', // Pawn Royale slate
       },
     },
   },
