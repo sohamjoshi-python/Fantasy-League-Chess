@@ -6,7 +6,14 @@ import { supabase } from '../lib/supabase'
 import { League, Team, Lineup, ChessPlayer } from '../types'
 import { Crown, Trophy, Calendar, Edit, Check, X, RefreshCw } from 'lucide-react'
 import { fetchLineupPlayerBreakdown } from '../lib/supabase';
-import { useQuery } from '@tanstack/react-query';
+// Remove: import { useQuery } from '@tanstack/react-query';
+// Remove: fetchLeague function
+// Remove: all useQuery calls and destructuring
+// Restore: const [league, setLeague] = useState<League | null>(null)
+// Restore: const [loading, setLoading] = useState(true)
+// Restore: const [error, setError] = useState('')
+// Restore: useEffect(() => { if (leagueId && user) { loadLeagueData() } }, [leagueId, user])
+// Restore: all setLeague, league, loading, and error usages
 
 // Expandable username component
 const ExpandableUsername: React.FC<{
@@ -111,22 +118,23 @@ const LeaguePage: React.FC = () => {
   const { user } = useAuth()
 
   // React Query for league data
-  const {
-    data: league,
-    isLoading: leagueLoading,
-    error: leagueError,
-  } = useQuery<League | undefined>(
-    ['league', leagueId],
-    () => (leagueId ? fetchLeague(leagueId) : undefined),
-    {
-      enabled: !!leagueId,
-      staleTime: 1000 * 60 * 10, // 10 minutes
-      cacheTime: 1000 * 60 * 60, // 1 hour
-    }
-  );
+  // Remove: const {
+  // Remove:   data: league,
+  // Remove:   isLoading: leagueLoading,
+  // Remove:   error: leagueError,
+  // Remove: } = useQuery<League | undefined>(
+  // Remove:   ['league', leagueId],
+  // Remove:   () => (leagueId ? fetchLeague(leagueId) : undefined),
+  // Remove:   {
+  // Remove:     enabled: !!leagueId,
+  // Remove:     staleTime: 1000 * 60 * 10, // 10 minutes
+  // Remove:     cacheTime: 1000 * 60 * 60, // 1 hour
+  // Remove:   }
+  // Remove: );
 
   // TODO: Refactor other fetches (team, players, standings, etc.) to use React Query
 
+  const [league, setLeague] = useState<League | null>(null)
   const [userTeam, setUserTeam] = useState<Team | null>(null)
   const [teamPlayers, setTeamPlayers] = useState<ChessPlayer[]>([])
   const [availablePlayers, setAvailablePlayers] = useState<ChessPlayer[]>([])
@@ -254,7 +262,7 @@ const LeaguePage: React.FC = () => {
         return
       }
 
-      // setLeague(leagueData) // This line is removed as league is now managed by React Query
+      setLeague(leagueData) // This line is removed as league is now managed by React Query
       // Combine all relevant user IDs
       const allUserIds = Array.from(new Set([
         ...(leagueData.member_ids || []),
@@ -405,7 +413,7 @@ const LeaguePage: React.FC = () => {
 
   const isUserTurn = () => {
     if (!league || !user) return false
-    return league.draft_order[league.current_draft_turn] === user.id
+    return league?.draft_order[league?.current_draft_turn] === user.id
   }
 
   const draftPlayer = async (playerId: string) => {
@@ -435,12 +443,12 @@ const LeaguePage: React.FC = () => {
       if (teamUpdateError) throw teamUpdateError
       
       // Update league draft state
-      const newDraftTurn = league.current_draft_turn + 1
-      const isDraftComplete = newDraftTurn >= league.member_ids.length * 10
+      const newDraftTurn = league?.current_draft_turn + 1
+      const isDraftComplete = newDraftTurn >= league?.member_ids.length * 10
       const { error: leagueError } = await supabase
         .from('leagues')
         .update({ current_draft_turn: newDraftTurn, draft_completed: isDraftComplete })
-        .eq('id', league.id)
+        .eq('id', league?.id)
       if (leagueError) throw leagueError
       
 
@@ -499,11 +507,11 @@ const LeaguePage: React.FC = () => {
   const fixDraftOrder = async () => {
     if (!league) return
     try {
-      const fullDraftOrder = generateSnakeDraftOrder(league.member_ids, 10)
+      const fullDraftOrder = generateSnakeDraftOrder(league?.member_ids, 10)
       await supabase.from('leagues').update({ 
         draft_order: fullDraftOrder,
         current_draft_turn: 0
-      }).eq('id', league.id)
+      }).eq('id', league?.id)
       await loadLeagueData()
     } catch (err) {
       console.error('Failed to fix draft order:', err)
@@ -521,7 +529,7 @@ const LeaguePage: React.FC = () => {
       setLoading(true)
       
       // Check if user is already a member
-      if (league.member_ids && league.member_ids.includes(user.id)) {
+      if (league?.member_ids && league?.member_ids.includes(user.id)) {
         return
       }
       
@@ -538,7 +546,7 @@ const LeaguePage: React.FC = () => {
         
       }
       
-      const updatedMemberIds = [...(league.member_ids || []), user.id]
+      const updatedMemberIds = [...(league?.member_ids || []), user.id]
       const updatedDraftOrder = generateSnakeDraftOrder(updatedMemberIds, 10)
       
 
@@ -547,7 +555,7 @@ const LeaguePage: React.FC = () => {
       const { error: memberError } = await supabase
         .from('league_members')
         .insert({
-          league_id: league.id,
+          league_id: league?.id,
           user_id: user.id,
           display_name: displayName,
           email: user.email
@@ -564,7 +572,7 @@ const LeaguePage: React.FC = () => {
         member_ids: updatedMemberIds,
         draft_order: updatedDraftOrder,
         current_draft_turn: 0
-      }).eq('id', league.id)
+      }).eq('id', league?.id)
       
       if (error) {
         console.error('Supabase update error:', error)
@@ -581,7 +589,7 @@ const LeaguePage: React.FC = () => {
           draft_order: updatedDraftOrder,
           current_draft_turn: 0
         }
-        // setLeague(updatedLeague) // This line is removed as league is now managed by React Query
+        setLeague(updatedLeague) // This line is removed as league is now managed by React Query
         // fetchUserMap(updatedMemberIds) // This line is removed as league is now managed by React Query
       }
       
@@ -603,13 +611,13 @@ const LeaguePage: React.FC = () => {
     setLoading(true)
     try {
       // Generate full snake draft order
-      const fullDraftOrder = generateSnakeDraftOrder(league.member_ids, 10)
+      const fullDraftOrder = generateSnakeDraftOrder(league?.member_ids, 10)
       await supabase.from('leagues').update({ 
         draft_started: true, 
         draft_start_time: new Date().toISOString(),
         draft_order: fullDraftOrder,
         current_draft_turn: 0
-      }).eq('id', league.id)
+      }).eq('id', league?.id)
       await loadLeagueData()
     } catch (err) {
       setError('Failed to start draft')
@@ -737,7 +745,7 @@ const LeaguePage: React.FC = () => {
         const { data: payoutData } = await supabase
           .from('payouts')
           .select('user_id, amount, processed_at')
-          .eq('league_id', league.id)
+          .eq('league_id', league?.id)
           .single();
         setPayout(payoutData);
         if (payoutData) {
@@ -750,7 +758,7 @@ const LeaguePage: React.FC = () => {
             const { data: member } = await supabase
               .from('league_members')
               .select('display_name')
-              .eq('league_id', league.id)
+              .eq('league_id', league?.id)
               .eq('user_id', payoutData.user_id)
               .single();
             displayName = member?.display_name || payoutData.user_id;
@@ -765,7 +773,7 @@ const LeaguePage: React.FC = () => {
     fetchPayoutAndWinner();
   }, [league, userMap]);
 
-  if (leagueLoading) {
+  if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="text-xl">Loading...</div>
@@ -773,10 +781,18 @@ const LeaguePage: React.FC = () => {
     )
   }
 
-  if (leagueError || !league) {
+  if (error) {
     return (
       <div className="text-center py-16">
-        <div className="text-red-600 text-xl">{leagueError?.message || 'League not found'}</div>
+        <div className="text-red-600 text-xl">{error}</div>
+      </div>
+    )
+  }
+
+  if (!league) {
+    return (
+      <div className="text-center py-16">
+        <div className="text-red-600 text-xl">League not found</div>
       </div>
     )
   }
@@ -787,8 +803,8 @@ const LeaguePage: React.FC = () => {
       <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6 mb-6 lg:mb-8 border-2 border-gold">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-4">
           <div className="flex items-center space-x-2">
-            <h1 className="text-2xl lg:text-3xl font-bold text-neutral-900 mb-2 lg:mb-0">{league.name}</h1>
-            {new Date(league.end_date) < new Date() && (
+            <h1 className="text-2xl lg:text-3xl font-bold text-neutral-900 mb-2 lg:mb-0">{league?.name}</h1>
+            {new Date(league?.end_date) < new Date() && (
               <span className="ml-2 px-2 py-1 bg-red-200 text-red-800 rounded text-xs font-bold">
                 League Ended
               </span>
@@ -799,19 +815,19 @@ const LeaguePage: React.FC = () => {
               <RefreshCw className="w-4 h-4 mr-1" /> Reload
             </button>
             <div className="text-xs lg:text-sm text-neutral-600">
-              {league.member_ids.length} members
+              {league?.member_ids.length} members
             </div>
             <div className="text-xs lg:text-sm text-neutral-600">
-              {league.buy_in} coins buy-in
+              {league?.buy_in} coins buy-in
             </div>
           </div>
         </div>
         
-        {league.description && (
-          <p className="text-neutral-600 mb-4 text-sm lg:text-base">{league.description}</p>
+        {league?.description && (
+          <p className="text-neutral-600 mb-4 text-sm lg:text-base">{league?.description}</p>
         )}
         {/* Winner and payout display */}
-        {new Date(league.end_date) < new Date() && league.payout_processed && payout && (
+        {new Date(league?.end_date) < new Date() && league?.payout_processed && payout && (
           <div className="bg-green-100 rounded-lg p-4 my-4 border border-green-200">
             <h3 className="font-bold text-lg text-green-800">🏆 Winner: {winnerName}</h3>
             <p className="text-green-700">Prize: {payout.amount} coins</p>
@@ -822,19 +838,19 @@ const LeaguePage: React.FC = () => {
           <div className="flex items-center space-x-2">
             <Calendar className="h-4 w-4 lg:h-5 lg:w-5 text-gold" />
             <span className="text-xs lg:text-sm text-neutral-600">
-              Ends: {new Date(league.end_date).toLocaleDateString()}
+              Ends: {new Date(league?.end_date).toLocaleDateString()}
             </span>
           </div>
           <div className="flex items-center space-x-2">
             <Trophy className="h-4 w-4 lg:h-5 lg:w-5 text-gold" />
             <span className="text-xs lg:text-sm text-neutral-600">
-              Join Code: {league.join_code}
+              Join Code: {league?.join_code}
             </span>
           </div>
           <div className="flex items-center space-x-2">
             <Crown className="h-4 w-4 lg:h-5 lg:w-5 text-gold" />
             <span className="text-xs lg:text-sm text-neutral-600">
-              Draft: {league.draft_completed ? 'Completed' : 'In Progress'}
+              Draft: {league?.draft_completed ? 'Completed' : 'In Progress'}
             </span>
           </div>
         </div>
