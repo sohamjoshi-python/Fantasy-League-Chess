@@ -1,9 +1,10 @@
-import React, { useState } from 'react'
-import ReactDOM from 'react-dom'
+import * as React from 'react'
+import * as ReactDOM from 'react-dom'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { LogIn, LogOut, UserPlus, HelpCircle } from 'lucide-react'
-import logo from '../assets/pawn-royale-logo.png'
+import logo from '../assets/pawn-royale-logo.png'; // eslint-disable-line @typescript-eslint/no-var-requires
 
 const Navbar: React.FC = () => {
   const { user, signOut } = useAuth()
@@ -111,13 +112,13 @@ const Navbar: React.FC = () => {
   )
 }
 
-interface AuthModalProps {
-  isSignUp: boolean
-  onClose: () => void
-  onToggleMode: () => void
-}
+type AuthModalProps = {
+  isSignUp: boolean;
+  onClose: () => void;
+  onToggleMode: () => void;
+};
 
-const AuthModal: React.FC<AuthModalProps> = ({ isSignUp, onClose, onToggleMode }) => {
+const AuthModal: React.FC<AuthModalProps> = ({ isSignUp, onClose, onToggleMode }: AuthModalProps) => {
   const { signIn, signUp } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -172,7 +173,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ isSignUp, onClose, onToggleMode }
       </h2>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
           <label htmlFor="email" className="block text-sm font-medium text-neutral-900 mb-1">
             Email
           </label>
@@ -181,13 +181,13 @@ const AuthModal: React.FC<AuthModalProps> = ({ isSignUp, onClose, onToggleMode }
             id="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            required\n
+            required
             className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-neutral-900 placeholder-neutral-500"
             placeholder="Enter your email"
           />
         </div>
         <div>
-          <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="password" className="block text-sm font-medium text-neutral-900 mb-1">
             Password
           </label>
           <input
@@ -195,14 +195,14 @@ const AuthModal: React.FC<AuthModalProps> = ({ isSignUp, onClose, onToggleMode }
             id="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            required\n
+            required
             className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-neutral-900 placeholder-neutral-500"
             placeholder="Enter your password"
           />
         </div>
         {isSignUp && (
           <div>
-            <label htmlFor="displayName" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="displayName" className="block text-sm font-medium text-neutral-900 mb-1">
               Display Name
             </label>
             <input
@@ -210,7 +210,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isSignUp, onClose, onToggleMode }
               id="displayName"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
-              required\n
+              required
               className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-neutral-900 placeholder-neutral-500"
               placeholder="Enter your display name"
             />
@@ -235,7 +235,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ isSignUp, onClose, onToggleMode }
       <div className="mt-4 text-center">
         <button
           onClick={onToggleMode}
-          className="text-blue-600 hover:text-blue-800 text-sm"
           className="text-neutral-500 hover:text-neutral-900 text-sm"
         >
           {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}

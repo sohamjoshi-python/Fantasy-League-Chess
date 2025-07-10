@@ -206,7 +206,6 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="w-full max-w-6xl mx-auto">
-      <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-6 lg:mb-8">Dashboard</h1>
       <h1 className="text-2xl lg:text-3xl font-bold text-neutral-900 mb-6 lg:mb-8">Dashboard</h1>
       {activeLeagues.length === 0 ? (
         <div className="text-center py-12 lg:py-16">
@@ -298,7 +297,6 @@ const Dashboard: React.FC = () => {
               <h3 className="text-xl font-bold">Point Breakdown</h3>
               {availableWeeks.length > 0 && (
                 <select
-                  className="ml-2 border rounded px-2 py-1 text-sm"
                   className="ml-2 border border-neutral-300 rounded px-2 py-1 text-sm text-neutral-900"
                   value={selectedWeek || ''}
                   onChange={e => setSelectedWeek(e.target.value)}
@@ -306,7 +304,7 @@ const Dashboard: React.FC = () => {
                   {availableWeeks.map(week => (
                     <option key={week} value={week}>{week}</option>
                   ))}
-                </select> {/* Update select styling */}
+                </select>
               )}
               <span className="text-xs text-neutral-500">(Select week)</span>
             </div>
@@ -335,7 +333,7 @@ const Dashboard: React.FC = () => {
                   </tr>
                 </tbody>
               </table>
-            ) : ( {/* Update text color */}
+            ) : (
               <div>No breakdown available for this week.</div>
             )}
           </div>
