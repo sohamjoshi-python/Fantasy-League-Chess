@@ -103,9 +103,4 @@ export interface LeagueStanding {
   total_points: number
   rank: number
   team_size: number
-}
-
-declare module '*.png' {
-  const value: string;
-  export default value;
 } 

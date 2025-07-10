@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { LogIn, LogOut, UserPlus, HelpCircle } from 'lucide-react'
-import logo from '../assets/pawn-royale-logo.png'; // eslint-disable-line @typescript-eslint/no-var-requires
+import logo from '../assets/pawn-royale-logo.png'
 
 const Navbar: React.FC = () => {
   const { user, signOut } = useAuth()
@@ -35,25 +35,25 @@ const Navbar: React.FC = () => {
               <>
                 <Link
                   to="/dashboard"
- className="text-neutral-900 hover:text-accent hover:underline hover:underline-offset-4 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                  className="text-neutral-900 hover:text-accent hover:underline hover:underline-offset-4 px-3 py-2 rounded-md text-sm font-medium transition-colors"
                 >
                   Dashboard
                 </Link>
                 <Link
                   to="/join-league"
- className="text-neutral-900 hover:text-accent hover:underline hover:underline-offset-4 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                  className="text-neutral-900 hover:text-accent hover:underline hover:underline-offset-4 px-3 py-2 rounded-md text-sm font-medium transition-colors"
                 >
                   Join League
                 </Link>
                 <Link
                   to="/profile"
- className="text-neutral-900 hover:text-accent hover:underline hover:underline-offset-4 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                  className="text-neutral-900 hover:text-accent hover:underline hover:underline-offset-4 px-3 py-2 rounded-md text-sm font-medium transition-colors"
                 >
                   Profile
                 </Link>
                 <Link
                   to="/help"
- className="text-neutral-900 hover:text-accent hover:underline hover:underline-offset-4 px-3 py-2 rounded-md text-sm font-medium flex items-center transition-colors"
+                  className="text-neutral-900 hover:text-accent hover:underline hover:underline-offset-4 px-3 py-2 rounded-md text-sm font-medium flex items-center transition-colors"
                 >
                   <HelpCircle className="h-4 w-4 mr-1" />
                   Help
@@ -62,7 +62,7 @@ const Navbar: React.FC = () => {
                   <span className="text-sm text-neutral-900">{user.email}</span>
                   <button
                     onClick={handleSignOut}
- className="flex items-center space-x-1 text-neutral-900 hover:text-red-400 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                    className="flex items-center space-x-1 text-neutral-900 hover:text-red-400 px-3 py-2 rounded-md text-sm font-medium transition-colors"
                   >
                     <LogOut className="h-4 w-4" />
                     <span>Sign Out</span>
@@ -97,7 +97,6 @@ const Navbar: React.FC = () => {
         </div>
       </div>
 
-      {/* Auth Modal rendered via Portal */}
       {showAuthModal && typeof window !== 'undefined' && ReactDOM.createPortal(
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <AuthModal
@@ -136,7 +135,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ isSignUp, onClose, onToggleMode }
     try {
       if (isSignUp) {
         await signUp(email, password, displayName)
-        // Wait for Supabase to create the user session
         setTimeout(async () => {
           const { supabase } = await import('../lib/supabase')
           const { data: { user } } = await supabase.auth.getUser()
