@@ -13,6 +13,78 @@ const truncateUsername = (username: string, maxLength: number = 20) => {
   return username.substring(0, maxLength - 3) + '...';
 };
 
+// Expandable username component
+const ExpandableUsername: React.FC<{ 
+  username: string; 
+  isCurrentUser?: boolean;
+  className?: string;
+}> = ({ username, isCurrentUser = false, className = "" }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const displayText = username + (isCurrentUser ? ' (You)' : '');
+  
+  return (
+    <div className="relative">
+      <p 
+        className={`font-medium text-sm lg:text-base text-neutral-900 truncate cursor-help transition-all duration-200 ${className} ${
+          isExpanded 
+            ? 'overflow-visible whitespace-normal bg-white shadow-lg rounded px-2 py-1 z-10 absolute min-w-max -top-1 -left-2' 
+            : ''
+        }`}
+        onMouseEnter={() => setIsExpanded(true)}
+        onMouseLeave={() => setIsExpanded(false)}
+        title={username}
+      >
+        {displayText}
+      </p>
+    </div>
+  );
+};
+
+// Expandable player name component
+const ExpandablePlayerName: React.FC<{ 
+  playerName: string; 
+  className?: string;
+  href?: string;
+}> = ({ playerName, className = "", href }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  
+  const content = (
+    <span 
+      className={`font-medium text-xs lg:text-sm text-gold hover:text-purple hover:underline cursor-pointer truncate transition-all duration-200 ${className} ${
+        isExpanded 
+          ? 'overflow-visible whitespace-normal bg-white shadow-lg rounded px-2 py-1 z-10 absolute min-w-max -top-1 -left-2' 
+          : ''
+      }`}
+      onMouseEnter={() => setIsExpanded(true)}
+      onMouseLeave={() => setIsExpanded(false)}
+      title={playerName}
+    >
+      {playerName}
+    </span>
+  );
+
+  if (href) {
+    return (
+      <div className="relative">
+        <a 
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block"
+        >
+          {content}
+        </a>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative">
+      {content}
+    </div>
+  );
+};
+
 const LeaguePage: React.FC = () => {
   const { leagueId } = useParams<{ leagueId: string }>()
   const { user } = useAuth()
@@ -738,7 +810,7 @@ const LeaguePage: React.FC = () => {
             {standings.map((standing, index) => (
               <div
                 key={standing.user_id}
-                className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
+                className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors group ${
                   standing.user_id === user?.id ? 'bg-gold bg-opacity-10 border border-gold' : 'bg-neutral-50 hover:bg-neutral-100'
                 }`}
                 onClick={() => handleUserClick(standing)}
@@ -750,13 +822,10 @@ const LeaguePage: React.FC = () => {
                     {standing.rank}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p 
-                      className="font-medium text-sm lg:text-base text-neutral-900 truncate"
-                      title={standing.display_name || standing.user_email}
-                    >
-                      {truncateUsername(standing.display_name || standing.user_email, 25)}
-                      {standing.user_id === user?.id && ' (You)'}
-                    </p>
+                    <ExpandableUsername 
+                      username={standing.display_name || standing.user_email}
+                      isCurrentUser={standing.user_id === user?.id}
+                    />
                   </div>
                 </div>
                 <div className="text-right flex-shrink-0 ml-2">
@@ -778,15 +847,10 @@ const LeaguePage: React.FC = () => {
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                 {teamPlayers.map((player) => (
                   <div key={player.id} className="bg-neutral-50 rounded-lg p-3 text-center border border-gold">
-                    <a 
+                    <ExpandablePlayerName 
+                      playerName={player.name}
                       href={`https://www.chess.com/member/${player.name}/`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-medium text-xs lg:text-sm text-gold hover:text-purple hover:underline cursor-pointer"
-                      title={player.name}
-                    >
-                      {truncateUsername(player.name)}
-                    </a>
+                    />
                     <div className="text-xs text-neutral-600">ELO: {player.elo}</div>
                     {player.accuracy !== undefined && player.accuracy !== null && (
                       <div className="text-xs text-neutral-500">Accuracy: {player.accuracy.toFixed(2)}</div>
@@ -834,7 +898,9 @@ const LeaguePage: React.FC = () => {
                           : 'border-neutral-200 hover:border-gold'
                       }`}
                     >
-                      <div className="font-medium text-sm lg:text-base text-neutral-900">{truncateUsername(player.name)}</div>
+                      <div className="font-medium text-sm lg:text-base text-neutral-900">
+                        <ExpandablePlayerName playerName={player.name} />
+                      </div>
                       <div className="text-xs lg:text-sm text-neutral-600">ELO: {player.elo}</div>
                     </button>
                   ))}
@@ -866,15 +932,10 @@ const LeaguePage: React.FC = () => {
                               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                 {lineupPlayers.map((player) => (
                   <div key={player.id} className="bg-neutral-50 rounded-lg p-3 text-center border border-gold">
-                    <a 
+                    <ExpandablePlayerName 
+                      playerName={player.name}
                       href={`https://www.chess.com/member/${player.name}/`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-medium text-xs lg:text-sm text-gold hover:text-purple hover:underline cursor-pointer"
-                      title={player.name}
-                    >
-                      {truncateUsername(player.name)}
-                    </a>
+                    />
                     <div className="text-xs text-neutral-600">ELO: {player.elo}</div>
                   </div>
                 ))}
@@ -914,7 +975,9 @@ const LeaguePage: React.FC = () => {
                 <tbody>
                   {playerBreakdown.map((row) => (
                     <tr key={row.player_id || row.player_name}>
-                      <td className="px-2 py-1 text-neutral-700">{truncateUsername(row.player_name)}</td>
+                      <td className="px-2 py-1 text-neutral-700">
+                        <ExpandablePlayerName playerName={row.player_name} />
+                      </td>
                       <td className="px-2 py-1 text-right text-neutral-700">{Number(row.player_points).toFixed(2)}</td>
                     </tr>
                   ))}
@@ -1003,15 +1066,11 @@ const LeaguePage: React.FC = () => {
                               className="p-3 rounded-lg border border-neutral-200 hover:border-gold text-left w-full transition-colors"
                             >
                               <div className="font-semibold text-base lg:text-lg text-neutral-900">
-                                <a 
+                                <ExpandablePlayerName 
+                                  playerName={player.name}
                                   href={`https://www.chess.com/member/${player.name}/`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-gold hover:text-purple hover:underline"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  {truncateUsername(player.name)}
-                                </a>
+                                  className="text-base lg:text-lg"
+                                />
                               </div>
                               <div className="text-xs lg:text-sm text-neutral-600">ELO: {player.elo}</div>
                             </button>
@@ -1029,7 +1088,7 @@ const LeaguePage: React.FC = () => {
                           
                           return (
                             <p className="text-neutral-600 text-sm lg:text-base">
-                              Waiting for {truncateUsername(displayName, 25)} to draft...
+                              Waiting for <span className="inline-block"><ExpandableUsername username={displayName} /></span> to draft...
                             </p>
                           );
                         })()
@@ -1049,12 +1108,12 @@ const LeaguePage: React.FC = () => {
           <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border-2 border-gold">
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
-                <h2 
-                  className="text-xl font-bold text-neutral-900 truncate"
-                  title={selectedUser.display_name || selectedUser.user_email}
-                >
-                  {truncateUsername(selectedUser.display_name || selectedUser.user_email, 30)}
-                  {selectedUser.user_id === user?.id && ' (You)'}
+                <h2 className="text-xl font-bold text-neutral-900">
+                  <ExpandableUsername 
+                    username={selectedUser.display_name || selectedUser.user_email}
+                    isCurrentUser={selectedUser.user_id === user?.id}
+                    className="text-xl font-bold"
+                  />
                 </h2>
                 <button
                   type="button"
@@ -1074,14 +1133,11 @@ const LeaguePage: React.FC = () => {
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                     {selectedUserTeam.map((player) => (
                       <div key={player.id} className="bg-neutral-50 rounded-lg p-3 text-center border border-gold">
-                        <a 
+                        <ExpandablePlayerName 
+                          playerName={player.name}
                           href={`https://www.chess.com/member/${player.name}/`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="font-medium text-sm text-gold hover:text-purple hover:underline cursor-pointer"
-                        >
-                          {truncateUsername(player.name)}
-                        </a>
+                          className="text-sm"
+                        />
                         <div className="text-xs text-neutral-600">ELO: {player.elo}</div>
                         {player.accuracy !== undefined && player.accuracy !== null && (
                           <div className="text-xs text-neutral-500">Accuracy: {player.accuracy.toFixed(2)}</div>
@@ -1101,14 +1157,11 @@ const LeaguePage: React.FC = () => {
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                     {selectedUserLineup.map((player) => (
                       <div key={player.id} className="bg-gold bg-opacity-10 rounded-lg p-3 text-center border border-gold">
-                        <a 
+                        <ExpandablePlayerName 
+                          playerName={player.name}
                           href={`https://www.chess.com/member/${player.name}/`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="font-medium text-sm text-gold hover:text-purple hover:underline cursor-pointer"
-                        >
-                          {truncateUsername(player.name)}
-                        </a>
+                          className="text-sm"
+                        />
                         <div className="text-xs text-neutral-600">ELO: {player.elo}</div>
                       </div>
                     ))}
