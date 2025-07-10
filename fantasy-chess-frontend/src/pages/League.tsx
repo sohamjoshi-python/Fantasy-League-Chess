@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react'
+import * as React from 'react'
+import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
@@ -665,12 +666,12 @@ const LeaguePage: React.FC = () => {
   }
 
   return (
-    <div className="w-full max-w-6xl mx-auto">
+    <div className="w-full max-w-6xl mx-auto bg-white min-h-screen p-4 lg:p-6">
       {/* League Header */}
-      <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6 mb-6 lg:mb-8">
+      <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6 mb-6 lg:mb-8 border-2 border-gold">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-4">
           <div className="flex items-center space-x-2">
-            <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-2 lg:mb-0">{league.name}</h1>
+            <h1 className="text-2xl lg:text-3xl font-bold text-neutral-900 mb-2 lg:mb-0">{league.name}</h1>
             {new Date(league.end_date) < new Date() && (
               <span className="ml-2 px-2 py-1 bg-red-200 text-red-800 rounded text-xs font-bold">
                 League Ended
@@ -678,45 +679,45 @@ const LeaguePage: React.FC = () => {
             )}
           </div>
           <div className="flex items-center space-x-4">
-            <button type="button" onClick={handleReload} className="flex items-center px-3 py-1 bg-gray-100 rounded hover:bg-gray-200 text-gray-700 text-sm font-medium">
+            <button type="button" onClick={handleReload} className="flex items-center px-3 py-1 bg-neutral-100 rounded hover:bg-neutral-200 text-neutral-700 text-sm font-medium transition-colors">
               <RefreshCw className="w-4 h-4 mr-1" /> Reload
             </button>
-            <div className="text-xs lg:text-sm text-gray-600">
+            <div className="text-xs lg:text-sm text-neutral-600">
               {league.member_ids.length} members
             </div>
-            <div className="text-xs lg:text-sm text-gray-600">
+            <div className="text-xs lg:text-sm text-neutral-600">
               {league.buy_in} coins buy-in
             </div>
           </div>
         </div>
         
         {league.description && (
-          <p className="text-gray-600 mb-4 text-sm lg:text-base">{league.description}</p>
+          <p className="text-neutral-600 mb-4 text-sm lg:text-base">{league.description}</p>
         )}
         {/* Winner and payout display */}
         {new Date(league.end_date) < new Date() && league.payout_processed && payout && (
-          <div className="bg-green-100 rounded-lg p-4 my-4">
-            <h3 className="font-bold text-lg">🏆 Winner: {winnerName}</h3>
-            <p>Prize: {payout.amount} coins</p>
-            <p>Payout processed: {new Date(payout.processed_at).toLocaleString()}</p>
+          <div className="bg-green-100 rounded-lg p-4 my-4 border border-green-200">
+            <h3 className="font-bold text-lg text-green-800">🏆 Winner: {winnerName}</h3>
+            <p className="text-green-700">Prize: {payout.amount} coins</p>
+            <p className="text-green-700">Payout processed: {new Date(payout.processed_at).toLocaleString()}</p>
           </div>
         )}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="flex items-center space-x-2">
-            <Calendar className="h-4 w-4 lg:h-5 lg:w-5 text-gray-500" />
-            <span className="text-xs lg:text-sm text-gray-600">
+            <Calendar className="h-4 w-4 lg:h-5 lg:w-5 text-gold" />
+            <span className="text-xs lg:text-sm text-neutral-600">
               Ends: {new Date(league.end_date).toLocaleDateString()}
             </span>
           </div>
           <div className="flex items-center space-x-2">
-            <Trophy className="h-4 w-4 lg:h-5 lg:w-5 text-gray-500" />
-            <span className="text-xs lg:text-sm text-gray-600">
+            <Trophy className="h-4 w-4 lg:h-5 lg:w-5 text-gold" />
+            <span className="text-xs lg:text-sm text-neutral-600">
               Join Code: {league.join_code}
             </span>
           </div>
           <div className="flex items-center space-x-2">
-            <Crown className="h-4 w-4 lg:h-5 lg:w-5 text-gray-500" />
-            <span className="text-xs lg:text-sm text-gray-600">
+            <Crown className="h-4 w-4 lg:h-5 lg:w-5 text-gold" />
+            <span className="text-xs lg:text-sm text-neutral-600">
               Draft: {league.draft_completed ? 'Completed' : 'In Progress'}
             </span>
           </div>
@@ -725,32 +726,32 @@ const LeaguePage: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
         {/* Standings */}
-        <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6">
-          <h2 className="text-lg lg:text-xl font-bold mb-4 text-gray-900">Standings</h2>
+        <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6 border-2 border-gold">
+          <h2 className="text-lg lg:text-xl font-bold mb-4 text-neutral-900">Standings</h2>
           <div className="space-y-3">
             {standings.map((standing, index) => (
               <div
                 key={standing.user_id}
                 className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
-                  standing.user_id === user?.id ? 'bg-blue-50 border border-blue-200' : 'bg-gray-50 hover:bg-gray-100'
+                  standing.user_id === user?.id ? 'bg-gold bg-opacity-10 border border-gold' : 'bg-neutral-50 hover:bg-neutral-100'
                 }`}
                 onClick={() => handleUserClick(standing)}
               >
                 <div className="flex items-center space-x-3">
                   <div className={`w-6 h-6 lg:w-8 lg:h-8 rounded-full flex items-center justify-center text-xs lg:text-sm font-bold ${
-                    index < 3 ? 'bg-yellow-500 text-white' : 'bg-gray-300 text-gray-700'
+                    index < 3 ? 'bg-gold text-white' : 'bg-neutral-300 text-neutral-700'
                   }`}>
                     {standing.rank}
                   </div>
                   <div>
-                    <p className="font-medium text-sm lg:text-base text-gray-900">
+                    <p className="font-medium text-sm lg:text-base text-neutral-900">
                       {standing.display_name || standing.user_email}
                       {standing.user_id === user?.id && ' (You)'}
                     </p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="font-semibold text-sm lg:text-base text-gray-900">{standing.total_points} points</p>
+                  <p className="font-semibold text-sm lg:text-base text-neutral-900">{standing.total_points} points</p>
                 </div>
               </div>
             ))}
@@ -760,25 +761,25 @@ const LeaguePage: React.FC = () => {
         {/* Team Management */}
         <div className="space-y-4 lg:space-y-6">
           {/* Your Team */}
-          <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6">
-            <h3 className="text-lg lg:text-xl font-bold mb-4 text-gray-900">Your Team</h3>
+          <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6 border-2 border-gold">
+            <h3 className="text-lg lg:text-xl font-bold mb-4 text-neutral-900">Your Team</h3>
             {teamPlayers.length === 0 ? (
-              <div className="text-gray-500 text-sm">You haven't drafted any players yet.</div>
+              <div className="text-neutral-500 text-sm">You haven't drafted any players yet.</div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                 {teamPlayers.map((player) => (
-                  <div key={player.id} className="bg-gray-50 rounded-lg p-3 text-center">
+                  <div key={player.id} className="bg-neutral-50 rounded-lg p-3 text-center border border-gold">
                     <a 
                       href={`https://www.chess.com/member/${player.name}/`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="font-medium text-xs lg:text-sm text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                      className="font-medium text-xs lg:text-sm text-gold hover:text-purple hover:underline cursor-pointer"
                     >
                       {player.name}
                     </a>
-                    <div className="text-xs text-gray-600">ELO: {player.elo}</div>
+                    <div className="text-xs text-neutral-600">ELO: {player.elo}</div>
                     {player.accuracy !== undefined && player.accuracy !== null && (
-                      <div className="text-xs text-gray-500">Accuracy: {player.accuracy.toFixed(2)}</div>
+                      <div className="text-xs text-neutral-500">Accuracy: {player.accuracy.toFixed(2)}</div>
                     )}
                   </div>
                 ))}
@@ -787,14 +788,14 @@ const LeaguePage: React.FC = () => {
           </div>
 
           {/* Current Lineup */}
-          <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6">
+          <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6 border-2 border-gold">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg lg:text-xl font-bold text-gray-900">Current Lineup</h3>
+              <h3 className="text-lg lg:text-xl font-bold text-neutral-900">Current Lineup</h3>
               {league.draft_completed && !isEditingLineup && (
                 <button
                   type="button"
                   onClick={() => setIsEditingLineup(true)}
-                  className="flex items-center space-x-1 text-blue-600 hover:text-blue-800 text-sm lg:text-base"
+                  className="flex items-center space-x-1 text-gold hover:text-purple text-sm lg:text-base transition-colors"
                 >
                   <Edit className="h-4 w-4" />
                   <span>Edit</span>
@@ -804,7 +805,7 @@ const LeaguePage: React.FC = () => {
 
             {isEditingLineup ? (
               <div className="space-y-4">
-                <p className="text-xs lg:text-sm text-gray-600">Select 5 players for your lineup:</p>
+                <p className="text-xs lg:text-sm text-neutral-600">Select 5 players for your lineup:</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {teamPlayers.map((player) => (
                     <button
@@ -817,14 +818,14 @@ const LeaguePage: React.FC = () => {
                           setSelectedLineupPlayers([...selectedLineupPlayers, player.id])
                         }
                       }}
-                      className={`p-3 rounded-lg border-2 text-left ${
+                      className={`p-3 rounded-lg border-2 text-left transition-colors ${
                         selectedLineupPlayers.includes(player.id)
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-200 hover:border-gray-300'
+                          ? 'border-gold bg-gold bg-opacity-10'
+                          : 'border-neutral-200 hover:border-gold'
                       }`}
                     >
-                      <div className="font-medium text-sm lg:text-base text-gray-900">{player.name}</div>
-                      <div className="text-xs lg:text-sm text-gray-600">ELO: {player.elo}</div>
+                      <div className="font-medium text-sm lg:text-base text-neutral-900">{player.name}</div>
+                      <div className="text-xs lg:text-sm text-neutral-600">ELO: {player.elo}</div>
                     </button>
                   ))}
                 </div>
@@ -833,7 +834,7 @@ const LeaguePage: React.FC = () => {
                     type="button"
                     onClick={saveLineup}
                     disabled={selectedLineupPlayers.length !== 5}
-                    className="flex items-center space-x-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-3 lg:px-4 py-2 rounded-lg text-sm lg:text-base"
+                    className="flex items-center space-x-1 bg-gold hover:bg-purple disabled:bg-neutral-400 text-white px-3 lg:px-4 py-2 rounded-lg text-sm lg:text-base shadow-lg transition-colors"
                   >
                     <Check className="h-4 w-4" />
                     <span>Save Lineup</span>
@@ -844,7 +845,7 @@ const LeaguePage: React.FC = () => {
                       setIsEditingLineup(false)
                       setSelectedLineupPlayers(currentLineup?.player_ids || [])
                     }}
-                    className="flex items-center space-x-1 bg-gray-600 hover:bg-gray-700 text-white px-3 lg:px-4 py-2 rounded-lg text-sm lg:text-base"
+                    className="flex items-center space-x-1 bg-neutral-600 hover:bg-neutral-700 text-white px-3 lg:px-4 py-2 rounded-lg text-sm lg:text-base shadow-lg transition-colors"
                   >
                     <X className="h-4 w-4" />
                     <span>Cancel</span>
@@ -854,16 +855,16 @@ const LeaguePage: React.FC = () => {
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                 {lineupPlayers.map((player) => (
-                  <div key={player.id} className="bg-gray-50 rounded-lg p-3 text-center">
+                  <div key={player.id} className="bg-neutral-50 rounded-lg p-3 text-center border border-gold">
                     <a 
                       href={`https://www.chess.com/member/${player.name}/`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="font-medium text-xs lg:text-sm text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                      className="font-medium text-xs lg:text-sm text-gold hover:text-purple hover:underline cursor-pointer"
                     >
                       {player.name}
                     </a>
-                    <div className="text-xs text-gray-600">ELO: {player.elo}</div>
+                    <div className="text-xs text-neutral-600">ELO: {player.elo}</div>
                   </div>
                 ))}
               </div>
@@ -873,10 +874,10 @@ const LeaguePage: React.FC = () => {
           {/* Point Breakdown Table */}
           <div className="mt-6">
             <div className="mb-2 flex items-center space-x-2">
-              <h4 className="font-semibold">Point Breakdown</h4>
+              <h4 className="font-semibold text-neutral-900">Point Breakdown</h4>
               {availableWeeks.length > 0 && (
                 <select
-                  className="ml-2 border rounded px-2 py-1 text-sm"
+                  className="ml-2 border border-neutral-300 rounded px-2 py-1 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-gold"
                   value={selectedWeek || ''}
                   onChange={e => setSelectedWeek(e.target.value)}
                 >
@@ -885,49 +886,49 @@ const LeaguePage: React.FC = () => {
                   ))}
                 </select>
               )}
-              <span className="text-xs text-gray-500">(Select week)</span>
+              <span className="text-xs text-neutral-500">(Select week)</span>
             </div>
             {breakdownLoading ? (
-              <div>Loading breakdown...</div>
+              <div className="text-neutral-600">Loading breakdown...</div>
             ) : breakdownError ? (
               <div className="text-red-600">{breakdownError}</div>
             ) : playerBreakdown && playerBreakdown.length > 0 ? (
               <table className="min-w-full text-sm">
                 <thead>
                   <tr>
-                    <th className="text-left px-2 py-1">Player</th>
-                    <th className="text-right px-2 py-1">Points</th>
+                    <th className="text-left px-2 py-1 text-neutral-900">Player</th>
+                    <th className="text-right px-2 py-1 text-neutral-900">Points</th>
                   </tr>
                 </thead>
                 <tbody>
                   {playerBreakdown.map((row) => (
                     <tr key={row.player_id || row.player_name}>
-                      <td className="px-2 py-1">{row.player_name}</td>
-                      <td className="px-2 py-1 text-right">{Number(row.player_points).toFixed(2)}</td>
+                      <td className="px-2 py-1 text-neutral-700">{row.player_name}</td>
+                      <td className="px-2 py-1 text-right text-neutral-700">{Number(row.player_points).toFixed(2)}</td>
                     </tr>
                   ))}
-                  <tr className="font-bold border-t">
-                    <td className="px-2 py-1">TOTAL</td>
-                    <td className="px-2 py-1 text-right">{playerBreakdown.reduce((sum, p) => sum + Number(p.player_points), 0).toFixed(2)}</td>
+                  <tr className="font-bold border-t border-neutral-300">
+                    <td className="px-2 py-1 text-neutral-900">TOTAL</td>
+                    <td className="px-2 py-1 text-right text-neutral-900">{playerBreakdown.reduce((sum, p) => sum + Number(p.player_points), 0).toFixed(2)}</td>
                   </tr>
                 </tbody>
               </table>
             ) : (
-              <div>No breakdown available for this week.</div>
+              <div className="text-neutral-600">No breakdown available for this week.</div>
             )}
           </div>
 
           {/* Draft Section */}
 
           {!league.draft_completed && (
-            <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6">
-              <h3 className="text-lg lg:text-xl font-bold mb-4 text-gray-900">Draft</h3>
+            <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6 border-2 border-gold">
+              <h3 className="text-lg lg:text-xl font-bold mb-4 text-neutral-900">Draft</h3>
               {/* Show Start Draft button for owner if draft not started and before start date */}
               {isOwner && !draftStarted && beforeStartDate && (
                 <button
                   type="button"
                   onClick={handleStartDraft}
-                  className="mb-4 px-6 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition"
+                  className="mb-4 px-6 py-2 bg-gold hover:bg-purple text-white rounded-lg font-semibold shadow-lg transition-colors"
                   disabled={loading}
                 >
                   Start Draft
@@ -936,7 +937,7 @@ const LeaguePage: React.FC = () => {
               {/* Show message if draft not started */}
               {!draftStarted && (
                 <div className="text-center py-6 lg:py-8">
-                  <p className="text-gray-600 text-sm lg:text-base">
+                  <p className="text-neutral-600 text-sm lg:text-base">
                     The draft has not started yet. The league owner can start the draft at any time before the league start date.
                   </p>
                 </div>
@@ -952,7 +953,7 @@ const LeaguePage: React.FC = () => {
                       <button
                         type="button"
                         onClick={addUserToLeague}
-                        className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
+                        className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 shadow-lg transition-colors"
                       >
                         Join League
                       </button>
@@ -964,7 +965,7 @@ const LeaguePage: React.FC = () => {
                       <button
                         type="button"
                         onClick={fixDraftOrder}
-                        className="px-3 py-1 bg-yellow-600 text-white rounded text-sm hover:bg-yellow-700"
+                        className="px-3 py-1 bg-yellow-600 text-white rounded text-sm hover:bg-yellow-700 shadow-lg transition-colors"
                       >
                         Fix Draft Order
                       </button>
@@ -975,7 +976,7 @@ const LeaguePage: React.FC = () => {
                     value={search}
                     onChange={e => setSearch(e.target.value)}
                     placeholder="Search players by name..."
-                    className="mb-4 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                    className="mb-4 w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gold text-neutral-900 placeholder-neutral-500"
                   />
                   {isUserTurn() ? (
                     <div>
@@ -988,20 +989,20 @@ const LeaguePage: React.FC = () => {
                               type="button"
                               key={player.id}
                               onClick={() => draftPlayer(player.id)}
-                              className="p-3 rounded-lg border border-gray-200 hover:border-blue-500 text-left w-full"
+                              className="p-3 rounded-lg border border-neutral-200 hover:border-gold text-left w-full transition-colors"
                             >
-                              <div className="font-semibold text-base lg:text-lg text-gray-900">
+                              <div className="font-semibold text-base lg:text-lg text-neutral-900">
                                 <a 
                                   href={`https://www.chess.com/member/${player.name}/`}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="text-blue-600 hover:text-blue-800 hover:underline"
+                                  className="text-gold hover:text-purple hover:underline"
                                   onClick={(e) => e.stopPropagation()}
                                 >
                                   {player.name}
                                 </a>
                               </div>
-                              <div className="text-xs lg:text-sm text-gray-600">ELO: {player.elo}</div>
+                              <div className="text-xs lg:text-sm text-neutral-600">ELO: {player.elo}</div>
                             </button>
                           ))}
                       </div>
@@ -1016,7 +1017,7 @@ const LeaguePage: React.FC = () => {
                           const displayName = userMap[currentDraftUserId] || 'Unknown Player';
                           
                           return (
-                            <p className="text-gray-600 text-sm lg:text-base">
+                            <p className="text-neutral-600 text-sm lg:text-base">
                               Waiting for {displayName} to draft...
                             </p>
                           );
@@ -1034,17 +1035,17 @@ const LeaguePage: React.FC = () => {
       {/* User Popup Modal */}
       {showUserPopup && selectedUser && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border-2 border-gold">
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-gray-900">
+                <h2 className="text-xl font-bold text-neutral-900">
                   {selectedUser.display_name || selectedUser.user_email}
                   {selectedUser.user_id === user?.id && ' (You)'}
                 </h2>
                 <button
                   type="button"
                   onClick={() => setShowUserPopup(false)}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="text-neutral-400 hover:text-neutral-600 transition-colors"
                 >
                   <X className="h-6 w-6" />
                 </button>
@@ -1052,24 +1053,24 @@ const LeaguePage: React.FC = () => {
 
               {/* Team Section */}
               <div className="mb-6">
-                <h3 className="text-lg font-semibold mb-3 text-gray-900">Team ({selectedUserTeam.length} players)</h3>
+                <h3 className="text-lg font-semibold mb-3 text-neutral-900">Team ({selectedUserTeam.length} players)</h3>
                 {selectedUserTeam.length === 0 ? (
-                  <p className="text-gray-500 text-sm">No players drafted yet.</p>
+                  <p className="text-neutral-500 text-sm">No players drafted yet.</p>
                 ) : (
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                     {selectedUserTeam.map((player) => (
-                      <div key={player.id} className="bg-gray-50 rounded-lg p-3 text-center">
+                      <div key={player.id} className="bg-neutral-50 rounded-lg p-3 text-center border border-gold">
                         <a 
                           href={`https://www.chess.com/member/${player.name}/`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="font-medium text-sm text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                          className="font-medium text-sm text-gold hover:text-purple hover:underline cursor-pointer"
                         >
                           {player.name}
                         </a>
-                        <div className="text-xs text-gray-600">ELO: {player.elo}</div>
+                        <div className="text-xs text-neutral-600">ELO: {player.elo}</div>
                         {player.accuracy !== undefined && player.accuracy !== null && (
-                          <div className="text-xs text-gray-500">Accuracy: {player.accuracy.toFixed(2)}</div>
+                          <div className="text-xs text-neutral-500">Accuracy: {player.accuracy.toFixed(2)}</div>
                         )}
                       </div>
                     ))}
@@ -1079,22 +1080,22 @@ const LeaguePage: React.FC = () => {
 
               {/* Current Lineup Section */}
               <div>
-                <h3 className="text-lg font-semibold mb-3 text-gray-900">Current Lineup ({selectedUserLineup.length}/5 players)</h3>
+                <h3 className="text-lg font-semibold mb-3 text-neutral-900">Current Lineup ({selectedUserLineup.length}/5 players)</h3>
                 {selectedUserLineup.length === 0 ? (
-                  <p className="text-gray-500 text-sm">No lineup set for this week.</p>
+                  <p className="text-neutral-500 text-sm">No lineup set for this week.</p>
                 ) : (
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                     {selectedUserLineup.map((player) => (
-                      <div key={player.id} className="bg-blue-50 rounded-lg p-3 text-center border border-blue-200">
+                      <div key={player.id} className="bg-gold bg-opacity-10 rounded-lg p-3 text-center border border-gold">
                         <a 
                           href={`https://www.chess.com/member/${player.name}/`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="font-medium text-sm text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                          className="font-medium text-sm text-gold hover:text-purple hover:underline cursor-pointer"
                         >
                           {player.name}
                         </a>
-                        <div className="text-xs text-gray-600">ELO: {player.elo}</div>
+                        <div className="text-xs text-neutral-600">ELO: {player.elo}</div>
                       </div>
                     ))}
                   </div>
@@ -1104,8 +1105,6 @@ const LeaguePage: React.FC = () => {
           </div>
         </div>
       )}
-
-
     </div>
   )
 }

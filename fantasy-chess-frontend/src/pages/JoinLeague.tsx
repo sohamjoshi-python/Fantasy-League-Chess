@@ -372,17 +372,17 @@ const JoinLeague: React.FC = () => {
   }
 
   return (
-    <div className="w-full max-w-6xl mx-auto">
-      <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-6 lg:mb-8">Join a League</h1>
-
+    <div className="w-full max-w-4xl mx-auto bg-white min-h-screen p-4 lg:p-6">
+      <h1 className="text-2xl lg:text-3xl font-bold mb-6 lg:mb-8 text-neutral-900">Join a League</h1>
+      
       {/* Tab Navigation */}
-      <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg mb-6 lg:mb-8">
+      <div className="flex space-x-1 mb-6 bg-neutral-100 p-1 rounded-lg">
         <button
           onClick={() => setActiveTab('create')}
           className={`flex-1 py-2 px-3 lg:px-4 rounded-md font-medium transition-colors text-sm lg:text-base ${
             activeTab === 'create'
-              ? 'bg-white text-blue-600 shadow-sm'
-              : 'text-gray-600 hover:text-gray-900'
+              ? 'bg-white text-gold shadow-sm border border-gold'
+              : 'text-neutral-600 hover:text-neutral-900'
           }`}
         >
           Create League
@@ -391,8 +391,8 @@ const JoinLeague: React.FC = () => {
           onClick={() => setActiveTab('public')}
           className={`flex-1 py-2 px-3 lg:px-4 rounded-md font-medium transition-colors text-sm lg:text-base ${
             activeTab === 'public'
-              ? 'bg-white text-blue-600 shadow-sm'
-              : 'text-gray-600 hover:text-gray-900'
+              ? 'bg-white text-gold shadow-sm border border-gold'
+              : 'text-neutral-600 hover:text-neutral-900'
           }`}
         >
           Public Leagues
@@ -401,8 +401,8 @@ const JoinLeague: React.FC = () => {
           onClick={() => setActiveTab('code')}
           className={`flex-1 py-2 px-3 lg:px-4 rounded-md font-medium transition-colors text-sm lg:text-base ${
             activeTab === 'code'
-              ? 'bg-white text-blue-600 shadow-sm'
-              : 'text-gray-600 hover:text-gray-900'
+              ? 'bg-white text-gold shadow-sm border border-gold'
+              : 'text-neutral-600 hover:text-neutral-900'
           }`}
         >
           Join with Code
@@ -417,11 +417,11 @@ const JoinLeague: React.FC = () => {
 
       {/* Create League Tab */}
       {activeTab === 'create' && (
-        <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6">
-          <h2 className="text-xl lg:text-2xl font-bold mb-4 lg:mb-6">Create Your Own League</h2>
+        <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6 border-2 border-gold">
+          <h2 className="text-xl lg:text-2xl font-bold mb-4 lg:mb-6 text-neutral-900">Create Your Own League</h2>
           <form onSubmit={createLeague} className="space-y-4 lg:space-y-6">
             <div>
-              <label htmlFor="leagueName" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="leagueName" className="block text-sm font-medium text-neutral-700 mb-2">
                 League Name *
               </label>
               <input
@@ -430,13 +430,13 @@ const JoinLeague: React.FC = () => {
                 value={leagueName}
                 onChange={(e) => setLeagueName(e.target.value)}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
+                className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gold text-neutral-900 placeholder-neutral-500"
                 placeholder="Enter league name"
               />
             </div>
 
             <div>
-              <label htmlFor="leagueDescription" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="leagueDescription" className="block text-sm font-medium text-neutral-700 mb-2">
                 Description
               </label>
               <textarea
@@ -444,14 +444,14 @@ const JoinLeague: React.FC = () => {
                 value={leagueDescription}
                 onChange={(e) => setLeagueDescription(e.target.value)}
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
+                className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gold text-neutral-900 placeholder-neutral-500"
                 placeholder="Optional description for your league"
               />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
               <div>
-                <label htmlFor="buyIn" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="buyIn" className="block text-sm font-medium text-neutral-700 mb-2">
                   Buy-in (coins) *
                 </label>
                 <input
@@ -461,12 +461,12 @@ const JoinLeague: React.FC = () => {
                   onChange={(e) => setBuyIn(parseInt(e.target.value) || 0)}
                   min="1"
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gold text-neutral-900"
                 />
               </div>
 
               <div>
-                <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="startDate" className="block text-sm font-medium text-neutral-700 mb-2">
                   Start Date (first of month) *
                 </label>
                 <input
@@ -475,7 +475,7 @@ const JoinLeague: React.FC = () => {
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gold text-neutral-900"
                 />
               </div>
             </div>
@@ -486,9 +486,9 @@ const JoinLeague: React.FC = () => {
                 id="isPublic"
                 checked={isPublic}
                 onChange={(e) => setIsPublic(e.target.checked)}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                className="h-4 w-4 text-gold focus:ring-gold border-neutral-300 rounded"
               />
-              <label htmlFor="isPublic" className="ml-2 block text-sm text-gray-900">
+              <label htmlFor="isPublic" className="ml-2 block text-sm text-neutral-900">
                 Make this league public (others can find and join it)
               </label>
             </div>
@@ -496,7 +496,7 @@ const JoinLeague: React.FC = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-accent hover:bg-blue-700 disabled:bg-blue-400 text-white py-3 px-4 rounded-lg font-semibold"
+              className="w-full bg-gold hover:bg-purple disabled:bg-neutral-400 text-white py-3 px-4 rounded-lg font-semibold shadow-lg transition-colors"
             >
               {loading ? 'Creating...' : 'Create League'}
             </button>
@@ -506,21 +506,21 @@ const JoinLeague: React.FC = () => {
       {/* Public Leagues Tab */}
       {activeTab === 'public' && (
         <div className="space-y-4 lg:space-y-6">
-          <h2 className="text-xl lg:text-2xl font-bold">Public Leagues</h2>
+          <h2 className="text-xl lg:text-2xl font-bold text-neutral-900">Public Leagues</h2>
           {publicLeagues.length === 0 ? (
-            <div className="text-center py-8 lg:py-12 bg-white rounded-lg shadow-lg">
-              <Search className="h-8 w-8 lg:h-12 lg:w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600 text-sm lg:text-base">No public leagues available at the moment.</p>
+            <div className="text-center py-8 lg:py-12 bg-white rounded-lg shadow-lg border-2 border-gold">
+              <Search className="h-8 w-8 lg:h-12 lg:w-12 text-neutral-400 mx-auto mb-4" />
+              <p className="text-neutral-600 text-sm lg:text-base">No public leagues available at the moment.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
               {publicLeagues.map((league) => (
-                <div key={league.id} className="bg-white rounded-lg shadow-lg p-4 lg:p-6">
+                <div key={league.id} className="bg-white rounded-lg shadow-lg p-4 lg:p-6 border-2 border-gold">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-base lg:text-lg font-semibold text-gray-900">{league.name}</h3>
+                    <h3 className="text-base lg:text-lg font-semibold text-neutral-900">{league.name}</h3>
                     <button
                       onClick={() => copyJoinCode(league.join_code)}
-                      className="text-blue-600 hover:text-blue-800"
+                      className="text-gold hover:text-purple transition-colors"
                       title="Copy join code"
                     >
                       <Copy className="h-4 w-4" />
@@ -528,25 +528,25 @@ const JoinLeague: React.FC = () => {
                   </div>
                   
                   {league.description && (
-                    <p className="text-gray-600 text-xs lg:text-sm mb-4">{league.description}</p>
+                    <p className="text-neutral-600 text-xs lg:text-sm mb-4">{league.description}</p>
                   )}
                   
                   <div className="space-y-2 mb-4">
                     <div className="flex items-center space-x-2">
-                      <Users className="h-4 w-4 text-gray-500" />
-                      <span className="text-xs lg:text-sm text-gray-600">
+                      <Users className="h-4 w-4 text-gold" />
+                      <span className="text-xs lg:text-sm text-neutral-600">
                         {league.member_ids.length} members
                       </span>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <Trophy className="h-4 w-4 text-gray-500" />
-                      <span className="text-xs lg:text-sm text-gray-600">
+                      <Trophy className="h-4 w-4 text-gold" />
+                      <span className="text-xs lg:text-sm text-neutral-600">
                         {league.buy_in} coins buy-in
                       </span>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <Calendar className="h-4 w-4 text-gray-500" />
-                      <span className="text-xs lg:text-sm text-gray-600">
+                      <Calendar className="h-4 w-4 text-gold" />
+                      <span className="text-xs lg:text-sm text-neutral-600">
                         Starts {new Date(league.start_date).toLocaleDateString()}
                       </span>
                     </div>
@@ -555,7 +555,7 @@ const JoinLeague: React.FC = () => {
                   <button
                     onClick={() => joinPublicLeague(league)}
                     disabled={loading}
-                    className="w-full bg-accent hover:bg-green-700 disabled:bg-green-400 text-white py-2 px-4 rounded-lg font-medium text-sm lg:text-base"
+                    className="w-full bg-gold hover:bg-purple disabled:bg-neutral-400 text-white py-2 px-4 rounded-lg font-medium text-sm lg:text-base shadow-lg transition-colors"
                   >
                     {loading ? 'Joining...' : 'Join League'}
                   </button>
@@ -568,11 +568,11 @@ const JoinLeague: React.FC = () => {
 
       {/* Join with Code Tab */}
       {activeTab === 'code' && (
-        <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6">
-          <h2 className="text-xl lg:text-2xl font-bold mb-4 lg:mb-6">Join with Code</h2>
+        <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6 border-2 border-gold">
+          <h2 className="text-xl lg:text-2xl font-bold mb-4 lg:mb-6 text-neutral-900">Join with Code</h2>
           <form onSubmit={joinLeagueWithCode} className="space-y-4 lg:space-y-6">
             <div>
-              <label htmlFor="joinCode" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="joinCode" className="block text-sm font-medium text-neutral-700 mb-2">
                 League Join Code *
               </label>
               <input
@@ -581,7 +581,7 @@ const JoinLeague: React.FC = () => {
                 value={joinCode}
                 onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
+                className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gold text-neutral-900 placeholder-neutral-500"
                 placeholder="Enter 6-character code"
                 maxLength={6}
               />
@@ -590,7 +590,7 @@ const JoinLeague: React.FC = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white py-3 px-4 rounded-lg font-semibold"
+              className="w-full bg-gold hover:bg-purple disabled:bg-neutral-400 text-white py-3 px-4 rounded-lg font-semibold shadow-lg transition-colors"
             >
               {loading ? 'Joining...' : 'Join League'}
             </button>

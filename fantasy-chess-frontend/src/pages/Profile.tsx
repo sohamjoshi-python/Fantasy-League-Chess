@@ -54,11 +54,11 @@ const Profile: React.FC = () => {
   }
 
   return (
-    <div className="w-full max-w-lg mx-auto bg-white rounded-lg shadow-lg p-6 lg:p-8 mt-4 lg:mt-8">
-      <h1 className="text-xl lg:text-2xl font-bold mb-4 lg:mb-6 text-gray-900">Profile</h1>
+    <div className="w-full max-w-lg mx-auto bg-white rounded-lg shadow-lg p-6 lg:p-8 mt-4 lg:mt-8 border-2 border-gold">
+      <h1 className="text-xl lg:text-2xl font-bold mb-4 lg:mb-6 text-neutral-900">Profile</h1>
       <form onSubmit={handleSave} className="space-y-6">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+          <label className="block text-sm font-medium text-neutral-700 mb-2">Email</label>
           <input
             type="text"
             value={profile?.email || ''}
@@ -67,17 +67,17 @@ const Profile: React.FC = () => {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Username</label>
+          <label className="block text-sm font-medium text-neutral-700 mb-2">Username</label>
           <input
             type="text"
             value={username}
             onChange={e => setUsername(e.target.value)}
-            className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent text-neutral-900 text-sm lg:text-base"
+            className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gold text-neutral-900 text-sm lg:text-base"
             placeholder="Enter your username"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Coins</label>
+          <label className="block text-sm font-medium text-neutral-700 mb-2">Coins</label>
           <input
             type="text"
             value={profile?.coins ?? 0}
@@ -88,7 +88,7 @@ const Profile: React.FC = () => {
         <button
           type="submit"
           disabled={saving}
-          className="w-full bg-accent hover:bg-blue-700 text-white py-2 px-4 rounded-md font-semibold text-sm lg:text-base"
+          className="w-full bg-gold hover:bg-purple text-white py-2 px-4 rounded-md font-semibold text-sm lg:text-base shadow-lg transition-colors"
         >
           {saving ? 'Saving...' : 'Save Changes'}
         </button>

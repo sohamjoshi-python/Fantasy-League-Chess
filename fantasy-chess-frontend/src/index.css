@@ -19,14 +19,14 @@ html, body {
 
 /* Ensure proper text contrast */
 input, textarea, select {
-  color: #111827; /* text-gray-900 */
+  color: #111827; /* text-neutral-900 */
 }
 
 /* Ensure proper focus states */
 input:focus, textarea:focus, select:focus {
   outline: none;
   ring: 2px;
-  ring-color: #3b82f6; /* ring-blue-500 */
+  ring-color: #d4af37; /* ring-gold */
 }
 
 /* Responsive container */
@@ -96,14 +96,14 @@ body {
   min-width: 320px;
   min-height: 100vh;
   font-family: 'Inter', system-ui, sans-serif;
-  background: linear-gradient(to bottom right, #e0f2f7, #f0f4f8);
-  color: #111827; /* text-gray-900 */
+  background: #ffffff; /* Pure white background */
+  color: #111827; /* text-neutral-900 */
 }
 
 #root {
   width: 100%;
   margin: 0 auto;
-  padding: 1rem;
+  padding: 0; /* Remove padding to allow full-width components */
 }
 
 .card {
