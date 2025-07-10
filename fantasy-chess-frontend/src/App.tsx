@@ -15,7 +15,7 @@ function App() {
     <AuthProvider>
       <Router>
         <NewUserRedirect />
-        <div className="min-h-screen bg-gray-50 flex flex-col w-full">
+        <div className="min-h-screen flex flex-col w-full">
           <Navbar />
           <main className="flex-1 w-full px-0 py-0">
             <Routes>
