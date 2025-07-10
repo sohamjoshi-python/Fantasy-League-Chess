@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react'
+import * as React from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
@@ -205,21 +206,21 @@ const Dashboard: React.FC = () => {
   }
 
   return (
-    <div className="w-full max-w-6xl mx-auto">
+    <div className="w-full max-w-6xl mx-auto bg-white min-h-screen">
       <h1 className="text-2xl lg:text-3xl font-bold text-neutral-900 mb-6 lg:mb-8">Dashboard</h1>
       {activeLeagues.length === 0 ? (
         <div className="text-center py-12 lg:py-16">
-          <div className="bg-white rounded-lg shadow-lg p-6 lg:p-8 max-w-md mx-auto">
-            <Crown className="h-12 w-12 lg:h-16 lg:w-16 text-accent mx-auto mb-4" />
-            <h2 className="text-xl lg:text-2xl font-bold mb-4">No Active League</h2>
-            <p className="text-neutral-500 mb-6 text-sm lg:text-base">
+          <div className="bg-white rounded-lg shadow-lg p-6 lg:p-8 max-w-md mx-auto border-2 border-gold">
+            <Crown className="h-12 w-12 lg:h-16 lg:w-16 text-gold mx-auto mb-4" />
+            <h2 className="text-xl lg:text-2xl font-bold mb-4 text-neutral-900">No Active League</h2>
+            <p className="text-neutral-700 mb-6 text-sm lg:text-base">
               You're not currently in any active league. Join or create one to start playing!
             </p>
             <Link
               to="/join-league"
-              className="inline-flex items-center space-x-2 bg-accent hover:bg-blue-700 text-white px-4 lg:px-6 py-3 rounded-lg font-semibold transition-colors"
+              className="inline-flex items-center space-x-2 bg-gold hover:bg-purple text-white px-4 lg:px-6 py-3 rounded-lg font-semibold transition-colors shadow-lg"
             >
-              <Plus className="h-5 w-5" /> {/* Assuming you want to keep the icon color white */}
+              <Plus className="h-5 w-5" />
               <span>Join a League</span>
             </Link>
           </div>
@@ -228,33 +229,33 @@ const Dashboard: React.FC = () => {
         <div className="space-y-6 lg:space-y-8">
           {/* Current League Info */}
           {currentLeague && (
-            <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6">
+            <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6 border-2 border-gold">
               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-4">
                 <h2 className="text-xl lg:text-2xl font-bold text-neutral-900 mb-2 lg:mb-0">{currentLeague.name}</h2>
                 <Link
                   to={`/league/${currentLeague.id}`}
-                  className="text-accent hover:text-blue-800 font-medium text-sm lg:text-base transition-colors"
+                  className="text-gold hover:text-purple font-medium text-sm lg:text-base transition-colors"
                 >
                   View League →
                 </Link>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6">
                 <div className="flex items-center space-x-3">
-                  <Users className="h-5 w-5 lg:h-6 lg:w-6 text-neutral-500" />
+                  <Users className="h-5 w-5 lg:h-6 lg:w-6 text-gold" />
                   <div>
                     <p className="text-xs lg:text-sm text-neutral-500">Members</p>
                     <p className="font-semibold text-sm lg:text-base text-neutral-900">{currentLeague.member_ids.length}</p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-3">
-                  <Trophy className="h-5 w-5 lg:h-6 lg:w-6 text-neutral-500" />
+                  <Trophy className="h-5 w-5 lg:h-6 lg:w-6 text-gold" />
                   <div>
                     <p className="text-xs lg:text-sm text-neutral-500">Buy-in</p>
                     <p className="font-semibold text-sm lg:text-base text-neutral-900">{currentLeague.buy_in} coins</p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-3">
-                  <Calendar className="h-5 w-5 lg:h-6 lg:w-6 text-neutral-500" />
+                  <Calendar className="h-5 w-5 lg:h-6 lg:w-6 text-gold" />
                   <div>
                     <p className="text-xs lg:text-sm text-neutral-500">End Date</p>
                     <p className="font-semibold text-sm lg:text-base text-neutral-900">{new Date(currentLeague.end_date).toLocaleDateString()}</p>
@@ -265,12 +266,12 @@ const Dashboard: React.FC = () => {
           )}
           {/* Current Lineup */}
           {userTeam && (
-            <div className="bg-white rounded-lg shadow-lg p-6">
-              <h3 className="text-xl font-bold mb-4">Current Lineup</h3>
+            <div className="bg-white rounded-lg shadow-lg p-6 border-2 border-gold">
+              <h3 className="text-xl font-bold mb-4 text-neutral-900">Current Lineup</h3>
               {currentLineup && lineupPlayers.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                   {lineupPlayers.map((player) => (
-                    <div key={player.id} className="bg-neutral-100 rounded-lg p-4 text-center">
+                    <div key={player.id} className="bg-neutral-50 rounded-lg p-4 text-center border border-gold">
                       <h4 className="font-semibold text-sm text-neutral-900">{player.name}</h4>
                       <p className="text-xs text-neutral-500">ELO: {player.elo}</p>
                     </div>
@@ -282,7 +283,7 @@ const Dashboard: React.FC = () => {
                   {currentLeague && (
                     <Link
                       to={`/league/${currentLeague.id}`}
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+                      className="bg-gold hover:bg-purple text-white px-4 py-2 rounded-lg shadow-lg transition-colors"
                     >
                       Set Lineup
                     </Link>
@@ -292,12 +293,12 @@ const Dashboard: React.FC = () => {
             </div>
           )}
           {/* Point Breakdown Table */}
-          <div className="bg-white rounded-lg shadow-lg p-6">
+          <div className="bg-white rounded-lg shadow-lg p-6 border-2 border-gold">
             <div className="mb-2 flex items-center space-x-2">
-              <h3 className="text-xl font-bold">Point Breakdown</h3>
+              <h3 className="text-xl font-bold text-neutral-900">Point Breakdown</h3>
               {availableWeeks.length > 0 && (
                 <select
-                  className="ml-2 border border-neutral-300 rounded px-2 py-1 text-sm text-neutral-900"
+                  className="ml-2 border border-gold rounded px-2 py-1 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-gold"
                   value={selectedWeek || ''}
                   onChange={e => setSelectedWeek(e.target.value)}
                 >
@@ -316,8 +317,8 @@ const Dashboard: React.FC = () => {
               <table className="min-w-full text-sm text-neutral-900">
                 <thead>
                   <tr>
-                    <th className="text-left px-2 py-1 border-b border-neutral-300">Player</th>
-                    <th className="text-right px-2 py-1 border-b border-neutral-300">Points</th>
+                    <th className="text-left px-2 py-1 border-b border-gold">Player</th>
+                    <th className="text-right px-2 py-1 border-b border-gold">Points</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -327,22 +328,22 @@ const Dashboard: React.FC = () => {
                       <td className="px-2 py-1 text-right text-neutral-900">{Number(row.player_points).toFixed(2)}</td>
                     </tr>
                   ))}
-                  <tr className="font-bold border-t">
+                  <tr className="font-bold border-t border-gold">
                     <td className="px-2 py-1">TOTAL</td>
                     <td className="px-2 py-1 text-right">{playerBreakdown.reduce((sum, p) => sum + Number(p.player_points), 0).toFixed(2)}</td>
                   </tr>
                 </tbody>
               </table>
             ) : (
-              <div>No breakdown available for this week.</div>
+              <div className="text-neutral-500">No breakdown available for this week.</div>
             )}
           </div>
           {/* Next Titled Tuesday */}
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h3 className="text-xl font-bold mb-4">Next Titled Tuesday</h3>
+          <div className="bg-white rounded-lg shadow-lg p-6 border-2 border-gold">
+            <h3 className="text-xl font-bold mb-4 text-neutral-900">Next Titled Tuesday</h3>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-lg font-semibold">
+                <p className="text-lg font-semibold text-neutral-900">
                   {getNextTitledTuesday().toLocaleDateString('en-US', { 
                     weekday: 'long', 
                     year: 'numeric', 
@@ -356,7 +357,7 @@ const Dashboard: React.FC = () => {
                 href="https://www.chess.com/tournament/live/titled-tuesdays"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
+                className="flex items-center space-x-2 bg-gold hover:bg-purple text-white px-4 py-2 rounded-lg transition-colors shadow-lg"
               >
                 <ExternalLink className="h-4 w-4" />
                 <span>Watch Live</span>
@@ -366,11 +367,11 @@ const Dashboard: React.FC = () => {
 
           {/* Past Performance */}
           {pastLeagues.length > 0 && (
-            <div className="bg-white rounded-lg shadow-lg p-6">
-              <h3 className="text-xl font-bold mb-4">Past League Performance</h3>
+            <div className="bg-white rounded-lg shadow-lg p-6 border-2 border-gold">
+              <h3 className="text-xl font-bold mb-4 text-neutral-900">Past League Performance</h3>
               <div className="space-y-3">
                 {pastLeagues.map((league) => (
-                  <div key={league.league_id} className="flex items-center justify-between p-4 bg-neutral-100 rounded-lg">
+                  <div key={league.league_id} className="flex items-center justify-between p-4 bg-neutral-50 rounded-lg border border-gold">
                     <div>
                       <h4 className="font-semibold text-neutral-900">{league.league_name}</h4>
                       <p className="text-sm text-neutral-500">
@@ -391,11 +392,11 @@ const Dashboard: React.FC = () => {
 
       {/* Past Leagues Section */}
       {pastLeagues.length > 0 && (
-        <div className="bg-white rounded-lg shadow-lg p-6 mt-8">
-          <h2 className="text-xl font-bold mb-4">Past Leagues</h2>
+        <div className="bg-white rounded-lg shadow-lg p-6 mt-8 border-2 border-gold">
+          <h2 className="text-xl font-bold mb-4 text-neutral-900">Past Leagues</h2>
           <div className="space-y-3">
             {pastLeagues.map((league) => (
-              <div key={league.league_id} className="flex items-center justify-between p-4 bg-neutral-100 rounded-lg">
+              <div key={league.league_id} className="flex items-center justify-between p-4 bg-neutral-50 rounded-lg border border-gold">
                 <div>
                   <h4 className="font-semibold text-neutral-900">{league.league_name}</h4>
                   <p className="text-sm text-neutral-500">
@@ -407,7 +408,7 @@ const Dashboard: React.FC = () => {
                 </div>
                 <Link
                   to={`/league/${league.league_id}`}
-                  className="bg-accent hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors"
+                  className="bg-gold hover:bg-purple text-white px-4 py-2 rounded-lg font-semibold transition-colors shadow-lg"
                 >
                   View League
                 </Link>

@@ -20,12 +20,14 @@ const Navbar: React.FC = () => {
   }
 
   return (
-    <nav className="bg-white shadow-lg sticky top-0 z-50">
+    <nav className="bg-white shadow-lg sticky top-0 z-50 border-b-2 border-gold">
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex justify-between h-16">
           <div className="flex items-center">
             <Link to="/" className="flex items-center space-x-2">
-              <img src={logo} alt="Pawn Royale Logo" className="h-10 w-10" />
+              <div className="h-10 w-10 bg-white rounded-full p-1 shadow-md border border-gold">
+                <img src={logo} alt="Pawn Royale Logo" className="h-full w-full object-contain" />
+              </div>
               <span className="text-2xl font-extrabold text-gold tracking-wide font-serif drop-shadow">PAWN ROYALE</span>
             </Link>
           </div>
@@ -35,34 +37,34 @@ const Navbar: React.FC = () => {
               <>
                 <Link
                   to="/dashboard"
-                  className="text-neutral-900 hover:text-accent hover:underline hover:underline-offset-4 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                  className="text-neutral-700 hover:text-gold hover:underline hover:underline-offset-4 px-3 py-2 rounded-md text-sm font-medium transition-colors"
                 >
                   Dashboard
                 </Link>
                 <Link
                   to="/join-league"
-                  className="text-neutral-900 hover:text-accent hover:underline hover:underline-offset-4 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                  className="text-neutral-700 hover:text-gold hover:underline hover:underline-offset-4 px-3 py-2 rounded-md text-sm font-medium transition-colors"
                 >
                   Join League
                 </Link>
                 <Link
                   to="/profile"
-                  className="text-neutral-900 hover:text-accent hover:underline hover:underline-offset-4 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                  className="text-neutral-700 hover:text-gold hover:underline hover:underline-offset-4 px-3 py-2 rounded-md text-sm font-medium transition-colors"
                 >
                   Profile
                 </Link>
                 <Link
                   to="/help"
-                  className="text-neutral-900 hover:text-accent hover:underline hover:underline-offset-4 px-3 py-2 rounded-md text-sm font-medium flex items-center transition-colors"
+                  className="text-neutral-700 hover:text-gold hover:underline hover:underline-offset-4 px-3 py-2 rounded-md text-sm font-medium flex items-center transition-colors"
                 >
                   <HelpCircle className="h-4 w-4 mr-1" />
                   Help
                 </Link>
                 <div className="flex items-center space-x-2">
-                  <span className="text-sm text-neutral-900">{user.email}</span>
+                  <span className="text-sm text-neutral-700">{user.email}</span>
                   <button
                     onClick={handleSignOut}
-                    className="flex items-center space-x-1 text-neutral-900 hover:text-red-400 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                    className="flex items-center space-x-1 text-neutral-700 hover:text-red-500 px-3 py-2 rounded-md text-sm font-medium transition-colors"
                   >
                     <LogOut className="h-4 w-4" />
                     <span>Sign Out</span>
@@ -76,7 +78,7 @@ const Navbar: React.FC = () => {
                     setIsSignUp(false)
                     setShowAuthModal(true)
                   }}
-                  className="flex items-center space-x-1 bg-accent hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-bold shadow transition-colors"
+                  className="flex items-center space-x-1 bg-gold hover:bg-purple text-white px-4 py-2 rounded-md text-sm font-bold shadow-lg transition-colors"
                 >
                   <LogIn className="h-4 w-4" />
                   <span>Sign In</span>
@@ -86,7 +88,7 @@ const Navbar: React.FC = () => {
                     setIsSignUp(true)
                     setShowAuthModal(true)
                   }}
-                  className="flex items-center space-x-1 bg-neutral-500 hover:bg-neutral-700 text-white px-4 py-2 rounded-md text-sm font-bold shadow transition-colors"
+                  className="flex items-center space-x-1 bg-white border-2 border-gold text-gold hover:bg-gold hover:text-white px-4 py-2 rounded-md text-sm font-bold shadow-lg transition-colors"
                 >
                   <UserPlus className="h-4 w-4" />
                   <span>Sign Up</span>
@@ -165,13 +167,13 @@ const AuthModal: React.FC<AuthModalProps> = ({ isSignUp, onClose, onToggleMode }
   }
 
   return (
-    <div className="bg-neutral-100 rounded-lg p-8 max-w-md w-full mx-4 relative shadow-lg">
+    <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4 relative shadow-lg border-2 border-gold">
       <h2 className="text-2xl font-bold mb-6 text-center text-neutral-900">
         {isSignUp ? 'Create Account' : 'Sign In'}
       </h2>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="email" className="block text-sm font-medium text-neutral-900 mb-1">
+          <label htmlFor="email" className="block text-sm font-medium text-neutral-700 mb-1">
             Email
           </label>
           <input
@@ -180,12 +182,12 @@ const AuthModal: React.FC<AuthModalProps> = ({ isSignUp, onClose, onToggleMode }
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-neutral-900 placeholder-neutral-500"
+            className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gold text-neutral-900 placeholder-neutral-500"
             placeholder="Enter your email"
           />
         </div>
         <div>
-          <label htmlFor="password" className="block text-sm font-medium text-neutral-900 mb-1">
+          <label htmlFor="password" className="block text-sm font-medium text-neutral-700 mb-1">
             Password
           </label>
           <input
@@ -194,13 +196,13 @@ const AuthModal: React.FC<AuthModalProps> = ({ isSignUp, onClose, onToggleMode }
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-neutral-900 placeholder-neutral-500"
+            className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gold text-neutral-900 placeholder-neutral-500"
             placeholder="Enter your password"
           />
         </div>
         {isSignUp && (
           <div>
-            <label htmlFor="displayName" className="block text-sm font-medium text-neutral-900 mb-1">
+            <label htmlFor="displayName" className="block text-sm font-medium text-neutral-700 mb-1">
               Display Name
             </label>
             <input
@@ -209,7 +211,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isSignUp, onClose, onToggleMode }
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               required
-              className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-neutral-900 placeholder-neutral-500"
+              className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gold text-neutral-900 placeholder-neutral-500"
               placeholder="Enter your display name"
             />
           </div>
@@ -218,14 +220,14 @@ const AuthModal: React.FC<AuthModalProps> = ({ isSignUp, onClose, onToggleMode }
           <div className="text-red-600 text-sm">{error}</div>
         )}
         {success && (
-          <div className="text-green-600 text-sm animate-fade-in-out absolute top-2 left-1/2 transform -translate-x-1/2 bg-white px-4 py-2 rounded shadow z-50">
+          <div className="text-green-600 text-sm animate-fade-in-out absolute top-2 left-1/2 transform -translate-x-1/2 bg-white px-4 py-2 rounded shadow z-50 border border-green-200">
             {success}
           </div>
         )}
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-accent hover:bg-blue-700 disabled:bg-blue-400 text-white py-2 px-4 rounded-md font-medium"
+          className="w-full bg-gold hover:bg-purple disabled:bg-neutral-400 text-white py-2 px-4 rounded-md font-medium shadow-lg transition-colors"
         >
           {loading ? 'Loading...' : (isSignUp ? 'Sign Up' : 'Sign In')}
         </button>
@@ -233,14 +235,14 @@ const AuthModal: React.FC<AuthModalProps> = ({ isSignUp, onClose, onToggleMode }
       <div className="mt-4 text-center">
         <button
           onClick={onToggleMode}
-          className="text-neutral-500 hover:text-neutral-900 text-sm"
+          className="text-neutral-500 hover:text-gold text-sm transition-colors"
         >
           {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
         </button>
       </div>
       <button
         onClick={onClose}
-        className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+        className="absolute top-4 right-4 text-neutral-400 hover:text-neutral-600 transition-colors"
       >
         ✕
       </button>
