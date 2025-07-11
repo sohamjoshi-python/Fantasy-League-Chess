@@ -54,7 +54,7 @@ const Profile: React.FC = () => {
   }
 
   return (
-    <div className="w-full max-w-lg mx-auto bg-white rounded-lg shadow-lg p-6 lg:p-8 mt-4 lg:mt-8 border-2 border-gold">
+    <div className="w-full max-w-lg mx-auto bg-white rounded-lg shadow-lg p-6 lg:p-8 mt-4 lg:mt-8 border-2 border-royalBlue">
       <h1 className="text-xl lg:text-2xl font-bold mb-4 lg:mb-6 text-neutral-900">Profile</h1>
       <form onSubmit={handleSave} className="space-y-6">
         <div>
@@ -72,7 +72,7 @@ const Profile: React.FC = () => {
             type="text"
             value={username}
             onChange={e => setUsername(e.target.value)}
-            className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gold text-neutral-900 text-sm lg:text-base"
+            className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-royalBlue text-neutral-900 text-sm lg:text-base"
             placeholder="Enter your username"
           />
         </div>
@@ -88,7 +88,7 @@ const Profile: React.FC = () => {
         <button
           type="submit"
           disabled={saving}
-          className="w-full bg-[#1e293b] hover:bg-gold text-white py-2 px-4 rounded-md font-semibold text-sm lg:text-base shadow-lg transition-colors"
+          className="w-full bg-[#1e293b] hover:bg-royalBlue text-white py-2 px-4 rounded-md font-semibold text-sm lg:text-base shadow-lg transition-colors"
         >
           {saving ? 'Saving...' : 'Save Changes'}
         </button>
