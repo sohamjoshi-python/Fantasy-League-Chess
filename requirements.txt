@@ -1,4 +1,3 @@
-aiohttp==3.9.1
-asyncio
-brotli
-python-chess 
+requests
+supabase
+python-dotenv 
