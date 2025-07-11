@@ -39,7 +39,7 @@ const Profile: React.FC = () => {
 
     // Check if username is already taken (by another user)
     if (username) {
-      const { data: existing, error: checkError } = await supabase
+      const { data: existing } = await supabase
         .from('users')
         .select('id')
         .eq('username', username)
