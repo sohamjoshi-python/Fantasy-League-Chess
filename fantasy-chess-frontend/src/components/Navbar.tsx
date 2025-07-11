@@ -1,15 +1,35 @@
 import * as React from 'react'
 import * as ReactDOM from 'react-dom'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { LogIn, LogOut, UserPlus, HelpCircle } from 'lucide-react'
+import { LogIn, LogOut, UserPlus, HelpCircle, Bell } from 'lucide-react'
+import { getUnreadNotificationCount } from '../lib/supabase'
+import Inbox from './Inbox'
 import logo from '../assets/pawn-royale-logo.png'
 
 const Navbar: React.FC = () => {
   const { user, signOut } = useAuth()
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [isSignUp, setIsSignUp] = useState(false)
+  const [showInbox, setShowInbox] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
+
+  useEffect(() => {
+    if (user) {
+      loadUnreadCount();
+      // Refresh unread count every 30 seconds
+      const interval = setInterval(loadUnreadCount, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [user]);
+
+  const loadUnreadCount = async () => {
+    const { success, count } = await getUnreadNotificationCount();
+    if (success && count !== undefined) {
+      setUnreadCount(count);
+    }
+  };
 
   const handleSignOut = async () => {
     try {
@@ -60,6 +80,17 @@ const Navbar: React.FC = () => {
                   <HelpCircle className="h-4 w-4 mr-1" />
                   Help
                 </Link>
+                <button
+                  onClick={() => setShowInbox(true)}
+                  className="relative text-neutral-700 hover:text-royalBlue px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                >
+                  <Bell className="h-4 w-4" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[18px] flex items-center justify-center">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  )}
+                </button>
                 <div className="flex items-center space-x-2">
                   <span className="text-sm text-neutral-700">{user.email}</span>
                   <button
@@ -108,6 +139,16 @@ const Navbar: React.FC = () => {
           />
         </div>,
         document.body
+      )}
+      
+      {showInbox && (
+        <Inbox 
+          isOpen={showInbox} 
+          onClose={() => {
+            setShowInbox(false);
+            loadUnreadCount(); // Refresh count when closing
+          }} 
+        />
       )}
     </nav>
   )

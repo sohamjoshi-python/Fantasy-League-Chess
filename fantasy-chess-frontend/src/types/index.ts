@@ -114,4 +114,16 @@ export interface LeagueStanding {
   total_points: number
   rank: number
   team_size: number
+}
+
+export interface Notification {
+  id: string
+  user_id: string
+  league_id?: string
+  title: string
+  message: string
+  type: 'league_start' | 'weekly_results' | 'league_end' | 'draft_start' | 'payout_processed' | 'player_removed' | 'league_joined'
+  is_read: boolean
+  created_at: string
+  data?: any
 } 

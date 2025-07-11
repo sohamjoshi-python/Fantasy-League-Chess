@@ -384,4 +384,70 @@ export async function autoSetLineupForBot(botId: string, leagueId: string, weekS
     console.error('❌ Auto-set lineup error:', error);
     return { success: false, error };
   }
+}
+
+// Notification functions
+export async function fetchNotifications(): Promise<{ success: boolean, notifications?: any[], error?: any }> {
+  const { data, error } = await supabase
+    .from('notifications')
+    .select('*')
+    .order('created_at', { ascending: false });
+  
+  if (error) {
+    return { success: false, error };
+  }
+  
+  return { success: true, notifications: data };
+}
+
+export async function markNotificationAsRead(notificationId: string): Promise<{ success: boolean, error?: any }> {
+  const { error } = await supabase
+    .from('notifications')
+    .update({ is_read: true })
+    .eq('id', notificationId);
+  
+  if (error) {
+    return { success: false, error };
+  }
+  
+  return { success: true };
+}
+
+export async function markAllNotificationsAsRead(): Promise<{ success: boolean, error?: any }> {
+  const { error } = await supabase
+    .from('notifications')
+    .update({ is_read: true })
+    .eq('is_read', false);
+  
+  if (error) {
+    return { success: false, error };
+  }
+  
+  return { success: true };
+}
+
+export async function deleteNotification(notificationId: string): Promise<{ success: boolean, error?: any }> {
+  const { error } = await supabase
+    .from('notifications')
+    .delete()
+    .eq('id', notificationId);
+  
+  if (error) {
+    return { success: false, error };
+  }
+  
+  return { success: true };
+}
+
+export async function getUnreadNotificationCount(): Promise<{ success: boolean, count?: number, error?: any }> {
+  const { count, error } = await supabase
+    .from('notifications')
+    .select('*', { count: 'exact', head: true })
+    .eq('is_read', false);
+  
+  if (error) {
+    return { success: false, error };
+  }
+  
+  return { success: true, count: count || 0 };
 } 
