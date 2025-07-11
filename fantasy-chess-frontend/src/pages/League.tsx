@@ -467,12 +467,6 @@ const LeaguePage: React.FC = () => {
     return currentDraftUserId === user.id
   }
 
-  const isBotTurn = () => {
-    if (!league || !bot) return false
-    const currentDraftUserId = league?.draft_order[league?.current_draft_turn]
-    return currentDraftUserId === bot.id
-  }
-
   const draftPlayer = async (playerId: string) => {
     if (!league || !user || !isUserTurn()) return
     try {
