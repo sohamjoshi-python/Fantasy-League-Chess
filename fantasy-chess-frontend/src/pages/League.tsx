@@ -172,6 +172,9 @@ const LeaguePage: React.FC = () => {
   const [botName, setBotName] = useState('')
   const [botNameError, setBotNameError] = useState('')
 
+  // Track the last draft turn the bot drafted for
+  const lastBotDraftTurnRef = React.useRef<number | null>(null);
+
   useEffect(() => {
     async function fetchAvailableWeeks() {
       if (!league || !user) return;
@@ -259,8 +262,8 @@ const LeaguePage: React.FC = () => {
         botDrafting
       })
 
-      // If it's the bot's turn, auto-draft immediately
-      if (currentDraftUserId === bot.id) {
+      // Only draft if we haven't already drafted for this turn
+      if (currentDraftUserId === bot.id && lastBotDraftTurnRef.current !== league.current_draft_turn) {
         const handleBotTurn = async () => {
           try {
             setBotDrafting(true)
@@ -273,12 +276,14 @@ const LeaguePage: React.FC = () => {
               .single();
             if (team && Array.isArray(team.player_ids) && team.player_ids.length >= 10) {
               console.log('Bot team already full, skipping draft');
+              lastBotDraftTurnRef.current = league.current_draft_turn;
               return;
             }
             console.log('🤖 Bot is drafting...')
             const { success, error } = await autoDraftForBot(bot.id, league.id)
             if (success) {
               console.log('✅ Bot draft successful')
+              lastBotDraftTurnRef.current = league.current_draft_turn;
               // Reload league data to update draft state
               await loadLeagueData()
             } else {
