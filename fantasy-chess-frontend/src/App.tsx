@@ -8,11 +8,13 @@ import JoinLeague from './pages/JoinLeague'
 import LeaguePage from './pages/League'
 import Profile from './pages/Profile'
 import Help from './pages/Help'
+import AuthRedirect from './components/AuthRedirect';
 import { AuthProvider } from './contexts/AuthContext'
 
 function App() {
   return (
     <AuthProvider>
+      <AuthRedirect />
       <Router>
         <NewUserRedirect />
         <div className="min-h-screen flex flex-col w-full">
