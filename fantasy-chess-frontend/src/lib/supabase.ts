@@ -106,13 +106,31 @@ export async function getHighestEloAvailablePlayer(leagueId: string): Promise<{ 
   const draftedPlayerIds = draftedPlayers?.flatMap(team => team.player_ids || []) || [];
   
   // Get the highest ELO player not yet drafted
-  const { data: availablePlayer, error: playerError } = await supabase
-    .from('chess_players')
-    .select('*')
-    .not('id', 'in', `(${draftedPlayerIds.map(id => `'${id}'`).join(',')})`)
-    .order('elo', { ascending: false })
-    .limit(1)
-    .single();
+  let availablePlayer = null;
+  let playerError = null;
+  
+  if (draftedPlayerIds.length === 0) {
+    // If no players are drafted yet, get the highest ELO player
+    const { data, error } = await supabase
+      .from('chess_players')
+      .select('*')
+      .order('elo', { ascending: false })
+      .limit(1)
+      .single();
+    availablePlayer = data;
+    playerError = error;
+  } else {
+    // If some players are drafted, exclude them
+    const { data, error } = await supabase
+      .from('chess_players')
+      .select('*')
+      .not('id', 'in', `(${draftedPlayerIds.map(id => `'${id}'`).join(',')})`)
+      .order('elo', { ascending: false })
+      .limit(1)
+      .single();
+    availablePlayer = data;
+    playerError = error;
+  }
   
   if (playerError) {
     return { success: false, error: playerError };
@@ -129,6 +147,8 @@ export async function getHighestEloAvailablePlayer(leagueId: string): Promise<{ 
  */
 export async function autoDraftForBot(botId: string, leagueId: string): Promise<{ success: boolean, error?: any }> {
   try {
+    console.log('Auto-drafting for bot:', botId, 'in league:', leagueId);
+    
     // Get the bot
     const { data: bot, error: botError } = await supabase
       .from('bots')
@@ -137,14 +157,20 @@ export async function autoDraftForBot(botId: string, leagueId: string): Promise<
       .single();
     
     if (botError) {
+      console.error('Bot fetch error:', botError);
       return { success: false, error: botError };
     }
+    
+    console.log('Found bot:', bot);
     
     // Get highest ELO available player
     const { success, player, error: playerError } = await getHighestEloAvailablePlayer(leagueId);
     if (!success || !player) {
+      console.error('Player fetch error:', playerError);
       return { success: false, error: playerError };
     }
+    
+    console.log('Selected player for bot:', player);
     
     // Create or get bot's team
     let team = null;

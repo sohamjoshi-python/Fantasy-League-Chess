@@ -24,6 +24,7 @@ const Dashboard: React.FC = () => {
   const [currentLineup, setCurrentLineup] = useState<Lineup | null>(null)
   const [lineupPlayers, setLineupPlayers] = useState<ChessPlayer[]>([])
   const [pastLeagues, setPastLeagues] = useState<any[]>([])
+  const [futureLeagues, setFutureLeagues] = useState<League[]>([])
   const [loading, setLoading] = useState(true)
   const [playerBreakdown, setPlayerBreakdown] = useState<any[]>([])
   const [breakdownLoading, setBreakdownLoading] = useState(false)
@@ -109,11 +110,13 @@ const Dashboard: React.FC = () => {
         return isMember
       }) || []
 
-      // Split into active and past leagues
+      // Split into active, future, and past leagues
       const todayStr = new Date().toISOString().split('T')[0];
-      const active = leagues.filter(l => l.end_date >= todayStr);
+      const active = leagues.filter(l => l.end_date >= todayStr && l.start_date <= todayStr);
+      const future = leagues.filter(l => l.start_date > todayStr);
       const past = leagues.filter(l => l.end_date < todayStr);
       setActiveLeagues(active);
+      setFutureLeagues(future);
 
       // Set currentLeague to the first active league (if any)
       setCurrentLeague(active.length > 0 ? active[0] : null);
@@ -390,6 +393,37 @@ const Dashboard: React.FC = () => {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Future Leagues Section */}
+      {futureLeagues.length > 0 && (
+        <div className="bg-white rounded-lg shadow-lg p-6 mt-8 border-2 border-royalBlue">
+          <h2 className="text-xl font-bold mb-4 text-neutral-900">Upcoming Leagues</h2>
+          <div className="space-y-3">
+            {futureLeagues.map((league) => (
+              <div key={league.id} className="flex items-center justify-between p-4 bg-neutral-50 rounded-lg border border-royalBlue">
+                <div>
+                  <h4 className="font-semibold text-neutral-900">{league.name}</h4>
+                  <p className="text-sm text-neutral-500">
+                    Starts: {new Date(league.start_date).toLocaleDateString()}
+                  </p>
+                  <p className="text-sm text-neutral-500">
+                    Ends: {new Date(league.end_date).toLocaleDateString()}
+                  </p>
+                  <p className="text-sm text-neutral-500">
+                    Buy-in: {league.buy_in} coins
+                  </p>
+                </div>
+                <Link
+                  to={`/league/${league.id}`}
+                  className="bg-[#1e293b] hover:bg-royalBlue text-white px-4 py-2 rounded-lg font-semibold transition-colors shadow-lg"
+                >
+                  View League
+                </Link>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
