@@ -36,6 +36,22 @@ const Profile: React.FC = () => {
     e.preventDefault()
     setSaving(true)
     setMessage('')
+
+    // Check if username is already taken (by another user)
+    if (username) {
+      const { data: existing, error: checkError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('username', username)
+        .neq('id', user?.id)
+        .single()
+      if (existing) {
+        setMessage('That username is already taken. Please choose another.');
+        setSaving(false)
+        return
+      }
+    }
+
     const { error } = await supabase
       .from('users')
       .update({ username })
@@ -43,6 +59,8 @@ const Profile: React.FC = () => {
     if (!error) {
       setMessage('Profile updated!')
       loadProfile()
+    } else if (error.code === '23505' || (error.message && error.message.includes('duplicate key'))) {
+      setMessage('That username is already taken. Please choose another.')
     } else {
       setMessage('Error updating profile')
     }
