@@ -256,25 +256,26 @@ const LeaguePage: React.FC = () => {
         isBotTurn: currentDraftUserId === bot.id
       })
       
-      // If it's the bot's turn, auto-draft
+      // If it's the bot's turn, auto-draft immediately
       if (currentDraftUserId === bot.id) {
         const handleBotTurn = async () => {
           try {
+            console.log('🤖 Bot is drafting...')
             const { success, error } = await autoDraftForBot(bot.id, league.id)
             if (success) {
+              console.log('✅ Bot draft successful')
               // Reload league data to update draft state
               await loadLeagueData()
             } else {
-              console.error('Bot auto-draft failed:', error)
+              console.error('❌ Bot auto-draft failed:', error)
             }
           } catch (error) {
-            console.error('Error in bot auto-draft:', error)
+            console.error('❌ Error in bot auto-draft:', error)
           }
         }
         
-        // Add a small delay to make the bot turn visible
-        const timer = setTimeout(handleBotTurn, 1000)
-        return () => clearTimeout(timer)
+        // Execute immediately without delay
+        handleBotTurn()
       }
     }
   }, [league?.current_draft_turn, bot, draftStarted, league?.draft_completed])
