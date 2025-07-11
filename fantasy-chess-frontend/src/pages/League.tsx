@@ -994,7 +994,7 @@ const LeaguePage: React.FC = () => {
   }
 
   if (!league) {
-    return (
+  return (
       <div className="text-center py-16">
         <div className="text-red-600 text-xl">League not found</div>
       </div>
@@ -1220,34 +1220,34 @@ const LeaguePage: React.FC = () => {
               )}
             </div>
           ) : (
-            <div className="space-y-3">
-              {standings.map((standing, index) => (
-                <div
-                  key={standing.user_id}
+          <div className="space-y-3">
+            {standings.map((standing, index) => (
+              <div
+                key={standing.user_id}
                   className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors group ${
                     standing.user_id === user?.id ? 'bg-royalBlue bg-opacity-10 border border-royalBlue' : 'bg-neutral-50 hover:bg-neutral-100'
-                  }`}
-                  onClick={() => handleUserClick(standing)}
-                >
+                }`}
+                onClick={() => handleUserClick(standing)}
+              >
                   <div className="flex items-center space-x-3 min-w-0 flex-1">
                     <div className={`w-6 h-6 lg:w-8 lg:h-8 rounded-full flex items-center justify-center text-xs lg:text-sm font-bold flex-shrink-0 ${
                       index < 3 ? 'bg-royalBlue text-white' : 'bg-neutral-300 text-neutral-700'
-                    }`}>
-                      {standing.rank}
-                    </div>
+                  }`}>
+                    {standing.rank}
+                  </div>
                     <div className="min-w-0 flex-1">
                       <ExpandableUsername 
                         username={standing.display_name || standing.user_email}
                         isCurrentUser={standing.user_id === user?.id}
                       />
-                    </div>
-                  </div>
-                  <div className="text-right flex-shrink-0 ml-2">
-                    <p className="font-semibold text-sm lg:text-base text-neutral-900">{standing.total_points} points</p>
                   </div>
                 </div>
-              ))}
-            </div>
+                  <div className="text-right flex-shrink-0 ml-2">
+                    <p className="font-semibold text-sm lg:text-base text-neutral-900">{standing.total_points} points</p>
+                </div>
+              </div>
+            ))}
+          </div>
           )}
         </div>
 
@@ -1344,7 +1344,7 @@ const LeaguePage: React.FC = () => {
                 </div>
               </div>
             ) : (
-                              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                 {lineupPlayers.map((player) => (
                   <div key={player.id} className="bg-neutral-50 rounded-lg p-3 text-center border border-gold">
                     <ExpandablePlayerName 
