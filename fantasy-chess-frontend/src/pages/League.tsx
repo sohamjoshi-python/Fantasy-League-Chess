@@ -1127,11 +1127,28 @@ const LeaguePage: React.FC = () => {
     if (!league || !user || isOwner) return;
     if (!user.id) return;
     if (!window.confirm('Are you sure you want to leave this league?')) return;
+    await removeUserFromLeague(user.id);
+  };
+
+  // Remove user from league (for creators or self)
+  const removeUserFromLeague = async (userIdToRemove: string) => {
+    if (!league || !user) return;
+    if (!user.id) return;
+    
+    // Only allow if user is the creator or removing themselves
+    if (!isOwner && user.id !== userIdToRemove) return;
+    
+    const confirmMessage = user.id === userIdToRemove 
+      ? 'Are you sure you want to leave this league?' 
+      : 'Are you sure you want to remove this player from the league?';
+    
+    if (!window.confirm(confirmMessage)) return;
+    
     setLoading(true);
     try {
       // First, update the league's member_ids (while user is still a member)
       const updatedMemberIds = (league.member_ids || []).reduce((acc: string[], id: string | undefined) => {
-        if (typeof id === 'string' && user?.id && id !== String(user.id)) acc.push(id);
+        if (typeof id === 'string' && id !== userIdToRemove) acc.push(id);
         return acc;
       }, []);
       const { error: leaguesError } = await supabase
@@ -1150,7 +1167,7 @@ const LeaguePage: React.FC = () => {
         .from('league_members')
         .delete()
         .eq('league_id', league.id)
-        .eq('user_id', user.id);
+        .eq('user_id', userIdToRemove);
       if (leagueMembersError) {
         console.error('Error removing from league_members:', leagueMembersError);
         setError('Failed to remove from league_members: ' + leagueMembersError.message);
@@ -1163,7 +1180,7 @@ const LeaguePage: React.FC = () => {
         .from('teams')
         .delete()
         .eq('league_id', league.id)
-        .eq('user_id', user.id);
+        .eq('user_id', userIdToRemove);
       if (teamsError) {
         console.error('Error deleting team:', teamsError);
         setError('Failed to delete team: ' + teamsError.message);
@@ -1176,7 +1193,7 @@ const LeaguePage: React.FC = () => {
         .from('lineups')
         .delete()
         .eq('league_id', league.id)
-        .eq('user_id', user.id);
+        .eq('user_id', userIdToRemove);
       if (lineupsError) {
         console.error('Error deleting lineups:', lineupsError);
         setError('Failed to delete lineups: ' + lineupsError.message);
@@ -1184,9 +1201,15 @@ const LeaguePage: React.FC = () => {
         return;
       }
       
-      navigate('/dashboard');
+      // If user removed themselves, navigate to dashboard
+      if (user.id === userIdToRemove) {
+        navigate('/dashboard');
+      } else {
+        // If creator removed someone, reload league data
+        await loadLeagueData();
+      }
     } catch (err) {
-      console.error('Unexpected error in handleLeaveLeague:', err);
+      console.error('Unexpected error in removeUserFromLeague:', err);
       setError('Unexpected error: ' + (err as Error).message);
     } finally {
       setLoading(false);
@@ -1479,9 +1502,21 @@ const LeaguePage: React.FC = () => {
                       />
                   </div>
                 </div>
-                  <div className="text-right flex-shrink-0 ml-2">
+                  <div className="flex items-center space-x-2 flex-shrink-0 ml-2">
                     <p className="font-semibold text-sm lg:text-base text-neutral-900">{standing.total_points} points</p>
-                </div>
+                    {isOwner && standing.user_id !== user?.id && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeUserFromLeague(standing.user_id);
+                        }}
+                        className="text-red-600 hover:text-red-800 p-1 rounded transition-colors"
+                        title="Remove player from league"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
               </div>
             ))}
           </div>
