@@ -92,51 +92,65 @@ export async function removeBot(botId: string): Promise<{ success: boolean, erro
  * @returns {Promise<{ success: boolean, player?: any, error?: any }>}
  */
 export async function getHighestEloAvailablePlayer(leagueId: string): Promise<{ success: boolean, player?: any, error?: any }> {
-  // Get all drafted players in this league
-  const { data: draftedPlayers, error: draftedError } = await supabase
-    .from('teams')
-    .select('player_ids')
-    .eq('league_id', leagueId);
-  
-  if (draftedError) {
-    return { success: false, error: draftedError };
+  try {
+    // Get all drafted players in this league
+    const { data: draftedPlayers, error: draftedError } = await supabase
+      .from('teams')
+      .select('player_ids')
+      .eq('league_id', leagueId);
+    
+    if (draftedError) {
+      return { success: false, error: draftedError };
+    }
+    
+    // Flatten all drafted player IDs
+    const draftedPlayerIds = draftedPlayers?.flatMap(team => team.player_ids || []) || [];
+    
+    console.log('Drafted player IDs:', draftedPlayerIds);
+    
+    // Get the highest ELO player not yet drafted
+    let availablePlayer = null;
+    let playerError = null;
+    
+    if (draftedPlayerIds.length === 0) {
+      // If no players are drafted yet, get the highest ELO player
+      console.log('No players drafted yet, getting highest ELO player');
+      const { data, error } = await supabase
+        .from('chess_players')
+        .select('*')
+        .order('elo', { ascending: false })
+        .limit(1)
+        .single();
+      availablePlayer = data;
+      playerError = error;
+    } else {
+      // If some players are drafted, get all players and filter in JavaScript
+      console.log('Some players drafted, filtering in JavaScript');
+      const { data: allPlayers, error } = await supabase
+        .from('chess_players')
+        .select('*')
+        .order('elo', { ascending: false });
+      
+      if (error) {
+        return { success: false, error };
+      }
+      
+      // Filter out drafted players
+      const availablePlayers = allPlayers?.filter(player => !draftedPlayerIds.includes(player.id)) || [];
+      availablePlayer = availablePlayers[0]; // Get the highest ELO available player
+      playerError = availablePlayers.length === 0 ? 'No available players' : null;
+    }
+    
+    if (playerError) {
+      return { success: false, error: playerError };
+    }
+    
+    console.log('Selected available player:', availablePlayer);
+    return { success: true, player: availablePlayer };
+  } catch (error: any) {
+    console.error('Error in getHighestEloAvailablePlayer:', error);
+    return { success: false, error };
   }
-  
-  // Flatten all drafted player IDs
-  const draftedPlayerIds = draftedPlayers?.flatMap(team => team.player_ids || []) || [];
-  
-  // Get the highest ELO player not yet drafted
-  let availablePlayer = null;
-  let playerError = null;
-  
-  if (draftedPlayerIds.length === 0) {
-    // If no players are drafted yet, get the highest ELO player
-    const { data, error } = await supabase
-      .from('chess_players')
-      .select('*')
-      .order('elo', { ascending: false })
-      .limit(1)
-      .single();
-    availablePlayer = data;
-    playerError = error;
-  } else {
-    // If some players are drafted, exclude them
-    const { data, error } = await supabase
-      .from('chess_players')
-      .select('*')
-      .not('id', 'in', `(${draftedPlayerIds.map(id => `'${id}'`).join(',')})`)
-      .order('elo', { ascending: false })
-      .limit(1)
-      .single();
-    availablePlayer = data;
-    playerError = error;
-  }
-  
-  if (playerError) {
-    return { success: false, error: playerError };
-  }
-  
-  return { success: true, player: availablePlayer };
 }
 
 /**
