@@ -195,7 +195,7 @@ export async function autoDraftForBot(botId: string, leagueId: string): Promise<
     }
 
     // --- Get or create bot team ---
-    let { data: team, error: teamError } = await supabase
+    let { data: team } = await supabase
       .from('teams')
       .select('id, player_ids')
       .eq('bot_id', botId)
