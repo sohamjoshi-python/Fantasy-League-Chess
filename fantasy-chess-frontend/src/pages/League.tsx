@@ -880,7 +880,7 @@ const LeaguePage: React.FC = () => {
                 {/* 1st Place */}
                 {standings[0] && (
                   <div className="flex flex-col items-center">
-                    <div className="w-20 h-20 lg:w-24 lg:h-24 rounded-full bg-gold flex items-center justify-center text-3xl font-extrabold text-white border-4 border-gold mb-2 shadow-lg">
+                    <div className="w-20 h-20 lg:w-24 lg:h-24 rounded-full bg-royalBlue flex items-center justify-center text-3xl font-extrabold text-white border-4 border-royalBlue mb-2 shadow-lg">
                       1
                     </div>
                     <ExpandableUsername username={standings[0].display_name || standings[0].user_email} />
@@ -925,13 +925,13 @@ const LeaguePage: React.FC = () => {
                 <div
                   key={standing.user_id}
                   className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors group ${
-                    standing.user_id === user?.id ? 'bg-gold bg-opacity-10 border border-gold' : 'bg-neutral-50 hover:bg-neutral-100'
+                    standing.user_id === user?.id ? 'bg-royalBlue bg-opacity-10 border border-royalBlue' : 'bg-neutral-50 hover:bg-neutral-100'
                   }`}
                   onClick={() => handleUserClick(standing)}
                 >
                   <div className="flex items-center space-x-3 min-w-0 flex-1">
                     <div className={`w-6 h-6 lg:w-8 lg:h-8 rounded-full flex items-center justify-center text-xs lg:text-sm font-bold flex-shrink-0 ${
-                      index < 3 ? 'bg-gold text-white' : 'bg-neutral-300 text-neutral-700'
+                      index < 3 ? 'bg-royalBlue text-white' : 'bg-neutral-300 text-neutral-700'
                     }`}>
                       {standing.rank}
                     </div>
@@ -984,7 +984,7 @@ const LeaguePage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsEditingLineup(true)}
-                  className="flex items-center space-x-1 text-gold hover:text-purple text-sm lg:text-base transition-colors"
+                  className="flex items-center space-x-1 text-royalBlue hover:text-purple text-sm lg:text-base transition-colors"
                 >
                   <Edit className="h-4 w-4" />
                   <span>Edit</span>
@@ -1009,8 +1009,8 @@ const LeaguePage: React.FC = () => {
                       }}
                       className={`p-3 rounded-lg border-2 text-left transition-colors ${
                         selectedLineupPlayers.includes(player.id)
-                          ? 'border-gold bg-gold bg-opacity-10'
-                          : 'border-neutral-200 hover:border-gold'
+                          ? 'border-royalBlue bg-royalBlue bg-opacity-10'
+                          : 'border-neutral-200 hover:border-royalBlue'
                       }`}
                     >
                       <div className="font-medium text-sm lg:text-base text-neutral-900">
@@ -1025,7 +1025,7 @@ const LeaguePage: React.FC = () => {
                     type="button"
                     onClick={saveLineup}
                     disabled={selectedLineupPlayers.length !== 5}
-                    className="flex items-center space-x-1 bg-[#1e293b] hover:bg-gold disabled:bg-neutral-400 text-white px-3 lg:px-4 py-2 rounded-lg text-sm lg:text-base shadow-lg transition-colors"
+                    className="flex items-center space-x-1 bg-[#1e293b] hover:bg-royalBlue disabled:bg-neutral-400 text-white px-3 lg:px-4 py-2 rounded-lg text-sm lg:text-base shadow-lg transition-colors"
                   >
                     <Check className="h-4 w-4" />
                     <span>Save Lineup</span>
@@ -1064,7 +1064,7 @@ const LeaguePage: React.FC = () => {
               <h4 className="font-semibold text-neutral-900">Point Breakdown</h4>
               {availableWeeks.length > 0 && (
                 <select
-                  className="ml-2 border border-neutral-300 rounded px-2 py-1 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-gold"
+                  className="ml-2 border border-neutral-300 rounded px-2 py-1 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-royalBlue"
                   value={selectedWeek || ''}
                   onChange={e => setSelectedWeek(e.target.value)}
                 >
@@ -1117,7 +1117,7 @@ const LeaguePage: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleStartDraft}
-                  className="mb-4 px-6 py-2 bg-[#1e293b] hover:bg-gold text-white rounded-lg font-semibold shadow-lg transition-colors"
+                  className="mb-4 px-6 py-2 bg-[#1e293b] hover:bg-royalBlue text-white rounded-lg font-semibold shadow-lg transition-colors"
                   disabled={loading}
                 >
                   Start Draft
@@ -1165,11 +1165,11 @@ const LeaguePage: React.FC = () => {
                     value={search}
                     onChange={e => setSearch(e.target.value)}
                     placeholder="Search players by name..."
-                    className="mb-4 w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gold text-neutral-900 placeholder-neutral-500"
+                    className="mb-4 w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-royalBlue text-neutral-900 placeholder-neutral-500"
                   />
                   {isUserTurn() ? (
                     <div>
-                      <p className="text-green-600 font-medium mb-4 text-sm lg:text-base">It's your turn to draft!</p>
+                      <p className="text-royalBlue font-medium mb-4 text-sm lg:text-base">It's your turn to draft!</p>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-64 overflow-y-auto">
                         {availablePlayers
                           .filter(player => player.name.toLowerCase().includes(search.toLowerCase()))
@@ -1178,7 +1178,7 @@ const LeaguePage: React.FC = () => {
                               type="button"
                               key={player.id}
                               onClick={() => draftPlayer(player.id)}
-                              className="p-3 rounded-lg border border-neutral-200 hover:border-gold text-left w-full transition-colors"
+                              className="p-3 rounded-lg border border-neutral-200 hover:border-royalBlue text-left w-full transition-colors"
                             >
                               <div className="font-semibold text-base lg:text-lg text-neutral-900">
                                 <ExpandablePlayerName 
@@ -1195,7 +1195,7 @@ const LeaguePage: React.FC = () => {
                   ) : (
                     <div className="text-center py-6 lg:py-8">
                       {league.current_draft_turn >= league.draft_order.length ? (
-                        <p className="text-green-600 text-sm lg:text-base font-semibold">Draft complete!</p>
+                        <p className="text-royalBlue text-sm lg:text-base font-semibold">Draft complete!</p>
                       ) : (
                         (() => {
                           const currentDraftUserId = league.draft_order[league.current_draft_turn];
@@ -1271,7 +1271,7 @@ const LeaguePage: React.FC = () => {
                 ) : (
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                     {selectedUserLineup.map((player) => (
-                      <div key={player.id} className="bg-gold bg-opacity-10 rounded-lg p-3 text-center border border-gold">
+                      <div key={player.id} className="bg-royalBlue bg-opacity-10 rounded-lg p-3 text-center border border-royalBlue">
                         <ExpandablePlayerName 
                           playerName={player.name}
                           href={`https://www.chess.com/member/${player.name}/`}

@@ -210,15 +210,15 @@ const Dashboard: React.FC = () => {
       <h1 className="text-2xl lg:text-3xl font-bold text-neutral-900 mb-6 lg:mb-8">Dashboard</h1>
       {activeLeagues.length === 0 ? (
         <div className="text-center py-12 lg:py-16">
-          <div className="bg-white rounded-lg shadow-lg p-6 lg:p-8 max-w-md mx-auto border-2 border-gold">
-            <Crown className="h-12 w-12 lg:h-16 lg:w-16 text-gold mx-auto mb-4" />
+          <div className="bg-white rounded-lg shadow-lg p-6 lg:p-8 max-w-md mx-auto border-2 border-royalBlue">
+            <Crown className="h-12 w-12 lg:h-16 lg:w-16 text-royalBlue mx-auto mb-4" />
             <h2 className="text-xl lg:text-2xl font-bold mb-4 text-neutral-900">No Active League</h2>
             <p className="text-neutral-700 mb-6 text-sm lg:text-base">
               You're not currently in any active league. Join or create one to start playing!
             </p>
             <Link
               to="/join-league"
-              className="inline-flex items-center space-x-2 bg-[#1e293b] hover:bg-gold text-white px-4 lg:px-6 py-3 rounded-lg font-semibold transition-colors shadow-lg"
+              className="inline-flex items-center space-x-2 bg-[#1e293b] hover:bg-royalBlue text-white px-4 lg:px-6 py-3 rounded-lg font-semibold transition-colors shadow-lg"
             >
               <Plus className="h-5 w-5" />
               <span>Join a League</span>
@@ -229,33 +229,33 @@ const Dashboard: React.FC = () => {
         <div className="space-y-6 lg:space-y-8">
           {/* Current League Info */}
           {currentLeague && (
-            <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6 border-2 border-gold">
+            <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6 border-2 border-royalBlue">
               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-4">
                 <h2 className="text-xl lg:text-2xl font-bold text-neutral-900 mb-2 lg:mb-0">{currentLeague.name}</h2>
                 <Link
                   to={`/league/${currentLeague.id}`}
-                  className="text-gold hover:text-purple font-medium text-sm lg:text-base transition-colors"
+                  className="text-royalBlue hover:text-purple font-medium text-sm lg:text-base transition-colors"
                 >
                   View League →
                 </Link>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6">
                 <div className="flex items-center space-x-3">
-                  <Users className="h-5 w-5 lg:h-6 lg:w-6 text-gold" />
+                  <Users className="h-5 w-5 lg:h-6 lg:w-6 text-royalBlue" />
                   <div>
                     <p className="text-xs lg:text-sm text-neutral-500">Members</p>
                     <p className="font-semibold text-sm lg:text-base text-neutral-900">{currentLeague.member_ids.length}</p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-3">
-                  <Trophy className="h-5 w-5 lg:h-6 lg:w-6 text-gold" />
+                  <Trophy className="h-5 w-5 lg:h-6 lg:w-6 text-royalBlue" />
                   <div>
                     <p className="text-xs lg:text-sm text-neutral-500">Buy-in</p>
                     <p className="font-semibold text-sm lg:text-base text-neutral-900">{currentLeague.buy_in} coins</p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-3">
-                  <Calendar className="h-5 w-5 lg:h-6 lg:w-6 text-gold" />
+                  <Calendar className="h-5 w-5 lg:h-6 lg:w-6 text-royalBlue" />
                   <div>
                     <p className="text-xs lg:text-sm text-neutral-500">End Date</p>
                     <p className="font-semibold text-sm lg:text-base text-neutral-900">{new Date(currentLeague.end_date).toLocaleDateString()}</p>
@@ -266,12 +266,12 @@ const Dashboard: React.FC = () => {
           )}
           {/* Current Lineup */}
           {userTeam && (
-            <div className="bg-white rounded-lg shadow-lg p-6 border-2 border-gold">
+            <div className="bg-white rounded-lg shadow-lg p-6 border-2 border-royalBlue">
               <h3 className="text-xl font-bold mb-4 text-neutral-900">Current Lineup</h3>
               {currentLineup && lineupPlayers.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                   {lineupPlayers.map((player) => (
-                    <div key={player.id} className="bg-neutral-50 rounded-lg p-4 text-center border border-gold">
+                    <div key={player.id} className="bg-neutral-50 rounded-lg p-4 text-center border border-royalBlue">
                       <h4 className="font-semibold text-sm text-neutral-900">{player.name}</h4>
                       <p className="text-xs text-neutral-500">ELO: {player.elo}</p>
                     </div>
@@ -283,7 +283,7 @@ const Dashboard: React.FC = () => {
                   {currentLeague && (
                     <Link
                       to={`/league/${currentLeague.id}`}
-                      className="bg-[#1e293b] hover:bg-gold text-white px-4 py-2 rounded-lg shadow-lg transition-colors"
+                      className="bg-[#1e293b] hover:bg-royalBlue text-white px-4 py-2 rounded-lg shadow-lg transition-colors"
                     >
                       Set Lineup
                     </Link>
@@ -293,12 +293,12 @@ const Dashboard: React.FC = () => {
             </div>
           )}
           {/* Point Breakdown Table */}
-          <div className="bg-white rounded-lg shadow-lg p-6 border-2 border-gold">
+          <div className="bg-white rounded-lg shadow-lg p-6 border-2 border-royalBlue">
             <div className="mb-2 flex items-center space-x-2">
               <h3 className="text-xl font-bold text-neutral-900">Point Breakdown</h3>
               {availableWeeks.length > 0 && (
                 <select
-                  className="ml-2 border border-gold rounded px-2 py-1 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-gold"
+                  className="ml-2 border border-royalBlue rounded px-2 py-1 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-royalBlue"
                   value={selectedWeek || ''}
                   onChange={e => setSelectedWeek(e.target.value)}
                 >
@@ -317,8 +317,8 @@ const Dashboard: React.FC = () => {
               <table className="min-w-full text-sm text-neutral-900">
                 <thead>
                   <tr>
-                    <th className="text-left px-2 py-1 border-b border-gold">Player</th>
-                    <th className="text-right px-2 py-1 border-b border-gold">Points</th>
+                    <th className="text-left px-2 py-1 border-b border-royalBlue">Player</th>
+                    <th className="text-right px-2 py-1 border-b border-royalBlue">Points</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -328,7 +328,7 @@ const Dashboard: React.FC = () => {
                       <td className="px-2 py-1 text-right text-neutral-900">{Number(row.player_points).toFixed(2)}</td>
                     </tr>
                   ))}
-                  <tr className="font-bold border-t border-gold">
+                  <tr className="font-bold border-t border-royalBlue">
                     <td className="px-2 py-1">TOTAL</td>
                     <td className="px-2 py-1 text-right">{playerBreakdown.reduce((sum, p) => sum + Number(p.player_points), 0).toFixed(2)}</td>
                   </tr>
@@ -339,7 +339,7 @@ const Dashboard: React.FC = () => {
             )}
           </div>
           {/* Next Titled Tuesday */}
-          <div className="bg-white rounded-lg shadow-lg p-6 border-2 border-gold">
+          <div className="bg-white rounded-lg shadow-lg p-6 border-2 border-royalBlue">
             <h3 className="text-xl font-bold mb-4 text-neutral-900">Next Titled Tuesday</h3>
             <div className="flex items-center justify-between">
               <div>
@@ -357,7 +357,7 @@ const Dashboard: React.FC = () => {
                 href="https://www.chess.com/tournament/live/titled-tuesdays"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center space-x-2 bg-[#1e293b] hover:bg-gold text-white px-4 py-2 rounded-lg transition-colors shadow-lg"
+                className="flex items-center space-x-2 bg-[#1e293b] hover:bg-royalBlue text-white px-4 py-2 rounded-lg transition-colors shadow-lg"
               >
                 <ExternalLink className="h-4 w-4" />
                 <span>Watch Live</span>
@@ -367,11 +367,11 @@ const Dashboard: React.FC = () => {
 
           {/* Past Performance */}
           {pastLeagues.length > 0 && (
-            <div className="bg-white rounded-lg shadow-lg p-6 border-2 border-gold">
+            <div className="bg-white rounded-lg shadow-lg p-6 border-2 border-royalBlue">
               <h3 className="text-xl font-bold mb-4 text-neutral-900">Past League Performance</h3>
               <div className="space-y-3">
                 {pastLeagues.map((league) => (
-                  <div key={league.league_id} className="flex items-center justify-between p-4 bg-neutral-50 rounded-lg border border-gold">
+                  <div key={league.league_id} className="flex items-center justify-between p-4 bg-neutral-50 rounded-lg border border-royalBlue">
                     <div>
                       <h4 className="font-semibold text-neutral-900">{league.league_name}</h4>
                       <p className="text-sm text-neutral-500">
@@ -392,11 +392,11 @@ const Dashboard: React.FC = () => {
 
       {/* Past Leagues Section */}
       {pastLeagues.length > 0 && (
-        <div className="bg-white rounded-lg shadow-lg p-6 mt-8 border-2 border-gold">
+        <div className="bg-white rounded-lg shadow-lg p-6 mt-8 border-2 border-royalBlue">
           <h2 className="text-xl font-bold mb-4 text-neutral-900">Past Leagues</h2>
           <div className="space-y-3">
             {pastLeagues.map((league) => (
-              <div key={league.league_id} className="flex items-center justify-between p-4 bg-neutral-50 rounded-lg border border-gold">
+              <div key={league.league_id} className="flex items-center justify-between p-4 bg-neutral-50 rounded-lg border border-royalBlue">
                 <div>
                   <h4 className="font-semibold text-neutral-900">{league.league_name}</h4>
                   <p className="text-sm text-neutral-500">
@@ -408,7 +408,7 @@ const Dashboard: React.FC = () => {
                 </div>
                 <Link
                   to={`/league/${league.league_id}`}
-                  className="bg-[#1e293b] hover:bg-gold text-white px-4 py-2 rounded-lg font-semibold transition-colors shadow-lg"
+                  className="bg-[#1e293b] hover:bg-royalBlue text-white px-4 py-2 rounded-lg font-semibold transition-colors shadow-lg"
                 >
                   View League
                 </Link>
