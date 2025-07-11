@@ -188,7 +188,7 @@ export async function autoDraftForBot(botId: string, leagueId: string): Promise<
 
     // Check if a team already exists for the bot in this league
     if (!teamId) {
-      const { data: existingTeam, error: existingTeamError } = await supabase
+      const { data: existingTeam } = await supabase
         .from('teams')
         .select('id')
         .eq('user_id', botId)
