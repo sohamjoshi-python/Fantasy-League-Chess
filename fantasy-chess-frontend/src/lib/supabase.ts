@@ -162,70 +162,85 @@ export async function getHighestEloAvailablePlayer(leagueId: string): Promise<{ 
 export async function autoDraftForBot(botId: string, leagueId: string): Promise<{ success: boolean, error?: any }> {
   try {
     console.log('Auto-drafting for bot:', botId, 'in league:', leagueId);
-    
+
     // Get highest ELO available player first (most important)
     const { success, player, error: playerError } = await getHighestEloAvailablePlayer(leagueId);
     if (!success || !player) {
       console.error('Player fetch error:', playerError);
       return { success: false, error: playerError };
     }
-    
+
     console.log('Selected player for bot:', player);
-    
+
     // Get the bot (simplified - we don't need all bot data)
     const { data: bot, error: botError } = await supabase
       .from('bots')
       .select('team_id')
       .eq('id', botId)
       .single();
-    
+
     if (botError) {
       console.error('Bot fetch error:', botError);
       return { success: false, error: botError };
     }
-    
-    console.log('Found bot team_id:', bot?.team_id);
-    
-    // Create or get bot's team
+
     let teamId = bot?.team_id;
+
+    // Check if a team already exists for the bot in this league
     if (!teamId) {
-      const { data: newTeam, error: teamError } = await supabase
+      const { data: existingTeam, error: existingTeamError } = await supabase
         .from('teams')
-        .insert({ 
-          user_id: botId,
-          league_id: leagueId, 
-          player_ids: [] 
-        })
         .select('id')
+        .eq('user_id', botId)
+        .eq('league_id', leagueId)
         .single();
-      
-      if (teamError) {
-        return { success: false, error: teamError };
+
+      if (existingTeam) {
+        teamId = existingTeam.id;
+        // Update bot with team_id if missing
+        await supabase
+          .from('bots')
+          .update({ team_id: teamId })
+          .eq('id', botId);
+      } else {
+        // No team exists, create one
+        const { data: newTeam, error: teamError } = await supabase
+          .from('teams')
+          .insert({
+            user_id: botId,
+            league_id: leagueId,
+            player_ids: []
+          })
+          .select('id')
+          .single();
+
+        if (teamError) {
+          return { success: false, error: teamError };
+        }
+
+        teamId = newTeam.id;
+        // Update bot with team_id
+        await supabase
+          .from('bots')
+          .update({ team_id: teamId })
+          .eq('id', botId);
       }
-      
-      teamId = newTeam.id;
-      
-      // Update bot with team_id
-      await supabase
-        .from('bots')
-        .update({ team_id: teamId })
-        .eq('id', botId);
     }
-    
+
     // Add player to bot's team
     const { data: currentTeam } = await supabase
       .from('teams')
       .select('player_ids')
       .eq('id', teamId)
       .single();
-    
+
     if (currentTeam) {
       const newPlayerIds = [...(currentTeam.player_ids || []), player.id];
       const { error: teamUpdateError } = await supabase
         .from('teams')
         .update({ player_ids: newPlayerIds })
         .eq('id', teamId);
-      
+
       if (teamUpdateError) {
         console.error('Team update error:', teamUpdateError);
         return { success: false, error: teamUpdateError };
@@ -233,7 +248,7 @@ export async function autoDraftForBot(botId: string, leagueId: string): Promise<
     } else {
       return { success: false, error: 'Team not found' };
     }
-    
+
     console.log('✅ Bot successfully drafted:', player.name);
     return { success: true };
   } catch (error: any) {
