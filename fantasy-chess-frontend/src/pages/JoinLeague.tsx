@@ -46,6 +46,13 @@ const JoinLeague: React.FC = () => {
     return !(endA < startB || endB < startA);
   }
 
+  // Helper to get tomorrow's date in yyyy-mm-dd format
+  function getTomorrowDate() {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return tomorrow.toISOString().split('T')[0];
+  }
+
   const loadPublicLeagues = async () => {
     try {
       const { data: leagues } = await supabase
@@ -78,6 +85,13 @@ const JoinLeague: React.FC = () => {
       // Validate buy-in
       if (buyIn < 1) {
         setError('Buy-in must be at least 1 coin')
+        return
+      }
+
+      // Validate start date (must be at least tomorrow)
+      const tomorrowStr = getTomorrowDate();
+      if (!startDate || startDate < tomorrowStr) {
+        setError('Start date must be at least tomorrow.')
         return
       }
 
@@ -485,6 +499,7 @@ const JoinLeague: React.FC = () => {
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
                   required
+                  min={getTomorrowDate()}
                   className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-royalBlue text-neutral-900"
                 />
               </div>

@@ -105,6 +105,60 @@ const ExpandablePlayerName: React.FC<{
 
 // Remove the fetchLeague function entirely
 
+// Auto-complete teams with random players if league has started and draft is incomplete
+const autoCompleteTeamsIfNeeded = async (leagueData: any) => {
+  const today = new Date().toISOString().split('T')[0];
+  if (
+    leagueData.draft_started &&
+    !leagueData.draft_completed &&
+    leagueData.start_date <= today
+  ) {
+    // Fetch all teams for this league
+    const { data: teams } = await supabase
+      .from('teams')
+      .select('*')
+      .eq('league_id', leagueData.id);
+    // Fetch all chess players
+    const { data: allPlayers } = await supabase
+      .from('chess_players')
+      .select('id');
+    if (!allPlayers) return;
+    // Build set of already drafted player IDs
+    const drafted = new Set();
+    (teams || []).forEach(team => {
+      (team.player_ids || []).forEach((id: string) => drafted.add(id));
+    });
+    // Pool of available players
+    let available = allPlayers.filter(p => !drafted.has(p.id)).map(p => p.id);
+    // For each team, fill up to 10 players
+    for (const team of teams || []) {
+      const current = team.player_ids || [];
+      const needed = 10 - current.length;
+      if (needed > 0) {
+        // Randomly select needed players
+        const chosen: string[] = [];
+        for (let i = 0; i < needed && available.length > 0; i++) {
+          const idx = Math.floor(Math.random() * available.length);
+          chosen.push(available[idx]);
+          available.splice(idx, 1);
+        }
+        const newPlayerIds = [...current, ...chosen];
+        await supabase
+          .from('teams')
+          .update({ player_ids: newPlayerIds })
+          .eq('id', team.id);
+      }
+    }
+    // After all teams are filled, mark draft as completed
+    await supabase
+      .from('leagues')
+      .update({ draft_completed: true })
+      .eq('id', leagueData.id);
+    // Reload league data to reflect changes
+    // await loadLeagueData(); // This line was removed as per the edit hint
+  }
+};
+
 const LeaguePage: React.FC = () => {
   const { leagueId } = useParams<{ leagueId: string }>()
   const { user } = useAuth()
@@ -321,7 +375,8 @@ const LeaguePage: React.FC = () => {
         return
       }
 
-      setLeague(leagueData) // This line is removed as league is now managed by React Query
+      setLeague(leagueData);
+      await autoCompleteTeamsIfNeeded(leagueData);
       // Combine all relevant user IDs
       const allUserIds = Array.from(new Set([
         ...(leagueData.member_ids || []),
