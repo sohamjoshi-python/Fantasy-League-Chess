@@ -589,12 +589,14 @@ const LeaguePage: React.FC = () => {
 
   // Helper to generate snake draft order
   function generateSnakeDraftOrder(memberIds: string[], rounds = 10) {
+    // Deduplicate participant IDs to avoid duplicate turns
+    const uniqueIds = Array.from(new Set(memberIds));
     const order: string[] = [];
     for (let round = 0; round < rounds; round++) {
       if (round % 2 === 0) {
-        order.push(...memberIds);
+        order.push(...uniqueIds);
       } else {
-        order.push(...[...memberIds].reverse());
+        order.push(...[...uniqueIds].reverse());
       }
     }
     return order;

@@ -96,3 +96,26 @@ FROM information_schema.columns
 WHERE table_name = 'teams' 
 AND column_name IN ('user_id', 'bot_id')
 ORDER BY column_name; 
+
+-- Step 8: Update RLS SELECT policies for teams and lineups
+DROP POLICY IF EXISTS "Users can view their own teams" ON public.teams;
+CREATE POLICY "League members can view all teams in their league" ON public.teams
+    FOR SELECT USING (
+        (user_id = auth.uid())
+        OR (bot_id IS NOT NULL)
+        OR (EXISTS (
+            SELECT 1 FROM public.leagues 
+            WHERE id = league_id AND auth.uid() = ANY(member_ids)
+        ))
+    );
+
+DROP POLICY IF EXISTS "Users can view their own lineups" ON public.lineups;
+CREATE POLICY "League members can view all lineups in their league" ON public.lineups
+    FOR SELECT USING (
+        (user_id = auth.uid())
+        OR (bot_id IS NOT NULL)
+        OR (EXISTS (
+            SELECT 1 FROM public.leagues 
+            WHERE id = league_id AND auth.uid() = ANY(member_ids)
+        ))
+    ); 
