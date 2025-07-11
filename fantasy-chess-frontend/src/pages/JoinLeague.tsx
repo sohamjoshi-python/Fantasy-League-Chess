@@ -193,6 +193,11 @@ const JoinLeague: React.FC = () => {
         return
       }
 
+      if (league.draft_started || new Date(league.start_date) <= new Date()) {
+        setError('You cannot join a league that is in progress or has already started.');
+        return;
+      }
+
       // Check for overlapping active leagues
       const overlap = userLeagues.some(l => hasDateOverlap(league.start_date, league.end_date, l.start_date, l.end_date) && l.end_date >= new Date().toISOString().split('T')[0]);
       if (overlap) {
@@ -285,6 +290,11 @@ const JoinLeague: React.FC = () => {
     try {
       setLoading(true)
       setError('')
+
+      if (league.draft_started || new Date(league.start_date) <= new Date()) {
+        setError('You cannot join a league that is in progress or has already started.');
+        return;
+      }
 
       // Check for overlapping active leagues
       const overlap = userLeagues.some(l => hasDateOverlap(league.start_date, league.end_date, l.start_date, l.end_date) && l.end_date >= new Date().toISOString().split('T')[0]);
