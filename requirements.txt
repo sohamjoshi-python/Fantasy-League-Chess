@@ -1,3 +1,8 @@
 requests
 supabase
 python-dotenv 
+aiohttp==3.9.1
+asyncio
+brotli
+python-chess 
+requests
