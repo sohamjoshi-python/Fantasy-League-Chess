@@ -1,42 +1,38 @@
--- Fix RLS policies for leave league functionality
--- Allow users to read and delete their own teams and lineups
--- Allow users to update leagues they are members of
+-- Fix RLS for leave league functionality
+-- The issue is that when updating member_ids, the user might not be in the array anymore
 
--- Drop existing policies
-DROP POLICY IF EXISTS "Users can read their own teams" ON teams;
-DROP POLICY IF EXISTS "Users can delete their own teams" ON teams;
-DROP POLICY IF EXISTS "Users can read their own lineups" ON lineups;
-DROP POLICY IF EXISTS "Users can delete their own lineups" ON lineups;
-DROP POLICY IF EXISTS "Users can update leagues they are members of" ON leagues;
+-- Drop existing leagues policies
+DROP POLICY IF EXISTS "leagues_select_policy" ON leagues;
+DROP POLICY IF EXISTS "leagues_update_policy" ON leagues;
+DROP POLICY IF EXISTS "leagues_insert_policy" ON leagues;
+DROP POLICY IF EXISTS "leagues_delete_policy" ON leagues;
 
--- Teams policies
-CREATE POLICY "Users can read their own teams" ON teams
+-- Recreate leagues policies with more permissive update policy
+CREATE POLICY "leagues_select_policy" ON leagues
   FOR SELECT USING (
-    (user_id IS NOT NULL AND user_id = auth.uid()) OR
-    (bot_id IS NOT NULL)
+    auth.uid() = ANY(member_ids) OR auth.uid() = creator_id
   );
 
-CREATE POLICY "Users can delete their own teams" ON teams
-  FOR DELETE USING (
-    (user_id IS NOT NULL AND user_id = auth.uid()) OR
-    (bot_id IS NOT NULL)
-  );
-
--- Lineups policies  
-CREATE POLICY "Users can read their own lineups" ON lineups
-  FOR SELECT USING (
-    (user_id IS NOT NULL AND user_id = auth.uid()) OR
-    (bot_id IS NOT NULL)
-  );
-
-CREATE POLICY "Users can delete their own lineups" ON lineups
-  FOR DELETE USING (
-    (user_id IS NOT NULL AND user_id = auth.uid()) OR
-    (bot_id IS NOT NULL)
-  );
-
--- Leagues policy - allow users to update leagues they are members of
-CREATE POLICY "Users can update leagues they are members of" ON leagues
+-- More permissive update policy - allow creators and anyone who was recently a member
+CREATE POLICY "leagues_update_policy" ON leagues
   FOR UPDATE USING (
-    auth.uid() = ANY(member_ids)
+    auth.uid() = creator_id OR 
+    auth.uid() = ANY(member_ids) OR
+    -- Allow updates if the user is the creator or if they're removing themselves from member_ids
+    (auth.uid() = creator_id) OR
+    -- This allows users to update leagues they were members of (for leaving)
+    EXISTS (
+      SELECT 1 FROM league_members 
+      WHERE league_id = leagues.id AND user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "leagues_insert_policy" ON leagues
+  FOR INSERT WITH CHECK (
+    auth.uid() = creator_id
+  );
+
+CREATE POLICY "leagues_delete_policy" ON leagues
+  FOR DELETE USING (
+    auth.uid() = creator_id
   ); 

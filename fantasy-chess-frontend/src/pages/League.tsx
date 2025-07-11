@@ -1129,19 +1129,7 @@ const LeaguePage: React.FC = () => {
     if (!window.confirm('Are you sure you want to leave this league?')) return;
     setLoading(true);
     try {
-      // Remove from league_members
-      const { error: leagueMembersError } = await supabase
-        .from('league_members')
-        .delete()
-        .eq('league_id', league.id)
-        .eq('user_id', user.id);
-      if (leagueMembersError) {
-        console.error('Error removing from league_members:', leagueMembersError);
-        setError('Failed to remove from league_members: ' + leagueMembersError.message);
-        setLoading(false);
-        return;
-      }
-      // Remove from member_ids in leagues
+      // First, update the league's member_ids (while user is still a member)
       const updatedMemberIds = (league.member_ids || []).reduce((acc: string[], id: string | undefined) => {
         if (typeof id === 'string' && user?.id && id !== String(user.id)) acc.push(id);
         return acc;
@@ -1156,6 +1144,20 @@ const LeaguePage: React.FC = () => {
         setLoading(false);
         return;
       }
+      
+      // Then remove from league_members
+      const { error: leagueMembersError } = await supabase
+        .from('league_members')
+        .delete()
+        .eq('league_id', league.id)
+        .eq('user_id', user.id);
+      if (leagueMembersError) {
+        console.error('Error removing from league_members:', leagueMembersError);
+        setError('Failed to remove from league_members: ' + leagueMembersError.message);
+        setLoading(false);
+        return;
+      }
+      
       // Remove user's team
       const { error: teamsError } = await supabase
         .from('teams')
@@ -1168,6 +1170,7 @@ const LeaguePage: React.FC = () => {
         setLoading(false);
         return;
       }
+      
       // Remove user's lineups
       const { error: lineupsError } = await supabase
         .from('lineups')
@@ -1180,6 +1183,7 @@ const LeaguePage: React.FC = () => {
         setLoading(false);
         return;
       }
+      
       navigate('/dashboard');
     } catch (err) {
       console.error('Unexpected error in handleLeaveLeague:', err);
