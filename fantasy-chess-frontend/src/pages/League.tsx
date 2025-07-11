@@ -248,7 +248,7 @@ const LeaguePage: React.FC = () => {
   useEffect(() => {
     if (league && bot && draftStarted && !league.draft_completed && !botDrafting) {
       const currentDraftUserId = league.draft_order[league.current_draft_turn]
-      
+
       // Debug logging
       console.log('Draft debug:', {
         currentTurn: league.current_draft_turn,
@@ -258,12 +258,23 @@ const LeaguePage: React.FC = () => {
         isBotTurn: currentDraftUserId === bot.id,
         botDrafting
       })
-      
+
       // If it's the bot's turn, auto-draft immediately
       if (currentDraftUserId === bot.id) {
         const handleBotTurn = async () => {
           try {
             setBotDrafting(true)
+            // Fetch bot's team and check size before drafting
+            const { data: team } = await supabase
+              .from('teams')
+              .select('player_ids')
+              .eq('bot_id', bot.id)
+              .eq('league_id', league.id)
+              .single();
+            if (team && Array.isArray(team.player_ids) && team.player_ids.length >= 10) {
+              console.log('Bot team already full, skipping draft');
+              return;
+            }
             console.log('🤖 Bot is drafting...')
             const { success, error } = await autoDraftForBot(bot.id, league.id)
             if (success) {
@@ -279,7 +290,7 @@ const LeaguePage: React.FC = () => {
             setBotDrafting(false)
           }
         }
-        
+
         // Execute immediately without delay
         handleBotTurn()
       }
