@@ -37,15 +37,25 @@ const Navbar: React.FC = () => {
     if (!user) return;
     
     try {
-      // First try to get display name from user metadata
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (authUser?.user_metadata?.display_name) {
-        setDisplayName(authUser.user_metadata.display_name);
+      // Get username from users table
+      const { data: userData, error } = await supabase
+        .from('users')
+        .select('username')
+        .eq('id', user.id)
+        .single();
+      
+      if (error) {
+        console.error('Error loading username:', error);
+        setDisplayName(user.email || user.id.slice(0, 6));
         return;
       }
       
-      // Fallback to email or truncated ID
-      setDisplayName(user.email || user.id.slice(0, 6));
+      if (userData?.username) {
+        setDisplayName(userData.username);
+      } else {
+        // Fallback to email or truncated ID
+        setDisplayName(user.email || user.id.slice(0, 6));
+      }
     } catch (error) {
       console.error('Error loading display name:', error);
       setDisplayName(user.email || user.id.slice(0, 6));
