@@ -6,6 +6,14 @@ export interface User {
   created_at: string
 }
 
+export interface Bot {
+  id: string
+  league_id: string
+  name: string
+  team_id?: string
+  created_at: string
+}
+
 export interface ChessPlayer {
   id: string
   name: string
@@ -36,6 +44,7 @@ export interface League {
   draft_started?: boolean
   draft_start_time?: string
   payout_processed?: boolean
+  bot_id?: string
 }
 
 export interface LeagueMember {

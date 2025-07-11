@@ -3,9 +3,9 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
-import { League, Team, Lineup, ChessPlayer } from '../types'
-import { Crown, Trophy, Calendar, Edit, Check, X, RefreshCw } from 'lucide-react'
-import { fetchLineupPlayerBreakdown } from '../lib/supabase';
+import { League, Team, Lineup, ChessPlayer, Bot } from '../types'
+import { Crown, Trophy, Calendar, Edit, Check, X, RefreshCw, Bot as BotIcon, Plus, Trash2 } from 'lucide-react'
+import { fetchLineupPlayerBreakdown, createBot, removeBot, autoDraftForBot, autoSetLineupForBot } from '../lib/supabase';
 import Confetti from 'react-confetti';
 // Remove: import { useQuery } from '@tanstack/react-query';
 // Remove: fetchLeague function
@@ -165,6 +165,12 @@ const LeaguePage: React.FC = () => {
   const [winnerName, setWinnerName] = useState<string>('');
   const [showConfetti, setShowConfetti] = useState(false);
 
+  const [bot, setBot] = useState<Bot | null>(null)
+  const [botLoading, setBotLoading] = useState(false)
+  const [showAddBotModal, setShowAddBotModal] = useState(false)
+  const [botName, setBotName] = useState('')
+  const [botNameError, setBotNameError] = useState('')
+
   useEffect(() => {
     async function fetchAvailableWeeks() {
       if (!league || !user) return;
@@ -235,6 +241,34 @@ const LeaguePage: React.FC = () => {
       loadLeagueData()
     }
   }, [leagueId, user])
+
+  // Handle bot turns during draft
+  useEffect(() => {
+    if (league && bot && draftStarted && !league.draft_completed) {
+      const currentDraftUserId = league.draft_order[league.current_draft_turn]
+      
+      // If it's the bot's turn, auto-draft
+      if (currentDraftUserId === bot.id) {
+        const handleBotTurn = async () => {
+          try {
+            const { success, error } = await autoDraftForBot(bot.id, league.id)
+            if (success) {
+              // Reload league data to update draft state
+              await loadLeagueData()
+            } else {
+              console.error('Bot auto-draft failed:', error)
+            }
+          } catch (error) {
+            console.error('Error in bot auto-draft:', error)
+          }
+        }
+        
+        // Add a small delay to make the bot turn visible
+        const timer = setTimeout(handleBotTurn, 1000)
+        return () => clearTimeout(timer)
+      }
+    }
+  }, [league?.current_draft_turn, bot, draftStarted, league?.draft_completed])
 
   const loadLeagueData = async () => {
     if (!leagueId || !user) return
@@ -339,7 +373,18 @@ const LeaguePage: React.FC = () => {
       // Load standings
       await loadStandings(leagueId)
 
-
+      // Load bot data if league has a bot
+      if (leagueData.bot_id) {
+        const { data: botData, error: botError } = await supabase
+          .from('bots')
+          .select('*')
+          .eq('id', leagueData.bot_id)
+          .single()
+        
+        if (!botError && botData) {
+          setBot(botData)
+        }
+      }
 
     } catch (error) {
       console.error('Error loading league data:', error)
@@ -383,6 +428,18 @@ const LeaguePage: React.FC = () => {
         rank: 0
       }))
 
+      // Add bot to standings if it exists
+      if (bot) {
+        const botPoints = userPoints.get(bot.id) || 0
+        standingsData.push({
+          user_id: bot.id,
+          user_email: `${bot.name}@bot`,
+          display_name: `${bot.name} 🤖`,
+          total_points: botPoints,
+          rank: 0
+        })
+      }
+
       // Sort by points and assign ranks
       standingsData.sort((a, b) => b.total_points - a.total_points)
       standingsData.forEach((standing, index) => {
@@ -406,7 +463,14 @@ const LeaguePage: React.FC = () => {
 
   const isUserTurn = () => {
     if (!league || !user) return false
-    return league?.draft_order[league?.current_draft_turn] === user.id
+    const currentDraftUserId = league?.draft_order[league?.current_draft_turn]
+    return currentDraftUserId === user.id
+  }
+
+  const isBotTurn = () => {
+    if (!league || !bot) return false
+    const currentDraftUserId = league?.draft_order[league?.current_draft_turn]
+    return currentDraftUserId === bot.id
   }
 
   const draftPlayer = async (playerId: string) => {
@@ -540,7 +604,10 @@ const LeaguePage: React.FC = () => {
       }
       
       const updatedMemberIds = [...(league?.member_ids || []), user.id]
-      const updatedDraftOrder = generateSnakeDraftOrder(updatedMemberIds, 10)
+      
+      // Include bot in draft order if it exists
+      const allDraftParticipants = bot ? [...updatedMemberIds, bot.id] : updatedMemberIds
+      const updatedDraftOrder = generateSnakeDraftOrder(allDraftParticipants, 10)
       
 
       
@@ -622,6 +689,132 @@ const LeaguePage: React.FC = () => {
   // Manual reload button
   const handleReload = () => {
     loadLeagueData()
+  }
+
+  // Bot management functions
+  const handleAddBot = async () => {
+    if (!league || !botName.trim()) {
+      setBotNameError('Please enter a bot name')
+      return
+    }
+
+    if (bot) {
+      setBotNameError('League already has a bot')
+      return
+    }
+
+    try {
+      setBotLoading(true)
+      setBotNameError('')
+
+      const { success, bot: newBot, error } = await createBot(league.id, botName.trim())
+      
+      if (success && newBot) {
+        setBot(newBot)
+        setShowAddBotModal(false)
+        setBotName('')
+        
+        // Update league with bot_id and regenerate draft order
+        const allDraftParticipants = [...league.member_ids, newBot.id]
+        const updatedDraftOrder = generateSnakeDraftOrder(allDraftParticipants, 10)
+        
+        await supabase
+          .from('leagues')
+          .update({ 
+            bot_id: newBot.id,
+            draft_order: updatedDraftOrder,
+            current_draft_turn: 0
+          })
+          .eq('id', league.id)
+        
+        // Reload league data to update draft order
+        await loadLeagueData()
+      } else {
+        setBotNameError(error?.message || 'Failed to create bot')
+      }
+    } catch (error: any) {
+      setBotNameError(error.message || 'Failed to create bot')
+    } finally {
+      setBotLoading(false)
+    }
+  }
+
+  const handleRemoveBot = async () => {
+    if (!league || !bot) return
+
+    try {
+      setBotLoading(true)
+
+      const { success, error } = await removeBot(bot.id)
+      
+      if (success) {
+        setBot(null)
+        
+        // Update league to remove bot_id and regenerate draft order
+        const updatedDraftOrder = generateSnakeDraftOrder(league.member_ids, 10)
+        
+        await supabase
+          .from('leagues')
+          .update({ 
+            bot_id: null,
+            draft_order: updatedDraftOrder,
+            current_draft_turn: 0
+          })
+          .eq('id', league.id)
+        
+        // Reload league data to update draft order
+        await loadLeagueData()
+      } else {
+        console.error('Failed to remove bot:', error)
+      }
+    } catch (error: any) {
+      console.error('Error removing bot:', error)
+    } finally {
+      setBotLoading(false)
+    }
+  }
+
+  const handleBotDraft = async () => {
+    if (!league || !bot) return
+
+    try {
+      setBotLoading(true)
+
+      const { success, error } = await autoDraftForBot(bot.id, league.id)
+      
+      if (success) {
+        // Reload league data to update draft state
+        await loadLeagueData()
+      } else {
+        console.error('Failed to auto-draft for bot:', error)
+      }
+    } catch (error: any) {
+      console.error('Error auto-drafting for bot:', error)
+    } finally {
+      setBotLoading(false)
+    }
+  }
+
+  const handleBotSetLineup = async () => {
+    if (!league || !bot) return
+
+    try {
+      setBotLoading(true)
+
+      const currentWeek = getCurrentWeekStart()
+      const { success, error } = await autoSetLineupForBot(bot.id, league.id, currentWeek)
+      
+      if (success) {
+        // Reload league data to update lineup
+        await loadLeagueData()
+      } else {
+        console.error('Failed to set lineup for bot:', error)
+      }
+    } catch (error: any) {
+      console.error('Error setting lineup for bot:', error)
+    } finally {
+      setBotLoading(false)
+    }
   }
 
   // Handle user click in standings
@@ -857,6 +1050,104 @@ const LeaguePage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Bot Management Section - Only visible to league owner */}
+      {isOwner && (
+        <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6 mb-6 lg:mb-8 border-2 border-royalBlue">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg lg:text-xl font-bold text-neutral-900 flex items-center">
+              <BotIcon className="w-5 h-5 mr-2 text-royalBlue" />
+              Bot Management
+            </h2>
+            {!bot && (
+              <button
+                type="button"
+                onClick={() => setShowAddBotModal(true)}
+                className="flex items-center space-x-1 bg-[#1e293b] hover:bg-royalBlue text-white px-3 py-2 rounded-lg text-sm font-medium shadow-lg transition-colors"
+                disabled={botLoading}
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Bot</span>
+              </button>
+            )}
+          </div>
+
+          {bot ? (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-4 bg-neutral-50 rounded-lg border border-royalBlue">
+                <div className="flex items-center space-x-3">
+                  <BotIcon className="w-6 h-6 text-royalBlue" />
+                  <div>
+                    <h3 className="font-semibold text-neutral-900">{bot.name}</h3>
+                    <p className="text-sm text-neutral-600">Auto-drafts highest ELO players</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleRemoveBot}
+                  className="flex items-center space-x-1 bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-sm font-medium shadow-lg transition-colors"
+                  disabled={botLoading}
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>Remove</span>
+                </button>
+              </div>
+
+              {/* Bot actions during draft */}
+              {draftStarted && !league.draft_completed && (
+                <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <h4 className="font-semibold text-blue-900 mb-2">Draft Actions</h4>
+                  <p className="text-sm text-blue-700 mb-3">
+                    The bot will automatically draft the highest ELO player available when it's their turn.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleBotDraft}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-lg transition-colors"
+                    disabled={botLoading}
+                  >
+                    {botLoading ? 'Processing...' : 'Force Bot Draft'}
+                  </button>
+                </div>
+              )}
+
+              {/* Bot actions for lineup */}
+              {league.draft_completed && (
+                <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                  <h4 className="font-semibold text-green-900 mb-2">Lineup Actions</h4>
+                  <p className="text-sm text-green-700 mb-3">
+                    The bot will automatically set a lineup with the 5 highest ELO players from their team.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleBotSetLineup}
+                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-lg transition-colors"
+                    disabled={botLoading}
+                  >
+                    {botLoading ? 'Processing...' : 'Set Bot Lineup'}
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-6">
+              <BotIcon className="w-12 h-12 mx-auto mb-3 text-neutral-400" />
+              <p className="text-neutral-600 text-sm lg:text-base mb-4">
+                Add a bot to automatically draft the highest ELO players and set optimal lineups.
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowAddBotModal(true)}
+                className="flex items-center space-x-1 bg-[#1e293b] hover:bg-royalBlue text-white px-4 py-2 rounded-lg font-medium shadow-lg transition-colors mx-auto"
+                disabled={botLoading}
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Bot</span>
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
         {/* Standings */}
@@ -1199,6 +1490,19 @@ const LeaguePage: React.FC = () => {
                       ) : (
                         (() => {
                           const currentDraftUserId = league.draft_order[league.current_draft_turn];
+                          
+                          // Check if it's the bot's turn
+                          if (currentDraftUserId === bot?.id) {
+                            return (
+                              <div className="space-y-2">
+                                <p className="text-blue-600 text-sm lg:text-base font-medium">
+                                  🤖 {bot.name} is drafting...
+                                </p>
+                                <p className="text-neutral-500 text-xs">Bot will automatically select the highest ELO player</p>
+                              </div>
+                            );
+                          }
+                          
                           const displayName = userMap[currentDraftUserId] || 'Unknown Player';
                           
                           return (
@@ -1282,6 +1586,89 @@ const LeaguePage: React.FC = () => {
                     ))}
                   </div>
                 )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Bot Modal */}
+      {showAddBotModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full border-2 border-royalBlue">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-neutral-900 flex items-center">
+                  <BotIcon className="w-5 h-5 mr-2 text-royalBlue" />
+                  Add Bot
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAddBotModal(false)
+                    setBotName('')
+                    setBotNameError('')
+                  }}
+                  className="text-neutral-400 hover:text-neutral-600 transition-colors"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="botName" className="block text-sm font-medium text-neutral-900 mb-2">
+                    Bot Name
+                  </label>
+                  <input
+                    type="text"
+                    id="botName"
+                    value={botName}
+                    onChange={(e) => {
+                      setBotName(e.target.value)
+                      setBotNameError('')
+                    }}
+                    placeholder="Enter bot name..."
+                    className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-royalBlue text-neutral-900 placeholder-neutral-500"
+                    disabled={botLoading}
+                  />
+                  {botNameError && (
+                    <p className="text-red-600 text-sm mt-1">{botNameError}</p>
+                  )}
+                </div>
+
+                <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                  <h3 className="font-semibold text-blue-900 mb-2">Bot Behavior</h3>
+                  <ul className="text-sm text-blue-700 space-y-1">
+                    <li>• Automatically drafts the highest ELO player available</li>
+                    <li>• Sets lineups with the 5 highest ELO players from their team</li>
+                    <li>• Only one bot allowed per league</li>
+                    <li>• Can be removed at any time by the league owner</li>
+                  </ul>
+                </div>
+
+                <div className="flex space-x-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={handleAddBot}
+                    className="flex-1 bg-[#1e293b] hover:bg-royalBlue text-white px-4 py-2 rounded-lg font-medium shadow-lg transition-colors"
+                    disabled={botLoading || !botName.trim()}
+                  >
+                    {botLoading ? 'Creating...' : 'Add Bot'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAddBotModal(false)
+                      setBotName('')
+                      setBotNameError('')
+                    }}
+                    className="flex-1 bg-neutral-600 hover:bg-neutral-700 text-white px-4 py-2 rounded-lg font-medium shadow-lg transition-colors"
+                    disabled={botLoading}
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
             </div>
           </div>
