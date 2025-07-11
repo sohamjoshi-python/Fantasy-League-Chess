@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { League, Team, Lineup, ChessPlayer, Bot } from '../types'
@@ -162,6 +162,7 @@ const autoCompleteTeamsIfNeeded = async (leagueData: any) => {
 const LeaguePage: React.FC = () => {
   const { leagueId } = useParams<{ leagueId: string }>()
   const { user } = useAuth()
+  const navigate = useNavigate();
 
   // React Query for league data
   // Remove: const {
@@ -195,7 +196,7 @@ const LeaguePage: React.FC = () => {
   const [selectedLineupPlayers, setSelectedLineupPlayers] = useState<string[]>([])
 
   // Helper: is current user the league owner?
-  const isOwner = user && league && user.id === league?.creator_id;
+  const isOwner = user?.id && league && user.id === league?.creator_id;
   // Helper: is draft started?
   const draftStarted = !!league?.draft_started;
   // Helper: is it before league start date?
@@ -852,7 +853,10 @@ const LeaguePage: React.FC = () => {
         setBot(null)
         
         // Update league to remove bot_id, remove bot from member_ids, and regenerate draft order
-        const updatedMemberIds = league.member_ids.filter(id => id !== bot.id)
+        const updatedMemberIds = (league.member_ids || []).reduce((acc: string[], id: string | undefined) => {
+          if (typeof id === 'string' && user?.id && id !== String(user.id)) acc.push(id);
+          return acc;
+        }, []);
         const updatedDraftOrder = generateSnakeDraftOrder(updatedMemberIds, 10)
         
         await supabase
@@ -1098,6 +1102,68 @@ const LeaguePage: React.FC = () => {
     }
   }, [league?.draft_completed, league?.end_date]);
 
+  // Delete league (admin only)
+  const handleDeleteLeague = async () => {
+    if (!league || !isOwner) return;
+    if (!window.confirm('Are you sure you want to delete this league? This cannot be undone.')) return;
+    setLoading(true);
+    try {
+      // Delete the league (cascades to teams, lineups, league_members, bots, etc.)
+      const { error } = await supabase
+        .from('leagues')
+        .delete()
+        .eq('id', league.id);
+      if (error) throw error;
+      navigate('/dashboard');
+    } catch (err) {
+      setError('Failed to delete league');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Leave league (for non-owners)
+  const handleLeaveLeague = async () => {
+    if (!league || !user || isOwner) return;
+    if (!user.id) return;
+    if (!window.confirm('Are you sure you want to leave this league?')) return;
+    setLoading(true);
+    try {
+      // Remove from league_members
+      await supabase
+        .from('league_members')
+        .delete()
+        .eq('league_id', league.id)
+        .eq('user_id', user.id);
+      // Remove from member_ids in leagues
+      const updatedMemberIds = (league.member_ids || []).reduce((acc: string[], id: string | undefined) => {
+        if (typeof id === 'string' && user?.id && id !== String(user.id)) acc.push(id);
+        return acc;
+      }, []);
+      await supabase
+        .from('leagues')
+        .update({ member_ids: updatedMemberIds })
+        .eq('id', league.id);
+      // Remove user's team
+      await supabase
+        .from('teams')
+        .delete()
+        .eq('league_id', league.id)
+        .eq('user_id', user.id);
+      // Remove user's lineups
+      await supabase
+        .from('lineups')
+        .delete()
+        .eq('league_id', league.id)
+        .eq('user_id', user.id);
+      navigate('/dashboard');
+    } catch (err) {
+      setError('Failed to leave league');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -1278,6 +1344,27 @@ const LeaguePage: React.FC = () => {
           )}
         </div>
       )}
+
+      <div className="flex gap-4 mb-4">
+        {isOwner && (
+          <button
+            onClick={handleDeleteLeague}
+            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded font-semibold shadow-lg"
+            disabled={loading}
+          >
+            Delete League
+          </button>
+        )}
+        {!isOwner && user?.id && league?.member_ids?.includes(user.id) && (
+          <button
+            onClick={handleLeaveLeague}
+            className="bg-neutral-300 hover:bg-neutral-400 text-neutral-900 px-4 py-2 rounded font-semibold shadow-lg"
+            disabled={loading}
+          >
+            Leave League
+          </button>
+        )}
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
         {/* Standings */}
