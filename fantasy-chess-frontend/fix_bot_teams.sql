@@ -23,7 +23,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS teams_bot_league_unique
     WHERE bot_id IS NOT NULL;
 
 -- Step 4: Update RLS policies to handle bot teams
-DROP POLICY IF EXISTS "Users can create their own teams" ON public.teams;
+DROP POLICY IF EXISTS "Users and bots can create teams" ON public.teams;
 CREATE POLICY "Users and bots can create teams" ON public.teams
     FOR INSERT WITH CHECK (
         auth.uid() = user_id OR
@@ -34,7 +34,7 @@ CREATE POLICY "Users and bots can create teams" ON public.teams
         )
     );
 
-DROP POLICY IF EXISTS "Users can update their own teams" ON public.teams;
+DROP POLICY IF EXISTS "Users and bots can update teams" ON public.teams;
 CREATE POLICY "Users and bots can update teams" ON public.teams
     FOR UPDATE USING (
         auth.uid() = user_id OR
@@ -64,7 +64,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS lineups_bot_league_week_unique
     WHERE bot_id IS NOT NULL;
 
 -- Step 6: Update lineups RLS policies
-DROP POLICY IF EXISTS "Users can create their own lineups" ON public.lineups;
+DROP POLICY IF EXISTS "Users and bots can create lineups" ON public.lineups;
 CREATE POLICY "Users and bots can create lineups" ON public.lineups
     FOR INSERT WITH CHECK (
         auth.uid() = user_id OR
@@ -75,7 +75,7 @@ CREATE POLICY "Users and bots can create lineups" ON public.lineups
         )
     );
 
-DROP POLICY IF EXISTS "Users can update their own lineups" ON public.lineups;
+DROP POLICY IF EXISTS "Users and bots can update lineups" ON public.lineups;
 CREATE POLICY "Users and bots can update lineups" ON public.lineups
     FOR UPDATE USING (
         auth.uid() = user_id OR
@@ -98,7 +98,7 @@ AND column_name IN ('user_id', 'bot_id')
 ORDER BY column_name; 
 
 -- Step 8: Update RLS SELECT policies for teams and lineups
-DROP POLICY IF EXISTS "Users can view their own teams" ON public.teams;
+DROP POLICY IF EXISTS "League members can view all teams in their league" ON public.teams;
 CREATE POLICY "League members can view all teams in their league" ON public.teams
     FOR SELECT USING (
         (user_id = auth.uid())
@@ -109,7 +109,7 @@ CREATE POLICY "League members can view all teams in their league" ON public.team
         ))
     );
 
-DROP POLICY IF EXISTS "Users can view their own lineups" ON public.lineups;
+DROP POLICY IF EXISTS "League members can view all lineups in their league" ON public.lineups;
 CREATE POLICY "League members can view all lineups in their league" ON public.lineups
     FOR SELECT USING (
         (user_id = auth.uid())
