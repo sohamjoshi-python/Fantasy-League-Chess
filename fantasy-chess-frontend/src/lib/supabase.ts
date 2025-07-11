@@ -189,7 +189,7 @@ export async function autoDraftForBot(botId: string, leagueId: string): Promise<
     let { data: team, error: teamError } = await supabase
       .from('teams')
       .select('id, player_ids')
-      .eq('user_id', botId)
+      .eq('bot_id', botId)
       .eq('league_id', leagueId)
       .single();
 
@@ -201,7 +201,7 @@ export async function autoDraftForBot(botId: string, leagueId: string): Promise<
       const { data: newTeam, error: createError } = await supabase
         .from('teams')
         .insert({
-          user_id: botId,
+          bot_id: botId,
           league_id: leagueId,
           player_ids: []
         })
@@ -216,7 +216,7 @@ export async function autoDraftForBot(botId: string, leagueId: string): Promise<
           const { data: existingTeam, error: fetchError } = await supabase
             .from('teams')
             .select('id, player_ids')
-            .eq('user_id', botId)
+            .eq('bot_id', botId)
             .eq('league_id', leagueId)
             .single();
           
@@ -334,7 +334,7 @@ export async function autoSetLineupForBot(botId: string, leagueId: string, weekS
     let { data: existingLineup } = await supabase
       .from('lineups')
       .select('id')
-      .eq('user_id', botId)
+      .eq('bot_id', botId)
       .eq('league_id', leagueId)
       .eq('week_start_date', weekStartDate)
       .single();
@@ -358,7 +358,7 @@ export async function autoSetLineupForBot(botId: string, leagueId: string, weekS
       const { error: insertError } = await supabase
         .from('lineups')
         .insert({
-          user_id: botId,
+          bot_id: botId,
           league_id: leagueId,
           week_start_date: weekStartDate,
           player_ids: top5PlayerIds,

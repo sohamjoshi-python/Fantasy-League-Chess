@@ -58,7 +58,8 @@ export interface LeagueMember {
 
 export interface Team {
   id: string
-  user_id: string
+  user_id?: string
+  bot_id?: string
   league_id: string
   player_ids: string[]
   created_at: string
@@ -66,7 +67,8 @@ export interface Team {
 
 export interface Lineup {
   id: string
-  user_id: string
+  user_id?: string
+  bot_id?: string
   league_id: string
   week_start_date: string
   player_ids: string[]
