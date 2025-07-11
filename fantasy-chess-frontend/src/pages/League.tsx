@@ -430,8 +430,10 @@ const LeaguePage: React.FC = () => {
       const userPoints = new Map<string, number>()
       if (lineups) {
         lineups.forEach(lineup => {
-          const current = userPoints.get(lineup.user_id) || 0
-          userPoints.set(lineup.user_id, current + lineup.total_points)
+          if (lineup.user_id) {
+            const current = userPoints.get(lineup.user_id) || 0
+            userPoints.set(lineup.user_id, current + lineup.total_points)
+          }
         })
       }
 
@@ -446,7 +448,13 @@ const LeaguePage: React.FC = () => {
 
       // Add bot to standings if it exists
       if (bot) {
-        const botPoints = userPoints.get(bot.id) || 0
+        // Sum up all lineups for this bot by bot_id
+        let botPoints = 0
+        if (lineups) {
+          botPoints = lineups
+            .filter(lineup => lineup.bot_id === bot.id)
+            .reduce((sum, lineup) => sum + (lineup.total_points || 0), 0)
+        }
         standingsData.push({
           user_id: bot.id,
           user_email: `${bot.name}@bot`,
