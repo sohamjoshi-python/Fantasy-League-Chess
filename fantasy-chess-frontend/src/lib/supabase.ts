@@ -159,7 +159,20 @@ export async function getHighestEloAvailablePlayer(leagueId: string): Promise<{ 
  * @param leagueId string
  * @returns {Promise<{ success: boolean, error?: any }>}
  */
+// Track ongoing bot drafts to prevent multiple simultaneous calls
+const ongoingBotDrafts = new Set<string>();
+
 export async function autoDraftForBot(botId: string, leagueId: string): Promise<{ success: boolean, error?: any }> {
+  const draftKey = `${botId}-${leagueId}`;
+  
+  // Prevent multiple simultaneous drafts for the same bot
+  if (ongoingBotDrafts.has(draftKey)) {
+    console.log('Bot draft already in progress for:', draftKey);
+    return { success: false, error: 'Draft already in progress' };
+  }
+  
+  ongoingBotDrafts.add(draftKey);
+  
   try {
     console.log('Auto-drafting for bot:', botId, 'in league:', leagueId);
 
@@ -172,23 +185,58 @@ export async function autoDraftForBot(botId: string, leagueId: string): Promise<
 
     console.log('Selected player for bot:', player);
 
-    // Try to create or get the bot's team using upsert
-    const { data: team, error: teamError } = await supabase
+    // First, try to get existing team
+    let { data: team, error: teamError } = await supabase
       .from('teams')
-      .upsert({
-        user_id: botId,
-        league_id: leagueId,
-        player_ids: []
-      }, {
-        onConflict: 'user_id,league_id',
-        ignoreDuplicates: false
-      })
       .select('id, player_ids')
+      .eq('user_id', botId)
+      .eq('league_id', leagueId)
       .single();
 
-    if (teamError) {
-      console.error('Team upsert error:', teamError);
-      return { success: false, error: teamError };
+    console.log('Existing team check:', { team, teamError });
+
+    // If team doesn't exist, create it
+    if (!team) {
+      console.log('Creating new team for bot');
+      const { data: newTeam, error: createError } = await supabase
+        .from('teams')
+        .insert({
+          user_id: botId,
+          league_id: leagueId,
+          player_ids: []
+        })
+        .select('id, player_ids')
+        .single();
+
+      if (createError) {
+        console.error('Team creation error:', createError);
+        // If creation fails due to conflict, try to get the existing team again
+        if (createError.code === '23505') { // Unique violation
+          console.log('Team already exists, fetching it');
+          const { data: existingTeam, error: fetchError } = await supabase
+            .from('teams')
+            .select('id, player_ids')
+            .eq('user_id', botId)
+            .eq('league_id', leagueId)
+            .single();
+          
+          if (fetchError || !existingTeam) {
+            console.error('Failed to fetch existing team:', fetchError);
+            return { success: false, error: fetchError || 'Failed to fetch existing team' };
+          }
+          team = existingTeam;
+        } else {
+          return { success: false, error: createError };
+        }
+      } else {
+        team = newTeam;
+        console.log('Created new team:', team);
+      }
+    }
+
+    if (!team) {
+      console.error('No team found or created');
+      return { success: false, error: 'No team found or created' };
     }
 
     console.log('Bot team:', team);
@@ -209,6 +257,8 @@ export async function autoDraftForBot(botId: string, leagueId: string): Promise<
 
     // Add player to bot's team
     const newPlayerIds = [...(team.player_ids || []), player.id];
+    console.log('Updating team with new player IDs:', newPlayerIds);
+    
     const { error: teamUpdateError } = await supabase
       .from('teams')
       .update({ player_ids: newPlayerIds })
@@ -224,6 +274,9 @@ export async function autoDraftForBot(botId: string, leagueId: string): Promise<
   } catch (error: any) {
     console.error('❌ Auto-draft error:', error);
     return { success: false, error };
+  } finally {
+    // Always clean up the ongoing draft tracking
+    ongoingBotDrafts.delete(draftKey);
   }
 }
 
@@ -236,6 +289,8 @@ export async function autoDraftForBot(botId: string, leagueId: string): Promise<
  */
 export async function autoSetLineupForBot(botId: string, leagueId: string, weekStartDate: string): Promise<{ success: boolean, error?: any }> {
   try {
+    console.log('Auto-setting lineup for bot:', botId, 'in league:', leagueId, 'for week:', weekStartDate);
+    
     // Get bot's team
     const { data: bot, error: botError } = await supabase
       .from('bots')
@@ -244,6 +299,7 @@ export async function autoSetLineupForBot(botId: string, leagueId: string, weekS
       .single();
     
     if (botError || !bot.team_id) {
+      console.error('Bot team error:', botError);
       return { success: false, error: botError };
     }
     
@@ -254,6 +310,7 @@ export async function autoSetLineupForBot(botId: string, leagueId: string, weekS
       .single();
     
     if (teamError || !team.player_ids || team.player_ids.length < 5) {
+      console.error('Team error:', teamError, 'player_ids:', team?.player_ids);
       return { success: false, error: teamError };
     }
     
@@ -265,29 +322,59 @@ export async function autoSetLineupForBot(botId: string, leagueId: string, weekS
       .order('elo', { ascending: false });
     
     if (playersError) {
+      console.error('Players error:', playersError);
       return { success: false, error: playersError };
     }
     
     // Select top 5 players by ELO
     const top5PlayerIds = players.slice(0, 5).map(p => p.id);
+    console.log('Selected top 5 players for bot lineup:', top5PlayerIds);
     
-    // Save lineup
-    const { error: lineupError } = await supabase
+    // First try to get existing lineup
+    let { data: existingLineup } = await supabase
       .from('lineups')
-      .upsert({
-        user_id: botId, // Use bot ID as user_id
-        league_id: leagueId,
-        week_start_date: weekStartDate,
-        player_ids: top5PlayerIds,
-        total_points: 0
-      });
+      .select('id')
+      .eq('user_id', botId)
+      .eq('league_id', leagueId)
+      .eq('week_start_date', weekStartDate)
+      .single();
     
-    if (lineupError) {
-      return { success: false, error: lineupError };
+    if (existingLineup) {
+      // Update existing lineup
+      const { error: updateError } = await supabase
+        .from('lineups')
+        .update({
+          player_ids: top5PlayerIds,
+          total_points: 0
+        })
+        .eq('id', existingLineup.id);
+      
+      if (updateError) {
+        console.error('Lineup update error:', updateError);
+        return { success: false, error: updateError };
+      }
+    } else {
+      // Create new lineup
+      const { error: insertError } = await supabase
+        .from('lineups')
+        .insert({
+          user_id: botId,
+          league_id: leagueId,
+          week_start_date: weekStartDate,
+          player_ids: top5PlayerIds,
+          total_points: 0
+        });
+      
+      if (insertError) {
+        console.error('Lineup insert error:', insertError);
+        return { success: false, error: insertError };
+      }
     }
     
+    console.log('✅ Bot lineup set successfully');
     return { success: true };
   } catch (error: any) {
+    console.error('❌ Auto-set lineup error:', error);
     return { success: false, error };
   }
 } 

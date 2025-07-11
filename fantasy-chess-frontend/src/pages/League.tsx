@@ -167,6 +167,7 @@ const LeaguePage: React.FC = () => {
 
   const [bot, setBot] = useState<Bot | null>(null)
   const [botLoading, setBotLoading] = useState(false)
+  const [botDrafting, setBotDrafting] = useState(false)
   const [showAddBotModal, setShowAddBotModal] = useState(false)
   const [botName, setBotName] = useState('')
   const [botNameError, setBotNameError] = useState('')
@@ -243,8 +244,9 @@ const LeaguePage: React.FC = () => {
   }, [leagueId, user])
 
   // Handle bot turns during draft
+  
   useEffect(() => {
-    if (league && bot && draftStarted && !league.draft_completed) {
+    if (league && bot && draftStarted && !league.draft_completed && !botDrafting) {
       const currentDraftUserId = league.draft_order[league.current_draft_turn]
       
       // Debug logging
@@ -253,13 +255,15 @@ const LeaguePage: React.FC = () => {
         currentUserId: currentDraftUserId,
         botId: bot.id,
         draftOrder: league.draft_order,
-        isBotTurn: currentDraftUserId === bot.id
+        isBotTurn: currentDraftUserId === bot.id,
+        botDrafting
       })
       
       // If it's the bot's turn, auto-draft immediately
       if (currentDraftUserId === bot.id) {
         const handleBotTurn = async () => {
           try {
+            setBotDrafting(true)
             console.log('🤖 Bot is drafting...')
             const { success, error } = await autoDraftForBot(bot.id, league.id)
             if (success) {
@@ -271,6 +275,8 @@ const LeaguePage: React.FC = () => {
             }
           } catch (error) {
             console.error('❌ Error in bot auto-draft:', error)
+          } finally {
+            setBotDrafting(false)
           }
         }
         
@@ -278,7 +284,7 @@ const LeaguePage: React.FC = () => {
         handleBotTurn()
       }
     }
-  }, [league?.current_draft_turn, bot, draftStarted, league?.draft_completed])
+  }, [league?.current_draft_turn, bot, draftStarted, league?.draft_completed, botDrafting])
 
   const loadLeagueData = async () => {
     if (!leagueId || !user) return
@@ -468,7 +474,11 @@ const LeaguePage: React.FC = () => {
     const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1
     const monday = new Date(now)
     monday.setDate(now.getDate() - daysToSubtract)
-    return monday.toISOString().split('T')[0]
+    // Ensure we get a clean date string without timezone issues
+    const year = monday.getFullYear()
+    const month = String(monday.getMonth() + 1).padStart(2, '0')
+    const day = String(monday.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
   }
 
   const isUserTurn = () => {
@@ -723,7 +733,7 @@ const LeaguePage: React.FC = () => {
         setShowAddBotModal(false)
         setBotName('')
         
-        // Update league with bot_id and regenerate draft order
+        // Update league with bot_id, add bot to member_ids, and regenerate draft order
         const allDraftParticipants = [...league.member_ids, newBot.id]
         const updatedDraftOrder = generateSnakeDraftOrder(allDraftParticipants, 10)
         
@@ -731,6 +741,7 @@ const LeaguePage: React.FC = () => {
           .from('leagues')
           .update({ 
             bot_id: newBot.id,
+            member_ids: allDraftParticipants, // Add bot to member_ids
             draft_order: updatedDraftOrder,
             current_draft_turn: 0
           })
@@ -759,13 +770,15 @@ const LeaguePage: React.FC = () => {
       if (success) {
         setBot(null)
         
-        // Update league to remove bot_id and regenerate draft order
-        const updatedDraftOrder = generateSnakeDraftOrder(league.member_ids, 10)
+        // Update league to remove bot_id, remove bot from member_ids, and regenerate draft order
+        const updatedMemberIds = league.member_ids.filter(id => id !== bot.id)
+        const updatedDraftOrder = generateSnakeDraftOrder(updatedMemberIds, 10)
         
         await supabase
           .from('leagues')
           .update({ 
             bot_id: null,
+            member_ids: updatedMemberIds, // Remove bot from member_ids
             draft_order: updatedDraftOrder,
             current_draft_turn: 0
           })

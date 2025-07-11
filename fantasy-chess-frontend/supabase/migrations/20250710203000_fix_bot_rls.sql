@@ -1,11 +1,10 @@
 -- Fix RLS policies for bots to work properly
 -- This migration updates the teams and lineups tables to allow bots to create records
 
--- Update teams RLS policy to allow bots to create teams
-DROP POLICY IF EXISTS "Users can manage their own teams" ON teams;
-
-CREATE POLICY "Users and bots can manage their own teams" ON teams
-    FOR ALL USING (
+-- Update teams RLS policies to allow bots to create and update teams
+DROP POLICY IF EXISTS "Users can create their own teams" ON public.teams;
+CREATE POLICY "Users and bots can create teams" ON public.teams
+    FOR INSERT WITH CHECK (
         auth.uid() = user_id OR
         EXISTS (
             SELECT 1 FROM bots 
@@ -14,11 +13,32 @@ CREATE POLICY "Users and bots can manage their own teams" ON teams
         )
     );
 
--- Update lineups RLS policy to allow bots to create lineups
-DROP POLICY IF EXISTS "Users can manage their own lineups" ON lineups;
+DROP POLICY IF EXISTS "Users can update their own teams" ON public.teams;
+CREATE POLICY "Users and bots can update teams" ON public.teams
+    FOR UPDATE USING (
+        auth.uid() = user_id OR
+        EXISTS (
+            SELECT 1 FROM bots 
+            WHERE bots.id = teams.user_id 
+            AND bots.league_id = teams.league_id
+        )
+    );
 
-CREATE POLICY "Users and bots can manage their own lineups" ON lineups
-    FOR ALL USING (
+-- Update lineups RLS policies to allow bots to create and update lineups
+DROP POLICY IF EXISTS "Users can create their own lineups" ON public.lineups;
+CREATE POLICY "Users and bots can create lineups" ON public.lineups
+    FOR INSERT WITH CHECK (
+        auth.uid() = user_id OR
+        EXISTS (
+            SELECT 1 FROM bots 
+            WHERE bots.id = lineups.user_id 
+            AND bots.league_id = lineups.league_id
+        )
+    );
+
+DROP POLICY IF EXISTS "Users can update their own lineups" ON public.lineups;
+CREATE POLICY "Users and bots can update lineups" ON public.lineups
+    FOR UPDATE USING (
         auth.uid() = user_id OR
         EXISTS (
             SELECT 1 FROM bots 

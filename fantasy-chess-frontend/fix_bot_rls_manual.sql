@@ -1,5 +1,5 @@
--- Fix RLS policies for bots to work properly
--- This migration updates the teams and lineups tables to allow bots to create records
+-- Manual fix for bot RLS policies
+-- Run this in your Supabase SQL editor
 
 -- Update teams RLS policies to allow bots to create and update teams
 DROP POLICY IF EXISTS "Users can create their own teams" ON public.teams;
