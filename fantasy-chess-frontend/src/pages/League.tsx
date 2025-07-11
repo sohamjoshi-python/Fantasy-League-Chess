@@ -854,12 +854,26 @@ const LeaguePage: React.FC = () => {
       setShowUserPopup(true)
 
       // Get user's team
-      const { data: teamData } = await supabase
-        .from('teams')
-        .select('*')
-        .eq('user_id', userData.user_id)
-        .eq('league_id', leagueId!)
-        .single()
+      let teamData = null;
+      if (bot && userData.user_id === bot.id) {
+        // Fetch bot's team by bot_id
+        const { data } = await supabase
+          .from('teams')
+          .select('*')
+          .eq('bot_id', bot.id)
+          .eq('league_id', leagueId!)
+          .single();
+        teamData = data;
+      } else {
+        // Fetch user's team by user_id
+        const { data } = await supabase
+          .from('teams')
+          .select('*')
+          .eq('user_id', userData.user_id)
+          .eq('league_id', leagueId!)
+          .single();
+        teamData = data;
+      }
 
       if (teamData) {
         const { data: teamPlayers } = await supabase
@@ -874,13 +888,26 @@ const LeaguePage: React.FC = () => {
 
       // Get user's current lineup
       const currentWeek = getCurrentWeekStart()
-      const { data: lineupData } = await supabase
-        .from('lineups')
-        .select('*')
-        .eq('user_id', userData.user_id)
-        .eq('league_id', leagueId!)
-        .eq('week_start_date', currentWeek)
-        .single()
+      let lineupData = null;
+      if (bot && userData.user_id === bot.id) {
+        const { data } = await supabase
+          .from('lineups')
+          .select('*')
+          .eq('bot_id', bot.id)
+          .eq('league_id', leagueId!)
+          .eq('week_start_date', currentWeek)
+          .single();
+        lineupData = data;
+      } else {
+        const { data } = await supabase
+          .from('lineups')
+          .select('*')
+          .eq('user_id', userData.user_id)
+          .eq('league_id', leagueId!)
+          .eq('week_start_date', currentWeek)
+          .single();
+        lineupData = data;
+      }
 
       if (lineupData) {
         const { data: lineupPlayers } = await supabase

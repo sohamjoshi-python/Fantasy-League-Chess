@@ -231,7 +231,21 @@ export async function autoDraftForBot(botId: string, leagueId: string): Promise<
     // --- Enforce max team size ---
     if ((team.player_ids?.length || 0) >= 10) {
       console.log('Bot team already has 10 players. No draft needed.');
-      return { success: false, error: 'Bot team full' };
+      // Advance draft turn and check for completion
+      const totalDraftParticipants = league.member_ids.length + (league.bot_id ? 1 : 0);
+      const newDraftTurn = league.current_draft_turn + 1;
+      const isDraftComplete = newDraftTurn >= totalDraftParticipants * 10;
+      const { error: leagueUpdateError } = await supabase
+        .from('leagues')
+        .update({
+          current_draft_turn: newDraftTurn,
+          draft_completed: isDraftComplete
+        })
+        .eq('id', leagueId);
+      if (leagueUpdateError) {
+        return { success: false, error: leagueUpdateError };
+      }
+      return { success: true };
     }
 
     // --- Get highest ELO available player ---
