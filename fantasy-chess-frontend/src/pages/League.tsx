@@ -1130,35 +1130,60 @@ const LeaguePage: React.FC = () => {
     setLoading(true);
     try {
       // Remove from league_members
-      await supabase
+      const { error: leagueMembersError } = await supabase
         .from('league_members')
         .delete()
         .eq('league_id', league.id)
         .eq('user_id', user.id);
+      if (leagueMembersError) {
+        console.error('Error removing from league_members:', leagueMembersError);
+        setError('Failed to remove from league_members: ' + leagueMembersError.message);
+        setLoading(false);
+        return;
+      }
       // Remove from member_ids in leagues
       const updatedMemberIds = (league.member_ids || []).reduce((acc: string[], id: string | undefined) => {
         if (typeof id === 'string' && user?.id && id !== String(user.id)) acc.push(id);
         return acc;
       }, []);
-      await supabase
+      const { error: leaguesError } = await supabase
         .from('leagues')
         .update({ member_ids: updatedMemberIds })
         .eq('id', league.id);
+      if (leaguesError) {
+        console.error('Error updating leagues.member_ids:', leaguesError);
+        setError('Failed to update league members: ' + leaguesError.message);
+        setLoading(false);
+        return;
+      }
       // Remove user's team
-      await supabase
+      const { error: teamsError } = await supabase
         .from('teams')
         .delete()
         .eq('league_id', league.id)
         .eq('user_id', user.id);
+      if (teamsError) {
+        console.error('Error deleting team:', teamsError);
+        setError('Failed to delete team: ' + teamsError.message);
+        setLoading(false);
+        return;
+      }
       // Remove user's lineups
-      await supabase
+      const { error: lineupsError } = await supabase
         .from('lineups')
         .delete()
         .eq('league_id', league.id)
         .eq('user_id', user.id);
+      if (lineupsError) {
+        console.error('Error deleting lineups:', lineupsError);
+        setError('Failed to delete lineups: ' + lineupsError.message);
+        setLoading(false);
+        return;
+      }
       navigate('/dashboard');
     } catch (err) {
-      setError('Failed to leave league');
+      console.error('Unexpected error in handleLeaveLeague:', err);
+      setError('Unexpected error: ' + (err as Error).message);
     } finally {
       setLoading(false);
     }
