@@ -88,6 +88,16 @@ const Help: React.FC = () => {
               <h2 className="text-xl font-bold text-neutral-900">Participate in the Draft</h2>
             </div>
             <div className="ml-12 space-y-4">
+              {/* Bot info section */}
+              <div className="flex items-start">
+                <ArrowRight className="w-5 h-5 text-purple mt-0.5 mr-3 flex-shrink-0" />
+                <div>
+                  <h3 className="font-semibold text-neutral-900">Play Solo or Fill Leagues with Bots</h3>
+                  <p className="text-neutral-700">
+                    <strong>New:</strong> You can add a bot to your league! Bots will automatically draft and set lineups, letting you play by yourself or fill out leagues with fewer people. Just click <span className="font-semibold">Add Bot</span> on your league page before starting the draft.
+                  </p>
+                </div>
+              </div>
               <div className="flex items-start">
                 <ArrowRight className="w-5 h-5 text-purple mt-0.5 mr-3 flex-shrink-0" />
                 <div>
