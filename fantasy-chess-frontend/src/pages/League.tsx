@@ -1656,6 +1656,8 @@ const LeaguePage: React.FC = () => {
                 <thead>
                   <tr>
                     <th className="text-left px-2 py-1 text-neutral-900">Player</th>
+                    <th className="text-center px-2 py-1 text-neutral-900">Rank</th>
+                    <th className="text-center px-2 py-1 text-neutral-900">Record</th>
                     <th className="text-right px-2 py-1 text-neutral-900">Points</th>
                   </tr>
                 </thead>
@@ -1665,11 +1667,22 @@ const LeaguePage: React.FC = () => {
                       <td className="px-2 py-1 text-neutral-700">
                         <ExpandablePlayerName playerName={row.player_name} />
                       </td>
+                      <td className="px-2 py-1 text-center text-neutral-700">
+                        {row.rank ? `#${row.rank}` : '-'}
+                      </td>
+                      <td className="px-2 py-1 text-center text-neutral-700">
+                        {row.wins !== undefined && row.total_games !== undefined 
+                          ? `${row.wins}/${row.total_games}` 
+                          : '-'
+                        }
+                      </td>
                       <td className="px-2 py-1 text-right text-neutral-700">{Number(row.player_points).toFixed(2)}</td>
                     </tr>
                   ))}
                   <tr className="font-bold border-t border-neutral-300">
                     <td className="px-2 py-1 text-neutral-900">TOTAL</td>
+                    <td className="px-2 py-1 text-center">-</td>
+                    <td className="px-2 py-1 text-center">-</td>
                     <td className="px-2 py-1 text-right text-neutral-900">{playerBreakdown.reduce((sum, p) => sum + Number(p.player_points), 0).toFixed(2)}</td>
                   </tr>
                 </tbody>

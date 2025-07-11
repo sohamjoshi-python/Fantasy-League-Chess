@@ -32,7 +32,7 @@ export async function processWeeklyResultsEnhanced(weekDate: string) {
  * @param weekDate string (YYYY-MM-DD)
  * @returns {Promise<Array<{ player_id: string, player_name: string, player_points: number }>>}
  */
-export async function fetchLineupPlayerBreakdown(userId: string, leagueId: string, weekDate: string): Promise<Array<{ player_id: string, player_name: string, player_points: number }>> {
+export async function fetchLineupPlayerBreakdown(userId: string, leagueId: string, weekDate: string): Promise<Array<{ player_id: string, player_name: string, player_points: number, rank?: number, wins?: number, total_games?: number }>> {
   const { data, error } = await supabase.rpc('get_lineup_player_breakdown', {
     user_id_input: userId,
     league_id_input: leagueId,
@@ -42,7 +42,57 @@ export async function fetchLineupPlayerBreakdown(userId: string, leagueId: strin
     console.error('Error fetching player breakdown:', error);
     return [];
   }
-  return data;
+
+  // Enhance the data with ranking and win record information
+  const enhancedData = await Promise.all(
+    data.map(async (player: { player_id: string, player_name: string, player_points: number }) => {
+      try {
+        // Get player's games for this week
+        const { data: games, error: gamesError } = await supabase
+          .from('games')
+          .select('*')
+          .eq('early_late', weekDate)
+          .or(`white.eq.${player.player_name},black.eq.${player.player_name}`);
+
+        if (gamesError) {
+          console.error('Error fetching games for player:', player.player_name, gamesError);
+          return player;
+        }
+
+        // Calculate wins and total games
+        let wins = 0;
+        let totalGames = 0;
+        
+        games?.forEach(game => {
+          if (game.white === player.player_name || game.black === player.player_name) {
+            totalGames++;
+            if (game.result === '1-0' && game.white === player.player_name) {
+              wins++;
+            } else if (game.result === '0-1' && game.black === player.player_name) {
+              wins++;
+            }
+          }
+        });
+
+        // Get player's ranking (position) in the tournament
+        // This would need to be calculated based on the tournament results
+        // For now, we'll set it as undefined and can enhance later
+        const rank = undefined;
+
+        return {
+          ...player,
+          rank,
+          wins,
+          total_games: totalGames
+        };
+      } catch (error) {
+        console.error('Error enhancing player data:', error);
+        return player;
+      }
+    })
+  );
+
+  return enhancedData;
 }
 
 /**

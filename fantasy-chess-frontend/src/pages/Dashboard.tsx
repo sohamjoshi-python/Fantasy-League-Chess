@@ -324,6 +324,8 @@ const Dashboard: React.FC = () => {
                 <thead>
                   <tr>
                     <th className="text-left px-2 py-1 border-b border-royalBlue">Player</th>
+                    <th className="text-center px-2 py-1 border-b border-royalBlue">Rank</th>
+                    <th className="text-center px-2 py-1 border-b border-royalBlue">Record</th>
                     <th className="text-right px-2 py-1 border-b border-royalBlue">Points</th>
                   </tr>
                 </thead>
@@ -331,11 +333,22 @@ const Dashboard: React.FC = () => {
                   {playerBreakdown.map((row) => (
                     <tr key={row.player_id || row.player_name} className="border-b border-neutral-100 last:border-b-0">
                       <td className="px-2 py-1 text-neutral-900">{row.player_name}</td>
+                      <td className="px-2 py-1 text-center text-neutral-900">
+                        {row.rank ? `#${row.rank}` : '-'}
+                      </td>
+                      <td className="px-2 py-1 text-center text-neutral-900">
+                        {row.wins !== undefined && row.total_games !== undefined 
+                          ? `${row.wins}/${row.total_games}` 
+                          : '-'
+                        }
+                      </td>
                       <td className="px-2 py-1 text-right text-neutral-900">{Number(row.player_points).toFixed(2)}</td>
                     </tr>
                   ))}
                   <tr className="font-bold border-t border-royalBlue">
                     <td className="px-2 py-1">TOTAL</td>
+                    <td className="px-2 py-1 text-center">-</td>
+                    <td className="px-2 py-1 text-center">-</td>
                     <td className="px-2 py-1 text-right">{playerBreakdown.reduce((sum, p) => sum + Number(p.player_points), 0).toFixed(2)}</td>
                   </tr>
                 </tbody>
