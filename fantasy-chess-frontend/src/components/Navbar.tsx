@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { LogIn, LogOut, UserPlus, HelpCircle, Bell } from 'lucide-react'
-import { getUnreadNotificationCount } from '../lib/supabase'
+import { getUnreadNotificationCount, supabase } from '../lib/supabase'
 import Inbox from './Inbox'
 import logo from '../assets/pawn-royale-logo.png'
 
@@ -14,10 +14,12 @@ const Navbar: React.FC = () => {
   const [isSignUp, setIsSignUp] = useState(false)
   const [showInbox, setShowInbox] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
+  const [displayName, setDisplayName] = useState('')
 
   useEffect(() => {
     if (user) {
       loadUnreadCount();
+      loadDisplayName();
       // Refresh unread count every 30 seconds
       const interval = setInterval(loadUnreadCount, 30000);
       return () => clearInterval(interval);
@@ -28,6 +30,25 @@ const Navbar: React.FC = () => {
     const { success, count } = await getUnreadNotificationCount();
     if (success && count !== undefined) {
       setUnreadCount(count);
+    }
+  };
+
+  const loadDisplayName = async () => {
+    if (!user) return;
+    
+    try {
+      // First try to get display name from user metadata
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (authUser?.user_metadata?.display_name) {
+        setDisplayName(authUser.user_metadata.display_name);
+        return;
+      }
+      
+      // Fallback to email or truncated ID
+      setDisplayName(user.email || user.id.slice(0, 6));
+    } catch (error) {
+      console.error('Error loading display name:', error);
+      setDisplayName(user.email || user.id.slice(0, 6));
     }
   };
 
@@ -92,7 +113,7 @@ const Navbar: React.FC = () => {
                   )}
                 </button>
                 <div className="flex items-center space-x-2">
-                  <span className="text-sm text-neutral-700">{user.email}</span>
+                  <span className="text-sm text-neutral-700 font-medium">{displayName}</span>
                   <button
                     onClick={handleSignOut}
                     className="flex items-center space-x-1 text-neutral-700 hover:text-red-500 px-3 py-2 rounded-md text-sm font-medium transition-colors"
