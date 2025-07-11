@@ -247,6 +247,15 @@ const LeaguePage: React.FC = () => {
     if (league && bot && draftStarted && !league.draft_completed) {
       const currentDraftUserId = league.draft_order[league.current_draft_turn]
       
+      // Debug logging
+      console.log('Draft debug:', {
+        currentTurn: league.current_draft_turn,
+        currentUserId: currentDraftUserId,
+        botId: bot.id,
+        draftOrder: league.draft_order,
+        isBotTurn: currentDraftUserId === bot.id
+      })
+      
       // If it's the bot's turn, auto-draft
       if (currentDraftUserId === bot.id) {
         const handleBotTurn = async () => {
@@ -495,7 +504,9 @@ const LeaguePage: React.FC = () => {
       
       // Update league draft state
       const newDraftTurn = league?.current_draft_turn + 1
-      const isDraftComplete = newDraftTurn >= league?.member_ids.length * 10
+      // Include bot in draft completion calculation
+      const totalDraftParticipants = bot ? league.member_ids.length + 1 : league.member_ids.length
+      const isDraftComplete = newDraftTurn >= totalDraftParticipants * 10
       const { error: leagueError } = await supabase
         .from('leagues')
         .update({ current_draft_turn: newDraftTurn, draft_completed: isDraftComplete })
@@ -558,7 +569,9 @@ const LeaguePage: React.FC = () => {
   const fixDraftOrder = async () => {
     if (!league) return
     try {
-      const fullDraftOrder = generateSnakeDraftOrder(league?.member_ids, 10)
+      // Include bot in draft order if it exists
+      const allDraftParticipants = bot ? [...league.member_ids, bot.id] : league.member_ids
+      const fullDraftOrder = generateSnakeDraftOrder(allDraftParticipants, 10)
       await supabase.from('leagues').update({ 
         draft_order: fullDraftOrder,
         current_draft_turn: 0
@@ -664,8 +677,9 @@ const LeaguePage: React.FC = () => {
     if (!league) return
     setLoading(true)
     try {
-      // Generate full snake draft order
-      const fullDraftOrder = generateSnakeDraftOrder(league?.member_ids, 10)
+      // Generate full snake draft order including bot if it exists
+      const allDraftParticipants = bot ? [...league.member_ids, bot.id] : league.member_ids
+      const fullDraftOrder = generateSnakeDraftOrder(allDraftParticipants, 10)
       await supabase.from('leagues').update({ 
         draft_started: true, 
         draft_start_time: new Date().toISOString(),
