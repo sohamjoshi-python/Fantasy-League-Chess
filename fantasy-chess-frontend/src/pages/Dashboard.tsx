@@ -207,7 +207,10 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="w-full max-w-6xl mx-auto bg-white min-h-screen">
-      <h1 className="text-2xl lg:text-3xl font-bold text-neutral-900 mb-6 lg:mb-8">Dashboard</h1>
+      <h1 className="text-4xl lg:text-5xl font-extrabold text-neutral-900 mb-8 text-center tracking-tight font-serif drop-shadow relative">
+        Dashboard
+        <span className="block w-16 h-1 bg-royalBlue rounded-full mx-auto mt-3"></span>
+      </h1>
       {activeLeagues.length === 0 ? (
         <div className="text-center py-12 lg:py-16">
           <div className="bg-white rounded-lg shadow-lg p-6 lg:p-8 max-w-md mx-auto border-2 border-royalBlue">

@@ -8,7 +8,7 @@ const Help: React.FC = () => {
       <div className="max-w-4xl mx-auto px-4">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 mx-auto mb-2 bg-white rounded-full p-2 shadow-lg border-2 border-gold">
+          <div className="w-16 h-16 mx-auto mb-2 bg-white rounded-full p-2 shadow-lg border-2 border-royalBlue">
             <img src={logo} alt="Pawn Royale Logo" className="w-full h-full object-contain" />
           </div>
           <h1 className="text-3xl font-extrabold text-neutral-900 mb-4 font-serif drop-shadow">How to Play Pawn Royale</h1>
@@ -16,9 +16,9 @@ const Help: React.FC = () => {
         </div>
 
         {/* Quick Overview */}
-        <div className="bg-white rounded-xl shadow-lg p-6 mb-8 border-2 border-gold">
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-8 border-2 border-royalBlue">
           <h2 className="text-2xl font-bold text-neutral-900 mb-4 flex items-center">
-            <Trophy className="w-6 h-6 mr-2 text-gold" />
+            <Trophy className="w-6 h-6 mr-2 text-royalBlue" />
             What is Pawn Royale?
           </h2>
           <p className="text-neutral-700 mb-4">
@@ -26,18 +26,18 @@ const Help: React.FC = () => {
             in actual chess tournaments. Build your dream team, set weekly lineups, and compete against other players for prizes!
           </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-            <div className="text-center p-4 bg-neutral-50 rounded-lg border border-gold">
-              <Users className="w-8 h-8 mx-auto mb-2 text-gold" />
+            <div className="text-center p-4 bg-neutral-50 rounded-lg border border-royalBlue">
+              <Users className="w-8 h-8 mx-auto mb-2 text-royalBlue" />
               <h3 className="font-semibold text-neutral-900">Draft Players</h3>
               <p className="text-sm text-neutral-700">Select from real chess players</p>
             </div>
-            <div className="text-center p-4 bg-neutral-50 rounded-lg border border-gold">
+            <div className="text-center p-4 bg-neutral-50 rounded-lg border border-royalBlue">
               <Target className="w-8 h-8 mx-auto mb-2 text-purple" />
               <h3 className="font-semibold text-neutral-900">Set Lineups</h3>
               <p className="text-sm text-neutral-700">Choose your weekly team</p>
             </div>
-            <div className="text-center p-4 bg-neutral-50 rounded-lg border border-gold">
-              <Trophy className="w-8 h-8 mx-auto mb-2 text-gold" />
+            <div className="text-center p-4 bg-neutral-50 rounded-lg border border-royalBlue">
+              <Trophy className="w-8 h-8 mx-auto mb-2 text-royalBlue" />
               <h3 className="font-semibold text-neutral-900">Win Prizes</h3>
               <p className="text-sm text-neutral-700">Compete for coin rewards</p>
             </div>
@@ -47,14 +47,14 @@ const Help: React.FC = () => {
         {/* Step-by-Step Instructions */}
         <div className="space-y-8">
           {/* Step 1: Joining a League */}
-          <div className="bg-white rounded-xl shadow-lg p-6 border-2 border-gold">
+          <div className="bg-white rounded-xl shadow-lg p-6 border-2 border-royalBlue">
             <div className="flex items-center mb-4">
-              <div className="w-8 h-8 bg-gold text-white rounded-full flex items-center justify-center font-bold mr-4">1</div>
+              <div className="w-8 h-8 bg-royalBlue text-white rounded-full flex items-center justify-center font-bold mr-4">1</div>
               <h2 className="text-xl font-bold text-neutral-900">Join or Create a League</h2>
             </div>
             <div className="ml-12 space-y-4">
               <div className="flex items-start">
-                <ArrowRight className="w-5 h-5 text-gold mt-0.5 mr-3 flex-shrink-0" />
+                <ArrowRight className="w-5 h-5 text-royalBlue mt-0.5 mr-3 flex-shrink-0" />
                 <div>
                   <h3 className="font-semibold text-neutral-900">Create a New League</h3>
                   <p className="text-neutral-700">Click "Create League" and set your league details:</p>
@@ -67,13 +67,13 @@ const Help: React.FC = () => {
                 </div>
               </div>
               <div className="flex items-start">
-                <ArrowRight className="w-5 h-5 text-gold mt-0.5 mr-3 flex-shrink-0" />
+                <ArrowRight className="w-5 h-5 text-royalBlue mt-0.5 mr-3 flex-shrink-0" />
                 <div>
                   <h3 className="font-semibold text-neutral-900">Join an Existing League</h3>
                   <p className="text-neutral-700">Use the join code provided by the league creator or browse public leagues.</p>
                 </div>
               </div>
-              <div className="bg-neutral-50 p-4 rounded-lg border border-gold">
+              <div className="bg-neutral-50 p-4 rounded-lg border border-royalBlue">
                 <p className="text-sm text-neutral-700">
                   <strong>Tip:</strong> You can join multiple leagues, but they cannot overlap in time. Each league costs coins to join!
                 </p>
@@ -82,7 +82,7 @@ const Help: React.FC = () => {
           </div>
 
           {/* Step 2: The Draft */}
-          <div className="bg-white rounded-xl shadow-lg p-6 border-2 border-gold">
+          <div className="bg-white rounded-xl shadow-lg p-6 border-2 border-royalBlue">
             <div className="flex items-center mb-4">
               <div className="w-8 h-8 bg-purple text-white rounded-full flex items-center justify-center font-bold mr-4">2</div>
               <h2 className="text-xl font-bold text-neutral-900">Participate in the Draft</h2>
@@ -130,7 +130,7 @@ const Help: React.FC = () => {
                   Once started, the draft cannot be paused and no new members can join!
                 </p>
               </div>
-              <div className="bg-neutral-50 p-4 rounded-lg border border-gold">
+              <div className="bg-neutral-50 p-4 rounded-lg border border-royalBlue">
                 <p className="text-sm text-neutral-700">
                   <strong>Strategy:</strong> Consider player consistency, recent form, and upcoming tournaments when drafting!
                 </p>
@@ -139,34 +139,34 @@ const Help: React.FC = () => {
           </div>
 
           {/* Step 3: Setting Lineups */}
-          <div className="bg-white rounded-xl shadow-lg p-6 border-2 border-gold">
+          <div className="bg-white rounded-xl shadow-lg p-6 border-2 border-royalBlue">
             <div className="flex items-center mb-4">
-              <div className="w-8 h-8 bg-gold text-white rounded-full flex items-center justify-center font-bold mr-4">3</div>
+              <div className="w-8 h-8 bg-royalBlue text-white rounded-full flex items-center justify-center font-bold mr-4">3</div>
               <h2 className="text-xl font-bold text-neutral-900">Set Your Weekly Lineup</h2>
             </div>
             <div className="ml-12 space-y-4">
               <div className="flex items-start">
-                <ArrowRight className="w-5 h-5 text-gold mt-0.5 mr-3 flex-shrink-0" />
+                <ArrowRight className="w-5 h-5 text-royalBlue mt-0.5 mr-3 flex-shrink-0" />
                 <div>
                   <h3 className="font-semibold text-neutral-900">Choose 5 Players</h3>
                   <p className="text-neutral-700">Each week, select 5 players from your 10-player roster to start in your lineup.</p>
                 </div>
               </div>
               <div className="flex items-start">
-                <ArrowRight className="w-5 h-5 text-gold mt-0.5 mr-3 flex-shrink-0" />
+                <ArrowRight className="w-5 h-5 text-royalBlue mt-0.5 mr-3 flex-shrink-0" />
                 <div>
                   <h3 className="font-semibold text-neutral-900">Weekly Deadlines</h3>
                   <p className="text-neutral-700">Lineups lock at the start of each week (Monday). Make sure to set your lineup before the deadline!</p>
                 </div>
               </div>
               <div className="flex items-start">
-                <ArrowRight className="w-5 h-5 text-gold mt-0.5 mr-3 flex-shrink-0" />
+                <ArrowRight className="w-5 h-5 text-royalBlue mt-0.5 mr-3 flex-shrink-0" />
                 <div>
                   <h3 className="font-semibold text-neutral-900">Strategic Decisions</h3>
                   <p className="text-neutral-700">Consider which players are competing in tournaments that week and their recent performance.</p>
                 </div>
               </div>
-              <div className="bg-neutral-50 p-4 rounded-lg border border-gold">
+              <div className="bg-neutral-50 p-4 rounded-lg border border-royalBlue">
                 <p className="text-sm text-neutral-700">
                   <strong>Important:</strong> You can change your lineup anytime before the weekly deadline. After that, it's locked for the week!
                 </p>
@@ -175,7 +175,7 @@ const Help: React.FC = () => {
           </div>
 
           {/* Step 4: Scoring System */}
-          <div className="bg-white rounded-xl shadow-lg p-6 border-2 border-gold">
+          <div className="bg-white rounded-xl shadow-lg p-6 border-2 border-royalBlue">
             <div className="flex items-center mb-4">
               <div className="w-8 h-8 bg-purple text-white rounded-full flex items-center justify-center font-bold mr-4">4</div>
               <h2 className="text-xl font-bold text-neutral-900">Understanding Scoring</h2>
@@ -208,7 +208,7 @@ const Help: React.FC = () => {
                   <p className="text-neutral-700">Points accumulate throughout the league season. The player with the most total points at the end wins!</p>
                 </div>
               </div>
-              <div className="bg-neutral-50 p-4 rounded-lg border border-gold">
+              <div className="bg-neutral-50 p-4 rounded-lg border border-royalBlue">
                 <p className="text-sm text-neutral-700">
                   <strong>Pro Tip:</strong> Check the "Point Breakdown" section to see exactly how each player earned their points!
                 </p>
@@ -217,34 +217,34 @@ const Help: React.FC = () => {
           </div>
 
           {/* Step 5: Winning and Prizes */}
-          <div className="bg-white rounded-xl shadow-lg p-6 border-2 border-gold">
+          <div className="bg-white rounded-xl shadow-lg p-6 border-2 border-royalBlue">
             <div className="flex items-center mb-4">
-              <div className="w-8 h-8 bg-gold text-white rounded-full flex items-center justify-center font-bold mr-4">5</div>
+              <div className="w-8 h-8 bg-royalBlue text-white rounded-full flex items-center justify-center font-bold mr-4">5</div>
               <h2 className="text-xl font-bold text-neutral-900">Winning and Prizes</h2>
             </div>
             <div className="ml-12 space-y-4">
               <div className="flex items-start">
-                <ArrowRight className="w-5 h-5 text-gold mt-0.5 mr-3 flex-shrink-0" />
+                <ArrowRight className="w-5 h-5 text-royalBlue mt-0.5 mr-3 flex-shrink-0" />
                 <div>
                   <h3 className="font-semibold text-neutral-900">League Champion</h3>
                   <p className="text-neutral-700">The player with the highest total points at the end of the league season wins the championship!</p>
                 </div>
               </div>
               <div className="flex items-start">
-                <ArrowRight className="w-5 h-5 text-gold mt-0.5 mr-3 flex-shrink-0" />
+                <ArrowRight className="w-5 h-5 text-royalBlue mt-0.5 mr-3 flex-shrink-0" />
                 <div>
                   <h3 className="font-semibold text-neutral-900">Prize Pool</h3>
                   <p className="text-neutral-700">The winner receives coins equal to the total buy-ins from all league members.</p>
                 </div>
               </div>
               <div className="flex items-start">
-                <ArrowRight className="w-5 h-5 text-gold mt-0.5 mr-3 flex-shrink-0" />
+                <ArrowRight className="w-5 h-5 text-royalBlue mt-0.5 mr-3 flex-shrink-0" />
                 <div>
                   <h3 className="font-semibold text-neutral-900">Automatic Payout</h3>
                   <p className="text-neutral-700">Prizes are automatically processed when the league ends and distributed to the winner.</p>
                 </div>
               </div>
-              <div className="bg-neutral-50 p-4 rounded-lg border border-gold">
+              <div className="bg-neutral-50 p-4 rounded-lg border border-royalBlue">
                 <p className="text-sm text-neutral-700">
                   <strong>Example:</strong> In a 10-player league with 100 coin buy-ins, the winner gets 1000 coins!
                 </p>
@@ -254,7 +254,7 @@ const Help: React.FC = () => {
         </div>
 
         {/* Tips and Strategies */}
-        <div className="bg-white rounded-xl shadow-lg p-6 mt-8 border-2 border-gold">
+        <div className="bg-white rounded-xl shadow-lg p-6 mt-8 border-2 border-royalBlue">
           <h2 className="text-2xl font-bold text-neutral-900 mb-4 flex items-center">
             <BarChart3 className="w-6 h-6 mr-2 text-purple" />
             Pro Tips & Strategies
@@ -291,7 +291,7 @@ const Help: React.FC = () => {
         </div>
 
         {/* Getting Started */}
-        <div className="bg-gradient-to-r from-gold to-purple rounded-xl shadow-lg p-6 mt-8 text-white">
+        <div className="bg-gradient-to-r from-royalBlue to-purple rounded-xl shadow-lg p-6 mt-8 text-white">
           <h2 className="text-2xl font-bold mb-4 flex items-center">
             <Play className="w-6 h-6 mr-2" />
             Ready to Start?
@@ -316,9 +316,9 @@ const Help: React.FC = () => {
         </div>
 
         {/* FAQ Section */}
-        <div className="bg-white rounded-xl shadow-lg p-6 mt-8 border-2 border-gold">
+        <div className="bg-white rounded-xl shadow-lg p-6 mt-8 border-2 border-royalBlue">
           <h2 className="text-2xl font-bold text-neutral-900 mb-6 flex items-center">
-            <HelpCircle className="w-6 h-6 mr-2 text-gold" />
+            <HelpCircle className="w-6 h-6 mr-2 text-royalBlue" />
             Frequently Asked Questions
           </h2>
           <div className="space-y-4">
