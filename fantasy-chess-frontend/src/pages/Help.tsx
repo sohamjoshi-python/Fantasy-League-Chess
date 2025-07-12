@@ -8,7 +8,7 @@ const Help: React.FC = () => {
       <div className="max-w-4xl mx-auto px-4">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 mx-auto mb-2 bg-white rounded-full p-2 shadow-lg border-2 border-royalBlue">
+          <div className="w-20 h-20 mx-auto mb-2 bg-white rounded-full p-0 shadow-lg border-2 border-royalBlue">
             <img src={logo} alt="Pawn Royale Logo" className="w-full h-full object-contain" />
           </div>
           <h1 className="text-3xl font-extrabold text-neutral-900 mb-4 font-serif drop-shadow">How to Play Pawn Royale</h1>

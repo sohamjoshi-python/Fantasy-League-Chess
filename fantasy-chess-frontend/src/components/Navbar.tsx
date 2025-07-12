@@ -76,7 +76,7 @@ const Navbar: React.FC = () => {
         <div className="flex justify-between h-16">
           <div className="flex items-center">
             <Link to="/" className="flex items-center space-x-2">
-              <div className="h-10 w-10 bg-white rounded-full p-1 shadow-md border border-royalBlue">
+              <div className="h-14 w-14 bg-white rounded-full p-0 shadow-md border border-royalBlue">
                 <img src={logo} alt="Pawn Royale Logo" className="h-full w-full object-contain" />
               </div>
               <span className="text-2xl font-extrabold text-royalBlue tracking-wide font-serif drop-shadow">PAWN ROYALE</span>

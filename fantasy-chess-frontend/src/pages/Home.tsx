@@ -9,7 +9,7 @@ const Home: React.FC = () => {
       {/* Hero Section */}
       <section className="w-full bg-white py-20 shadow-sm border-b border-royalBlue">
         <div className="max-w-4xl mx-auto flex flex-col items-center text-center px-4">
-          <div className="w-20 h-20 mb-4 bg-white rounded-full p-2 shadow-lg border-2 border-royalBlue">
+          <div className="w-28 h-28 mb-4 bg-white rounded-full p-0 shadow-lg border-2 border-royalBlue">
             <img src={logo} alt="Pawn Royale Logo" className="w-full h-full object-contain" />
           </div>
           <h1 className="text-5xl font-extrabold text-neutral-900 mb-4 tracking-tight font-serif drop-shadow">Pawn Royale</h1>
@@ -44,7 +44,7 @@ const Home: React.FC = () => {
             <p className="text-neutral-700 text-center text-sm">Create or join a league. Each league is a month-long competition with a buy-in and prizes.</p>
           </div>
           <div className="bg-white rounded-xl shadow-lg p-6 flex flex-col items-center border-2 border-royalBlue hover:shadow-xl transition-shadow">
-            <div className="w-10 h-10 mb-3 bg-white rounded-full p-1 border border-royalBlue">
+            <div className="w-14 h-14 mb-3 bg-white rounded-full p-0 border border-royalBlue">
               <img src={logo} alt="Pawn Royale Logo" className="w-full h-full object-contain" />
             </div>
             <h3 className="font-semibold text-lg mb-2 text-neutral-900">Draft Your Team</h3>
