@@ -43,21 +43,25 @@ export async function fetchLineupPlayerBreakdown(userId: string, leagueId: strin
     return [];
   }
 
+  // Convert date format from YYYY-MM-DD to YYYY.MM.DD for games table
+  const formattedDate = weekDate.replace(/-/g, '.');
+  console.log('Original date:', weekDate, 'Formatted date:', formattedDate);
+
   // Enhance the data with ranking and win record information
   const enhancedData = await Promise.all(
     data.map(async (player: { player_id: string, player_name: string, player_points: number }) => {
       try {
-        console.log('Fetching games for player:', player.player_name, 'week:', weekDate);
+        console.log('Fetching games for player:', player.player_name, 'week:', formattedDate);
         
         // Get player's games for this week - try different approaches
         let games = null;
         let gamesError = null;
         
-        // First try with the exact date format
+        // First try with the correct date format (YYYY.MM.DD)
         const { data: games1, error: error1 } = await supabase
           .from('games')
           .select('*')
-          .eq('early_late', weekDate)
+          .eq('date', formattedDate)
           .or(`white.eq.${player.player_name},black.eq.${player.player_name}`);
         
         if (error1) {
@@ -66,7 +70,7 @@ export async function fetchLineupPlayerBreakdown(userId: string, leagueId: strin
           const { data: games2, error: error2 } = await supabase
             .from('games')
             .select('*')
-            .eq('early_late', weekDate);
+            .eq('date', formattedDate);
           
           if (error2) {
             console.log('Second query also failed:', error2);
