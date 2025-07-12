@@ -1656,7 +1656,6 @@ const LeaguePage: React.FC = () => {
                 <thead>
                   <tr>
                     <th className="text-left px-2 py-1 text-neutral-900">Player</th>
-                    <th className="text-center px-2 py-1 text-neutral-900">Rank</th>
                     <th className="text-center px-2 py-1 text-neutral-900">Record</th>
                     <th className="text-right px-2 py-1 text-neutral-900">Points</th>
                   </tr>
@@ -1666,9 +1665,6 @@ const LeaguePage: React.FC = () => {
                     <tr key={row.player_id || row.player_name}>
                       <td className="px-2 py-1 text-neutral-700">
                         <ExpandablePlayerName playerName={row.player_name} />
-                      </td>
-                      <td className="px-2 py-1 text-center text-neutral-700">
-                        {row.rank ? `#${row.rank}` : '-'}
                       </td>
                       <td className="px-2 py-1 text-center text-neutral-700">
                         {row.wins !== undefined && row.total_games !== undefined 

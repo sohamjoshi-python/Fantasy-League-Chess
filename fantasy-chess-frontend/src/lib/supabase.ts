@@ -32,7 +32,7 @@ export async function processWeeklyResultsEnhanced(weekDate: string) {
  * @param weekDate string (YYYY-MM-DD)
  * @returns {Promise<Array<{ player_id: string, player_name: string, player_points: number }>>}
  */
-export async function fetchLineupPlayerBreakdown(userId: string, leagueId: string, weekDate: string): Promise<Array<{ player_id: string, player_name: string, player_points: number, rank?: number, wins?: number, total_games?: number }>> {
+export async function fetchLineupPlayerBreakdown(userId: string, leagueId: string, weekDate: string): Promise<Array<{ player_id: string, player_name: string, player_points: number, wins?: number, total_games?: number }>> {
   const { data, error } = await supabase.rpc('get_lineup_player_breakdown', {
     user_id_input: userId,
     league_id_input: leagueId,
@@ -91,7 +91,6 @@ export async function fetchLineupPlayerBreakdown(userId: string, leagueId: strin
           console.error('Error fetching games for player:', player.player_name, gamesError);
           return {
             ...player,
-            rank: undefined,
             wins: 0,
             total_games: 0
           };
@@ -115,14 +114,8 @@ export async function fetchLineupPlayerBreakdown(userId: string, leagueId: strin
 
         console.log('Final stats for', player.player_name, ':', { wins, totalGames });
 
-        // Get player's ranking (position) in the tournament
-        // This would need to be calculated based on the tournament results
-        // For now, we'll set it as undefined and can enhance later
-        const rank = undefined;
-
         return {
           ...player,
-          rank,
           wins,
           total_games: totalGames
         };
@@ -130,7 +123,6 @@ export async function fetchLineupPlayerBreakdown(userId: string, leagueId: strin
         console.error('Error enhancing player data:', error);
         return {
           ...player,
-          rank: undefined,
           wins: 0,
           total_games: 0
         };
