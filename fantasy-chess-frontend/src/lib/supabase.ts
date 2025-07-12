@@ -47,16 +47,50 @@ export async function fetchLineupPlayerBreakdown(userId: string, leagueId: strin
   const enhancedData = await Promise.all(
     data.map(async (player: { player_id: string, player_name: string, player_points: number }) => {
       try {
-        // Get player's games for this week
-        const { data: games, error: gamesError } = await supabase
+        console.log('Fetching games for player:', player.player_name, 'week:', weekDate);
+        
+        // Get player's games for this week - try different approaches
+        let games = null;
+        let gamesError = null;
+        
+        // First try with the exact date format
+        const { data: games1, error: error1 } = await supabase
           .from('games')
           .select('*')
           .eq('early_late', weekDate)
           .or(`white.eq.${player.player_name},black.eq.${player.player_name}`);
+        
+        if (error1) {
+          console.log('First query failed, trying alternative:', error1);
+          // Try without the OR clause first to see if we get any games
+          const { data: games2, error: error2 } = await supabase
+            .from('games')
+            .select('*')
+            .eq('early_late', weekDate);
+          
+          if (error2) {
+            console.log('Second query also failed:', error2);
+            gamesError = error2;
+          } else {
+            // Filter in JavaScript
+            games = games2?.filter(game => 
+              game.white === player.player_name || game.black === player.player_name
+            ) || [];
+          }
+        } else {
+          games = games1;
+        }
+
+        console.log('Games found for', player.player_name, ':', games?.length || 0, games);
 
         if (gamesError) {
           console.error('Error fetching games for player:', player.player_name, gamesError);
-          return player;
+          return {
+            ...player,
+            rank: undefined,
+            wins: 0,
+            total_games: 0
+          };
         }
 
         // Calculate wins and total games
@@ -64,6 +98,7 @@ export async function fetchLineupPlayerBreakdown(userId: string, leagueId: strin
         let totalGames = 0;
         
         games?.forEach(game => {
+          console.log('Processing game:', game);
           if (game.white === player.player_name || game.black === player.player_name) {
             totalGames++;
             if (game.result === '1-0' && game.white === player.player_name) {
@@ -73,6 +108,8 @@ export async function fetchLineupPlayerBreakdown(userId: string, leagueId: strin
             }
           }
         });
+
+        console.log('Final stats for', player.player_name, ':', { wins, totalGames });
 
         // Get player's ranking (position) in the tournament
         // This would need to be calculated based on the tournament results
@@ -87,7 +124,12 @@ export async function fetchLineupPlayerBreakdown(userId: string, leagueId: strin
         };
       } catch (error) {
         console.error('Error enhancing player data:', error);
-        return player;
+        return {
+          ...player,
+          rank: undefined,
+          wins: 0,
+          total_games: 0
+        };
       }
     })
   );
