@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { League, Team, Lineup, ChessPlayer } from '../types'
 import { Crown, Users, Trophy, Calendar, Plus, ExternalLink } from 'lucide-react'
-import { fetchLineupPlayerBreakdown } from '../lib/supabase';
+import { fetchLineupPlayerBreakdownByRounds } from '../lib/supabase';
 
 function getCurrentTuesday() {
   const now = new Date();
@@ -26,7 +26,10 @@ const Dashboard: React.FC = () => {
   const [pastLeagues, setPastLeagues] = useState<any[]>([])
   const [futureLeagues, setFutureLeagues] = useState<League[]>([])
   const [loading, setLoading] = useState(true)
-  const [playerBreakdown, setPlayerBreakdown] = useState<any[]>([])
+  const [playerBreakdown, setPlayerBreakdown] = useState<{ 
+    early: Array<{ player_id: string, player_name: string, player_points: number, wins?: number, total_games?: number }>, 
+    late: Array<{ player_id: string, player_name: string, player_points: number, wins?: number, total_games?: number }> 
+  }>({ early: [], late: [] })
   const [breakdownLoading, setBreakdownLoading] = useState(false)
   const [breakdownError, setBreakdownError] = useState('')
   const [availableWeeks, setAvailableWeeks] = useState<string[]>([]);
@@ -77,7 +80,7 @@ const Dashboard: React.FC = () => {
       setBreakdownLoading(true);
       setBreakdownError('');
       try {
-        const data = await fetchLineupPlayerBreakdown(user.id, currentLeague.id, selectedWeek.replace(/\./g, '-'));
+        const data = await fetchLineupPlayerBreakdownByRounds(user.id, currentLeague.id, selectedWeek.replace(/\./g, '-'));
         setPlayerBreakdown(data);
       } catch (e: any) {
         setBreakdownError('Could not load point breakdown');
@@ -319,37 +322,87 @@ const Dashboard: React.FC = () => {
               <div className="text-neutral-500">Loading breakdown...</div>
             ) : breakdownError ? (
               <div className="text-red-600">{breakdownError}</div>
-            ) : playerBreakdown && playerBreakdown.length > 0 ? (
-              <table className="min-w-full text-sm text-neutral-900">
-                <thead>
-                  <tr>
-                    <th className="text-left px-2 py-1 border-b border-royalBlue">Player</th>
-    
-                    <th className="text-center px-2 py-1 border-b border-royalBlue">Record</th>
-                    <th className="text-right px-2 py-1 border-b border-royalBlue">Points</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {playerBreakdown.map((row) => (
-                    <tr key={row.player_id || row.player_name} className="border-b border-neutral-100 last:border-b-0">
-                      <td className="px-2 py-1 text-neutral-900">{row.player_name}</td>
-                      <td className="px-2 py-1 text-center text-neutral-900">
-                        {row.wins !== undefined && row.total_games !== undefined 
-                          ? `${row.wins}/${row.total_games}` 
-                          : '-'
-                        }
-                      </td>
-                      <td className="px-2 py-1 text-right text-neutral-900">{Number(row.player_points).toFixed(2)}</td>
-                    </tr>
-                  ))}
-                  <tr className="font-bold border-t border-royalBlue">
-                    <td className="px-2 py-1">TOTAL</td>
-                    <td className="px-2 py-1 text-center">-</td>
-                    <td className="px-2 py-1 text-center">-</td>
-                    <td className="px-2 py-1 text-right">{playerBreakdown.reduce((sum, p) => sum + Number(p.player_points), 0).toFixed(2)}</td>
-                  </tr>
-                </tbody>
-              </table>
+            ) : (playerBreakdown.early.length > 0 || playerBreakdown.late.length > 0) ? (
+              <div className="space-y-6">
+                {/* Early Round */}
+                {playerBreakdown.early.length > 0 && (
+                  <div>
+                    <h4 className="text-lg font-semibold mb-3 text-neutral-900">Early Round</h4>
+                    <table className="min-w-full text-sm text-neutral-900">
+                      <thead>
+                        <tr>
+                          <th className="text-left px-2 py-1 border-b border-royalBlue">Player</th>
+                          <th className="text-center px-2 py-1 border-b border-royalBlue">Record</th>
+                          <th className="text-right px-2 py-1 border-b border-royalBlue">Points</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {playerBreakdown.early.map((row) => (
+                          <tr key={row.player_id || row.player_name} className="border-b border-neutral-100 last:border-b-0">
+                            <td className="px-2 py-1 text-neutral-900">{row.player_name}</td>
+                            <td className="px-2 py-1 text-center text-neutral-900">
+                              {row.wins !== undefined && row.total_games !== undefined 
+                                ? `${row.wins}/${row.total_games}` 
+                                : '-'
+                              }
+                            </td>
+                            <td className="px-2 py-1 text-right text-neutral-900">{Number(row.player_points).toFixed(2)}</td>
+                          </tr>
+                        ))}
+                        <tr className="font-bold border-t border-royalBlue">
+                          <td className="px-2 py-1">TOTAL</td>
+                          <td className="px-2 py-1 text-center">-</td>
+                          <td className="px-2 py-1 text-right">{playerBreakdown.early.reduce((sum, p) => sum + Number(p.player_points), 0).toFixed(2)}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                
+                {/* Late Round */}
+                {playerBreakdown.late.length > 0 && (
+                  <div>
+                    <h4 className="text-lg font-semibold mb-3 text-neutral-900">Late Round</h4>
+                    <table className="min-w-full text-sm text-neutral-900">
+                      <thead>
+                        <tr>
+                          <th className="text-left px-2 py-1 border-b border-royalBlue">Player</th>
+                          <th className="text-center px-2 py-1 border-b border-royalBlue">Record</th>
+                          <th className="text-right px-2 py-1 border-b border-royalBlue">Points</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {playerBreakdown.late.map((row) => (
+                          <tr key={row.player_id || row.player_name} className="border-b border-neutral-100 last:border-b-0">
+                            <td className="px-2 py-1 text-neutral-900">{row.player_name}</td>
+                            <td className="px-2 py-1 text-center text-neutral-900">
+                              {row.wins !== undefined && row.total_games !== undefined 
+                                ? `${row.wins}/${row.total_games}` 
+                                : '-'
+                              }
+                            </td>
+                            <td className="px-2 py-1 text-right text-neutral-900">{Number(row.player_points).toFixed(2)}</td>
+                          </tr>
+                        ))}
+                        <tr className="font-bold border-t border-royalBlue">
+                          <td className="px-2 py-1">TOTAL</td>
+                          <td className="px-2 py-1 text-center">-</td>
+                          <td className="px-2 py-1 text-right">{playerBreakdown.late.reduce((sum, p) => sum + Number(p.player_points), 0).toFixed(2)}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                
+                {/* Combined Total */}
+                <div className="bg-neutral-50 rounded-lg p-4 border border-royalBlue">
+                  <h4 className="text-lg font-semibold mb-2 text-neutral-900">Week Total</h4>
+                  <p className="text-2xl font-bold text-royalBlue">
+                    {(playerBreakdown.early.reduce((sum, p) => sum + Number(p.player_points), 0) + 
+                      playerBreakdown.late.reduce((sum, p) => sum + Number(p.player_points), 0)).toFixed(2)} points
+                  </p>
+                </div>
+              </div>
             ) : (
               <div className="text-neutral-500">No breakdown available for this week.</div>
             )}

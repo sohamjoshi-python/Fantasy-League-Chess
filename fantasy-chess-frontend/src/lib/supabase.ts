@@ -134,6 +134,159 @@ export async function fetchLineupPlayerBreakdown(userId: string, leagueId: strin
 }
 
 /**
+ * Fetch the official per-player breakdown for a lineup split by rounds (early/late).
+ * @param userId string
+ * @param leagueId string
+ * @param weekDate string (YYYY-MM-DD)
+ * @returns {Promise<{ early: Array<PlayerBreakdown>, late: Array<PlayerBreakdown> }>}
+ */
+export async function fetchLineupPlayerBreakdownByRounds(userId: string, leagueId: string, weekDate: string): Promise<{ 
+  early: Array<{ player_id: string, player_name: string, player_points: number, wins?: number, total_games?: number }>, 
+  late: Array<{ player_id: string, player_name: string, player_points: number, wins?: number, total_games?: number }> 
+}> {
+  const { data, error } = await supabase.rpc('get_lineup_player_breakdown', {
+    user_id_input: userId,
+    league_id_input: leagueId,
+    week_date_input: weekDate
+  });
+  if (error) {
+    console.error('Error fetching player breakdown:', error);
+    return { early: [], late: [] };
+  }
+
+  // Convert date format from YYYY-MM-DD to YYYY.MM.DD for games table
+  const formattedDate = weekDate.replace(/-/g, '.');
+  console.log('Original date:', weekDate, 'Formatted date:', formattedDate);
+
+  // Enhance the data with round-specific breakdowns
+  const enhancedData = await Promise.all(
+    data.map(async (player: { player_id: string, player_name: string, player_points: number }) => {
+      try {
+        console.log('Fetching games for player:', player.player_name, 'week:', formattedDate);
+        
+        // Get player's games for this week by round
+        const { data: earlyGames, error: earlyError } = await supabase
+          .from('games')
+          .select('*')
+          .eq('date', formattedDate)
+          .eq('early_late', 'early')
+          .or(`white.eq.${player.player_name},black.eq.${player.player_name}`);
+        
+        const { data: lateGames, error: lateError } = await supabase
+          .from('games')
+          .select('*')
+          .eq('date', formattedDate)
+          .eq('early_late', 'late')
+          .or(`white.eq.${player.player_name},black.eq.${player.player_name}`);
+
+        if (earlyError || lateError) {
+          console.log('Error fetching games:', { earlyError, lateError });
+          // Fallback: get all games and filter
+          const { data: allGames, error: allError } = await supabase
+            .from('games')
+            .select('*')
+            .eq('date', formattedDate);
+          
+          if (allError) {
+            console.error('Error fetching all games for player:', player.player_name, allError);
+            return {
+              player,
+              early: { wins: 0, total_games: 0, points: 0 },
+              late: { wins: 0, total_games: 0, points: 0 }
+            };
+          }
+          
+          // Filter games by round
+          const early = allGames?.filter(game => 
+            game.early_late === 'early' && (game.white === player.player_name || game.black === player.player_name)
+          ) || [];
+          const late = allGames?.filter(game => 
+            game.early_late === 'late' && (game.white === player.player_name || game.black === player.player_name)
+          ) || [];
+          
+          return {
+            player,
+            early: calculateRoundStats(early, player.player_name),
+            late: calculateRoundStats(late, player.player_name)
+          };
+        }
+
+        console.log('Games found for', player.player_name, ':', { 
+          early: earlyGames?.length || 0, 
+          late: lateGames?.length || 0 
+        });
+
+        return {
+          player,
+          early: calculateRoundStats(earlyGames || [], player.player_name),
+          late: calculateRoundStats(lateGames || [], player.player_name)
+        };
+      } catch (error) {
+        console.error('Error enhancing player data:', error);
+        return {
+          player,
+          early: { wins: 0, total_games: 0, points: 0 },
+          late: { wins: 0, total_games: 0, points: 0 }
+        };
+      }
+    })
+  );
+
+  // Split into early and late arrays
+  const early: Array<{ player_id: string, player_name: string, player_points: number, wins?: number, total_games?: number }> = [];
+  const late: Array<{ player_id: string, player_name: string, player_points: number, wins?: number, total_games?: number }> = [];
+
+  enhancedData.forEach(({ player, early: earlyStats, late: lateStats }) => {
+    if (earlyStats.points > 0 || earlyStats.total_games > 0) {
+      early.push({
+        ...player,
+        player_points: earlyStats.points,
+        wins: earlyStats.wins,
+        total_games: earlyStats.total_games
+      });
+    }
+    if (lateStats.points > 0 || lateStats.total_games > 0) {
+      late.push({
+        ...player,
+        player_points: lateStats.points,
+        wins: lateStats.wins,
+        total_games: lateStats.total_games
+      });
+    }
+  });
+
+  return { early, late };
+}
+
+/**
+ * Helper function to calculate stats for a round
+ */
+function calculateRoundStats(games: any[], playerName: string): { wins: number, total_games: number, points: number } {
+  let wins = 0;
+  let totalGames = 0;
+  let points = 0;
+  
+  games.forEach(game => {
+    if (game.white === playerName || game.black === playerName) {
+      totalGames++;
+      if (game.result === '1-0' && game.white === playerName) {
+        wins++;
+        points += game.white_points || 0;
+      } else if (game.result === '0-1' && game.black === playerName) {
+        wins++;
+        points += game.black_points || 0;
+      } else if (game.white === playerName) {
+        points += game.white_points || 0;
+      } else if (game.black === playerName) {
+        points += game.black_points || 0;
+      }
+    }
+  });
+
+  return { wins, total_games: totalGames, points };
+}
+
+/**
  * Create a bot for a league
  * @param leagueId string
  * @param botName string
