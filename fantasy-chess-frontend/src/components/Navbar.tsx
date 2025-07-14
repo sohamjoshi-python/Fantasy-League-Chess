@@ -89,22 +89,16 @@ const Navbar: React.FC = () => {
             {user ? (
               <>
                 <Link
-                  to="/dashboard"
+                  to="/avatar-shop"
                   className="text-neutral-700 hover:text-royalBlue hover:underline hover:underline-offset-4 px-3 py-2 rounded-md text-sm font-medium transition-colors"
                 >
-                  Dashboard
+                  Avatar Shop
                 </Link>
                 <Link
-                  to="/join-league"
+                  to="/leaderboard"
                   className="text-neutral-700 hover:text-royalBlue hover:underline hover:underline-offset-4 px-3 py-2 rounded-md text-sm font-medium transition-colors"
                 >
-                  Join League
-                </Link>
-                <Link
-                  to="/profile"
-                  className="text-neutral-700 hover:text-royalBlue hover:underline hover:underline-offset-4 px-3 py-2 rounded-md text-sm font-medium transition-colors"
-                >
-                  Profile
+                  Leaderboard
                 </Link>
                 <Link
                   to="/help"
@@ -137,8 +131,6 @@ const Navbar: React.FC = () => {
                     {showDropdown && (
                       <div className="absolute right-0 mt-2 w-48 bg-white border border-neutral-200 rounded-lg shadow-lg z-50">
                         <a href="/profile" className="block px-4 py-2 hover:bg-neutral-100">Profile</a>
-                        <a href="/avatar-shop" className="block px-4 py-2 hover:bg-neutral-100">Avatar Shop</a>
-                        <a href="/leaderboard" className="block px-4 py-2 hover:bg-neutral-100">Leaderboard</a>
                         <a href="/join-league" className="block px-4 py-2 hover:bg-neutral-100">Join League</a>
                         <a href="/dashboard" className="block px-4 py-2 hover:bg-neutral-100">Dashboard</a>
                         <button onClick={handleSignOut} className="w-full text-left px-4 py-2 hover:bg-neutral-100 text-red-600">Sign Out</button>
