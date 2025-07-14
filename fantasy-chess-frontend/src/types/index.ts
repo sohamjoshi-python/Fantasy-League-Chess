@@ -1,10 +1,9 @@
-export interface User {
-  id: string
-  email: string
-  username: string
-  coins: number
-  created_at: string
-}
+export type User = {
+  id: string;
+  username: string;
+  coins: number;
+  selected_avatar_url?: string;
+};
 
 export interface Bot {
   id: string

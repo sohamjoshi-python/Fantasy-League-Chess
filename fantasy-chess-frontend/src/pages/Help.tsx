@@ -85,6 +85,12 @@ const Help: React.FC = () => {
                   <strong>Important:</strong> The draft must be completed before the start date. No points are earned before this date, and no new members can join after the draft starts.
                 </p>
               </div>
+              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 my-4">
+                <h4 className="font-semibold text-blue-900 mb-1">League Wins Leaderboard Rules</h4>
+                <p className="text-sm text-blue-900">
+                  Only leagues with <strong>more than 5 players</strong> and <strong>no bots</strong> count toward the "Most League Wins" leaderboard. This ensures fair competition and prevents abuse.
+                </p>
+              </div>
             </div>
           </div>
 
@@ -370,6 +376,12 @@ const Help: React.FC = () => {
               <p className="text-neutral-700">
                 <strong>Only start the draft after ALL intended members have joined.</strong> Once the draft begins, 
                 no new players can join the league, and the draft order is permanently locked in place.
+              </p>
+            </div>
+            <div className="bg-gold-50 p-4 rounded-lg border border-gold-200 my-4">
+              <h4 className="font-semibold text-gold-900 mb-1">Profile & Avatar Customizations</h4>
+              <p className="text-sm text-gold-900">
+                You can spend your coins to unlock and equip unique avatars for your profile! Visit your profile page and open the Avatar Shop to browse, purchase, and equip new looks. Show off your style in the standings and on the leaderboard!
               </p>
             </div>
           </div>
