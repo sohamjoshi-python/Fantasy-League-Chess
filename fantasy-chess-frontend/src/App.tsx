@@ -8,7 +8,21 @@ import JoinLeague from './pages/JoinLeague'
 import LeaguePage from './pages/League'
 import Profile from './pages/Profile'
 import Help from './pages/Help'
-import { AuthProvider } from './contexts/AuthContext'
+import Leaderboard from './pages/Leaderboard';
+import { AuthProvider, useAuth } from './contexts/AuthContext'
+import AvatarShop from './pages/Profile'; // We'll render AvatarShop from Profile for now
+import React from 'react';
+
+function AvatarShopPage() {
+  const { user } = useAuth();
+  const [showShop, setShowShop] = React.useState(true);
+  if (!user) return <Profile />;
+  return showShop ? (
+    <Profile showOnlyShop={true} onCloseShop={() => setShowShop(false)} />
+  ) : (
+    <Profile />
+  );
+}
 
 function App() {
   return (
@@ -25,6 +39,8 @@ function App() {
               <Route path="/league/:leagueId" element={<LeaguePage />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/help" element={<Help />} />
+              <Route path="/leaderboard" element={<Leaderboard />} />
+              <Route path="/avatar-shop" element={<AvatarShopPage />} />
             </Routes>
           </main>
         </div>
