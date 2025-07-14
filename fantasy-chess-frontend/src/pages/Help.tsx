@@ -78,6 +78,13 @@ const Help: React.FC = () => {
                   <strong>Tip:</strong> You can join multiple leagues, but they cannot overlap in time. Each league costs coins to join!
                 </p>
               </div>
+              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 my-4">
+                <h4 className="font-semibold text-blue-900 mb-1">What is the Start Date?</h4>
+                <p className="text-sm text-blue-900">
+                  The <strong>start date</strong> is when your league officially begins and points start accumulating for all teams. <br/>
+                  <strong>Important:</strong> The draft must be completed before the start date. No points are earned before this date, and no new members can join after the draft starts.
+                </p>
+              </div>
             </div>
           </div>
 

@@ -494,8 +494,14 @@ const JoinLeague: React.FC = () => {
               </div>
 
               <div>
-                <label htmlFor="startDate" className="block text-sm font-medium text-neutral-700 mb-2">
+                <label htmlFor="startDate" className="block text-sm font-medium text-neutral-700 mb-2 flex items-center gap-1">
                   Start Date (first of month) *
+                  <span className="relative group cursor-pointer">
+                    <svg className="w-4 h-4 text-royalBlue inline-block" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                    <span className="absolute left-1/2 -translate-x-1/2 mt-2 w-64 bg-white text-neutral-900 text-xs rounded shadow-lg border border-royalBlue px-3 py-2 z-50 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                      The start date is when the league officially begins and points start accumulating. The draft must be completed before this date.
+                    </span>
+                  </span>
                 </label>
                 <input
                   type="date"
