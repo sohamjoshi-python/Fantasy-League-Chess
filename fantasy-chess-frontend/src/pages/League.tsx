@@ -1921,7 +1921,7 @@ const LeaguePage: React.FC = () => {
                           
                           return (
                             <p className="text-neutral-600 text-sm lg:text-base">
-                              Waiting for <span className="inline-block"><ExpandableUsername username={displayName} /></span> to draft...
+                              Waiting for <ExpandableUsername username={displayName} /> to draft...
                             </p>
                           );
                         })()

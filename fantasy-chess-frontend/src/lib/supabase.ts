@@ -45,13 +45,11 @@ export async function fetchLineupPlayerBreakdown(userId: string, leagueId: strin
 
   // Convert date format from YYYY-MM-DD to YYYY.MM.DD for games table
   const formattedDate = weekDate.replace(/-/g, '.');
-  console.log('Original date:', weekDate, 'Formatted date:', formattedDate);
 
   // Enhance the data with ranking and win record information
   const enhancedData = await Promise.all(
     data.map(async (player: { player_id: string, player_name: string, player_points: number }) => {
       try {
-        console.log('Fetching games for player:', player.player_name, 'week:', formattedDate);
         
         // Get player's games for this week - try different approaches
         let games = null;
@@ -65,7 +63,6 @@ export async function fetchLineupPlayerBreakdown(userId: string, leagueId: strin
           .or(`white.eq.${player.player_name},black.eq.${player.player_name}`);
         
         if (error1) {
-          console.log('First query failed, trying alternative:', error1);
           // Try without the OR clause first to see if we get any games
           const { data: games2, error: error2 } = await supabase
             .from('games')
@@ -73,7 +70,6 @@ export async function fetchLineupPlayerBreakdown(userId: string, leagueId: strin
             .eq('date', formattedDate);
           
           if (error2) {
-            console.log('Second query also failed:', error2);
             gamesError = error2;
           } else {
             // Filter in JavaScript
@@ -84,8 +80,6 @@ export async function fetchLineupPlayerBreakdown(userId: string, leagueId: strin
         } else {
           games = games1;
         }
-
-        console.log('Games found for', player.player_name, ':', games?.length || 0, games);
 
         if (gamesError) {
           console.error('Error fetching games for player:', player.player_name, gamesError);
@@ -101,7 +95,6 @@ export async function fetchLineupPlayerBreakdown(userId: string, leagueId: strin
         let totalGames = 0;
         
         games?.forEach(game => {
-          console.log('Processing game:', game);
           if (game.white === player.player_name || game.black === player.player_name) {
             totalGames++;
             if (game.result === '1-0' && game.white === player.player_name) {
@@ -111,8 +104,6 @@ export async function fetchLineupPlayerBreakdown(userId: string, leagueId: strin
             }
           }
         });
-
-        console.log('Final stats for', player.player_name, ':', { wins, totalGames });
 
         return {
           ...player,
@@ -156,13 +147,11 @@ export async function fetchLineupPlayerBreakdownByRounds(userId: string, leagueI
 
   // Convert date format from YYYY-MM-DD to YYYY.MM.DD for games table
   const formattedDate = weekDate.replace(/-/g, '.');
-  console.log('Original date:', weekDate, 'Formatted date:', formattedDate);
 
   // Enhance the data with round-specific breakdowns
   const enhancedData = await Promise.all(
     data.map(async (player: { player_id: string, player_name: string, player_points: number }) => {
       try {
-        console.log('Fetching games for player:', player.player_name, 'week:', formattedDate);
         
         // Get player's games for this week by round
         const { data: earlyGames, error: earlyError } = await supabase
@@ -180,7 +169,6 @@ export async function fetchLineupPlayerBreakdownByRounds(userId: string, leagueI
           .or(`white.eq.${player.player_name},black.eq.${player.player_name}`);
 
         if (earlyError || lateError) {
-          console.log('Error fetching games:', { earlyError, lateError });
           // Fallback: get all games and filter
           const { data: allGames, error: allError } = await supabase
             .from('games')
@@ -210,11 +198,6 @@ export async function fetchLineupPlayerBreakdownByRounds(userId: string, leagueI
             late: calculateRoundStats(late, player.player_name)
           };
         }
-
-        console.log('Games found for', player.player_name, ':', { 
-          early: earlyGames?.length || 0, 
-          late: lateGames?.length || 0 
-        });
 
         return {
           player,
@@ -347,15 +330,12 @@ export async function getHighestEloAvailablePlayer(leagueId: string): Promise<{ 
     // Flatten all drafted player IDs
     const draftedPlayerIds = draftedPlayers?.flatMap(team => team.player_ids || []) || [];
     
-    console.log('Drafted player IDs:', draftedPlayerIds);
-    
     // Get the highest ELO player not yet drafted
     let availablePlayer = null;
     let playerError = null;
     
     if (draftedPlayerIds.length === 0) {
       // If no players are drafted yet, get the highest ELO player
-      console.log('No players drafted yet, getting highest ELO player');
       const { data, error } = await supabase
         .from('chess_players')
         .select('*')
@@ -366,7 +346,6 @@ export async function getHighestEloAvailablePlayer(leagueId: string): Promise<{ 
       playerError = error;
     } else {
       // If some players are drafted, get all players and filter in JavaScript
-      console.log('Some players drafted, filtering in JavaScript');
       const { data: allPlayers, error } = await supabase
         .from('chess_players')
         .select('*')
@@ -386,7 +365,6 @@ export async function getHighestEloAvailablePlayer(leagueId: string): Promise<{ 
       return { success: false, error: playerError };
     }
     
-    console.log('Selected available player:', availablePlayer);
     return { success: true, player: availablePlayer };
   } catch (error: any) {
     console.error('Error in getHighestEloAvailablePlayer:', error);
@@ -408,15 +386,13 @@ export async function autoDraftForBot(botId: string, leagueId: string): Promise<
   
   // Prevent multiple simultaneous drafts for the same bot
   if (ongoingBotDrafts.has(draftKey)) {
-    console.log('Bot draft already in progress for:', draftKey);
     return { success: false, error: 'Draft already in progress' };
   }
   
   ongoingBotDrafts.add(draftKey);
   
   try {
-    console.log('Auto-drafting for bot:', botId, 'in league:', leagueId);
-
+    
     // --- Get league info for draft order and turn logic ---
     const { data: league, error: leagueError } = await supabase
       .from('leagues')
@@ -431,7 +407,6 @@ export async function autoDraftForBot(botId: string, leagueId: string): Promise<
     // Check if it's the bot's turn
     const currentDraftUserId = league.draft_order[league.current_draft_turn];
     if (currentDraftUserId !== botId) {
-      console.log('Not bot\'s turn to draft.');
       return { success: false, error: 'Not bot\'s turn' };
     }
 
@@ -471,7 +446,6 @@ export async function autoDraftForBot(botId: string, leagueId: string): Promise<
 
     // --- Enforce max team size ---
     if ((team.player_ids?.length || 0) >= 10) {
-      console.log('Bot team already has 10 players. No draft needed.');
       // Advance draft turn and check for completion
       const totalDraftParticipants = league.member_ids.length + (league.bot_id ? 1 : 0);
       const newDraftTurn = league.current_draft_turn + 1;
@@ -537,7 +511,6 @@ export async function autoDraftForBot(botId: string, leagueId: string): Promise<
  */
 export async function autoSetLineupForBot(botId: string, leagueId: string, weekStartDate: string): Promise<{ success: boolean, error?: any }> {
   try {
-    console.log('Auto-setting lineup for bot:', botId, 'in league:', leagueId, 'for week:', weekStartDate);
     
     // Get bot's team
     const { data: bot, error: botError } = await supabase
@@ -576,7 +549,6 @@ export async function autoSetLineupForBot(botId: string, leagueId: string, weekS
     
     // Select top 5 players by ELO
     const top5PlayerIds = players.slice(0, 5).map(p => p.id);
-    console.log('Selected top 5 players for bot lineup:', top5PlayerIds);
     
     // First try to get existing lineup
     let { data: existingLineup } = await supabase
@@ -619,7 +591,6 @@ export async function autoSetLineupForBot(botId: string, leagueId: string, weekS
       }
     }
     
-    console.log('✅ Bot lineup set successfully');
     return { success: true };
   } catch (error: any) {
     console.error('❌ Auto-set lineup error:', error);
