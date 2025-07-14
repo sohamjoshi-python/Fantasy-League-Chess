@@ -15,6 +15,8 @@ const Navbar: React.FC = () => {
   const [showInbox, setShowInbox] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
   const [displayName, setDisplayName] = useState('')
+  // Add state for dropdown
+  const [showDropdown, setShowDropdown] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -122,16 +124,28 @@ const Navbar: React.FC = () => {
                     </span>
                   )}
                 </button>
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm text-neutral-700 font-medium">{displayName}</span>
-                  <button
-                    onClick={handleSignOut}
-                    className="flex items-center space-x-1 text-neutral-700 hover:text-red-500 px-3 py-2 rounded-md text-sm font-medium transition-colors"
-                  >
-                    <LogOut className="h-4 w-4" />
-                    <span>Sign Out</span>
-                  </button>
-                </div>
+                {user && (
+                  <div className="relative ml-4">
+                    <button
+                      className="flex items-center gap-2 px-3 py-2 rounded hover:bg-neutral-100 focus:outline-none"
+                      onClick={() => setShowDropdown((prev) => !prev)}
+                      onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
+                    >
+                      <span className="font-semibold text-neutral-900">{displayName}</span>
+                      <svg className="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"/></svg>
+                    </button>
+                    {showDropdown && (
+                      <div className="absolute right-0 mt-2 w-48 bg-white border border-neutral-200 rounded-lg shadow-lg z-50">
+                        <a href="/profile" className="block px-4 py-2 hover:bg-neutral-100">Profile</a>
+                        <a href="/avatar-shop" className="block px-4 py-2 hover:bg-neutral-100">Avatar Shop</a>
+                        <a href="/leaderboard" className="block px-4 py-2 hover:bg-neutral-100">Leaderboard</a>
+                        <a href="/join-league" className="block px-4 py-2 hover:bg-neutral-100">Join League</a>
+                        <a href="/dashboard" className="block px-4 py-2 hover:bg-neutral-100">Dashboard</a>
+                        <button onClick={handleSignOut} className="w-full text-left px-4 py-2 hover:bg-neutral-100 text-red-600">Sign Out</button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </>
             ) : (
               <div className="flex items-center space-x-2">

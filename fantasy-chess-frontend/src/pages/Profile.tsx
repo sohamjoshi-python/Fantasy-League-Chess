@@ -85,7 +85,9 @@ const Profile: React.FC = () => {
       <h1 className="text-xl lg:text-2xl font-bold mb-4 lg:mb-6 text-neutral-900">Profile</h1>
       {/* Use profile for all profile fields and avatar display */}
       <img src={profile?.selected_avatar_url || '/default-avatar.png'} alt="Avatar" className="w-24 h-24 rounded-full border-4 border-royalBlue mb-4" />
-      {profile && <button onClick={() => setShowAvatarShop(true)} className="bg-royalBlue text-white px-4 py-2 rounded-lg mb-4">Change Avatar</button>}
+      {profile && <button onClick={() => setShowAvatarShop(true)} className="bg-royalBlue text-white px-4 py-2 rounded-lg mb-2">Change Avatar</button>}
+      <a href="/avatar-shop" className="block text-royalBlue underline mb-2">Go to Avatar Shop</a>
+      <a href="/leaderboard" className="block text-royalBlue underline mb-4">View Leaderboard</a>
       {showAvatarShop && profile && <AvatarShop user={profile} onClose={() => setShowAvatarShop(false)} />}
       <form onSubmit={handleSave} className="space-y-6">
         <div>
