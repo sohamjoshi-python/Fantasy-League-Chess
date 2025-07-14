@@ -218,6 +218,12 @@ const Help: React.FC = () => {
                   <p className="text-neutral-700">Points accumulate throughout the league season. The player with the most total points at the end wins!</p>
                 </div>
               </div>
+              <div className="bg-neutral-50 p-4 rounded-lg border border-royalBlue mb-4">
+                <h4 className="font-semibold text-neutral-900 mb-1">What is Average Centipawn Loss (ACL)?</h4>
+                <p className="text-sm text-neutral-700">
+                  <strong>Average Centipawn Loss (ACL)</strong> is a chess metric that measures the average value lost per move compared to the best possible move (as determined by a chess engine). A lower ACL means more accurate play. In Pawn Royale, we use ACL instead of accuracy to better reflect a player's consistency and skill.
+                </p>
+              </div>
               <div className="bg-neutral-50 p-4 rounded-lg border border-royalBlue">
                 <p className="text-sm text-neutral-700">
                   <strong>Pro Tip:</strong> Check the "Point Breakdown" section to see exactly how each player earned their points!

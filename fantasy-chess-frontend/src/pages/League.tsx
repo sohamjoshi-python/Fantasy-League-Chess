@@ -233,6 +233,10 @@ const LeaguePage: React.FC = () => {
   // Track the last draft turn the bot drafted for
   const lastBotDraftTurnRef = React.useRef<number | null>(null);
 
+  // Add to state declarations:
+  const [selectedDraftPlayer, setSelectedDraftPlayer] = useState<ChessPlayer | null>(null);
+  const [showDraftPopup, setShowDraftPopup] = useState(false);
+
   useEffect(() => {
     async function fetchAvailableWeeks() {
       if (!league || !user) return;
@@ -1551,7 +1555,7 @@ const LeaguePage: React.FC = () => {
                     />
                     <div className="text-xs text-neutral-600">ELO: {player.elo}</div>
                     {player.accuracy !== undefined && player.accuracy !== null && (
-                      <div className="text-xs text-neutral-500">Accuracy: {player.accuracy.toFixed(2)}</div>
+                      <div className="text-xs text-neutral-500">Avg Centipawn Loss (ACL): {player.accuracy.toFixed(2)}</div>
                     )}
                   </div>
                 ))}
@@ -1822,7 +1826,10 @@ const LeaguePage: React.FC = () => {
                             <button
                               type="button"
                               key={player.id}
-                              onClick={() => draftPlayer(player.id)}
+                              onClick={() => {
+                                setSelectedDraftPlayer(player);
+                                setShowDraftPopup(true);
+                              }}
                               className="p-3 rounded-lg border border-neutral-200 hover:border-royalBlue text-left w-full transition-colors"
                             >
                               <div className="font-semibold text-base lg:text-lg text-neutral-900">
@@ -1833,9 +1840,65 @@ const LeaguePage: React.FC = () => {
                                 />
                               </div>
                               <div className="text-xs lg:text-sm text-neutral-600">ELO: {player.elo}</div>
+                              {player.accuracy !== undefined && player.accuracy !== null && (
+                                <div className="text-xs text-neutral-500">Avg Centipawn Loss (ACL): {player.accuracy.toFixed(2)}</div>
+                              )}
+                              {player.games !== undefined && (
+                                <div className="text-xs text-neutral-500">Games: {player.games}</div>
+                              )}
                             </button>
                           ))}
                       </div>
+                      {/* Draft Player Popup */}
+                      {showDraftPopup && selectedDraftPlayer && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                          <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto border-2 border-gold">
+                            <div className="p-6">
+                              <div className="flex items-center justify-between mb-6">
+                                <h2 className="text-xl font-bold text-neutral-900">
+                                  {selectedDraftPlayer.name}
+                                </h2>
+                                <button
+                                  type="button"
+                                  onClick={() => setShowDraftPopup(false)}
+                                  className="text-neutral-400 hover:text-neutral-600 transition-colors"
+                                >
+                                  <X className="h-6 w-6" />
+                                </button>
+                              </div>
+                              <div className="mb-4">
+                                <div className="text-sm text-neutral-700 mb-2">ELO: <span className="font-semibold">{selectedDraftPlayer.elo}</span></div>
+                                {selectedDraftPlayer.accuracy !== undefined && selectedDraftPlayer.accuracy !== null && (
+                                  <div className="text-sm text-neutral-700 mb-2">Avg Centipawn Loss (ACL): <span className="font-semibold">{selectedDraftPlayer.accuracy.toFixed(2)}</span></div>
+                                )}
+                                {selectedDraftPlayer.games !== undefined && (
+                                  <div className="text-sm text-neutral-700 mb-2">Games: <span className="font-semibold">{selectedDraftPlayer.games}</span></div>
+                                )}
+                                <a
+                                  href={`https://www.chess.com/member/${selectedDraftPlayer.name}/`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-block mt-2 text-royalBlue hover:underline text-sm"
+                                >
+                                  View Chess.com Profile
+                                </a>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  await draftPlayer(selectedDraftPlayer.id);
+                                  setShowDraftPopup(false);
+                                  setSelectedDraftPlayer(null);
+                                }}
+                                className="w-full bg-royalBlue hover:bg-purple text-white px-4 py-2 rounded-lg font-medium shadow-lg transition-colors"
+                                disabled={loading}
+                              >
+                                {loading ? 'Drafting...' : 'Confirm Draft'}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="text-center py-6 lg:py-8">
@@ -1913,7 +1976,7 @@ const LeaguePage: React.FC = () => {
                         />
                         <div className="text-xs text-neutral-600">ELO: {player.elo}</div>
                         {player.accuracy !== undefined && player.accuracy !== null && (
-                          <div className="text-xs text-neutral-500">Accuracy: {player.accuracy.toFixed(2)}</div>
+                          <div className="text-xs text-neutral-500">Avg Centipawn Loss (ACL): {player.accuracy.toFixed(2)}</div>
                         )}
                       </div>
                     ))}

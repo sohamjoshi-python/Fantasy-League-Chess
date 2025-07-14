@@ -101,10 +101,10 @@ const Home: React.FC = () => {
             <li><span className="font-semibold">Draw:</span> 1.0 point</li>
             <li><span className="font-semibold">Loss:</span> 0.0 points</li>
             <li><span className="font-semibold">Upset Bonus:</span> Up to 5.0 points</li>
-            <li><span className="font-semibold">Accuracy Bonus:</span> Up to 0.3 points</li>
+            <li><span className="font-semibold">ACL Bonus:</span> Up to 0.3 points (lower ACL = better)</li>
             <li><span className="font-semibold">Total Range:</span> -6.0 to 12.0 points</li>
           </ul>
-          <p className="text-neutral-700 text-center text-sm">Points are calculated using ELO, game results, and move accuracy (ACL). See the rules for full details.</p>
+          <p className="text-neutral-700 text-center text-sm">Points are calculated using ELO, game results, and average centipawn loss (ACL). See the rules for full details.</p>
         </div>
       </section>
 
