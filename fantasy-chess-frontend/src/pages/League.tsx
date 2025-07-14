@@ -517,12 +517,19 @@ const LeaguePage: React.FC = () => {
       }
 
       // Create standings data for all members
+      const { data: userAvatars } = await supabase
+        .from('users')
+        .select('id, selected_avatar_url')
+        .in('id', members.map(m => m.user_id));
+      const avatarMap = userAvatars ? Object.fromEntries(userAvatars.map(u => [u.id, u.selected_avatar_url])) : {};
+
       const standingsData = members.map(member => ({
         user_id: member.user_id,
         user_email: member.email,
         display_name: member.display_name,
         total_points: userPoints.get(member.user_id) || 0,
-        rank: 0
+        rank: 0,
+        avatar_url: avatarMap[member.user_id] || '/assets/pawn-royale-logo.png',
       }))
 
       // Add bot to standings if it exists
@@ -539,7 +546,8 @@ const LeaguePage: React.FC = () => {
           user_email: `${bot.name}@bot`,
           display_name: `${bot.name} 🤖`,
           total_points: botPoints,
-          rank: 0
+          rank: 0,
+          avatar_url: '/assets/pawn-royale-logo.png',
         })
       }
 
@@ -1455,7 +1463,10 @@ const LeaguePage: React.FC = () => {
                 {standings[1] && (
                   <div className="flex flex-col items-center">
                     <div className="w-16 h-16 lg:w-20 lg:h-20 rounded-full bg-silver flex items-center justify-center text-2xl font-bold text-white border-4 border-silver mb-2">2</div>
-                    <ExpandableUsername username={standings[1].display_name || standings[1].user_email} />
+                    <div className="flex items-center gap-2">
+                      <img src={standings[1].avatar_url} alt="Avatar" className="w-8 h-8 rounded-full border-2 border-gold" />
+                      <ExpandableUsername username={standings[1].display_name || standings[1].user_email} />
+                    </div>
                     <span className="text-neutral-600 text-sm">{standings[1].total_points} pts</span>
                   </div>
                 )}
@@ -1463,7 +1474,10 @@ const LeaguePage: React.FC = () => {
                 {standings[0] && (
                   <div className="flex flex-col items-center">
                     <div className="w-20 h-20 lg:w-24 lg:h-24 rounded-full bg-royalBlue flex items-center justify-center text-3xl font-extrabold text-white border-4 border-royalBlue mb-2 shadow-lg">1</div>
-                    <ExpandableUsername username={standings[0].display_name || standings[0].user_email} />
+                    <div className="flex items-center gap-2">
+                      <img src={standings[0].avatar_url} alt="Avatar" className="w-10 h-10 rounded-full border-2 border-gold" />
+                      <ExpandableUsername username={standings[0].display_name || standings[0].user_email} />
+                    </div>
                     <span className="text-neutral-900 font-bold text-base">{standings[0].total_points} pts</span>
                   </div>
                 )}
@@ -1471,7 +1485,10 @@ const LeaguePage: React.FC = () => {
                 {standings[2] && (
                   <div className="flex flex-col items-center">
                     <div className="w-16 h-16 lg:w-20 lg:h-20 rounded-full bg-[#cd7f32] flex items-center justify-center text-2xl font-bold text-white border-4 border-[#cd7f32] mb-2">3</div>
-                    <ExpandableUsername username={standings[2].display_name || standings[2].user_email} />
+                    <div className="flex items-center gap-2">
+                      <img src={standings[2].avatar_url} alt="Avatar" className="w-8 h-8 rounded-full border-2 border-gold" />
+                      <ExpandableUsername username={standings[2].display_name || standings[2].user_email} />
+                    </div>
                     <span className="text-neutral-600 text-sm">{standings[2].total_points} pts</span>
                   </div>
                 )}
@@ -1486,11 +1503,35 @@ const LeaguePage: React.FC = () => {
                         key={standing.user_id}
                         className="flex items-center justify-between p-2 rounded bg-neutral-50 border border-neutral-200"
                       >
-                        <div className="flex items-center space-x-2">
-                          <span className="w-6 h-6 rounded-full bg-neutral-300 text-neutral-700 flex items-center justify-center font-bold text-xs">{standing.rank}</span>
-                          <ExpandableUsername username={standing.display_name || standing.user_email} />
+                        <div className="flex items-center space-x-3 min-w-0 flex-1">
+                          <div className={`w-6 h-6 lg:w-8 lg:h-8 rounded-full flex items-center justify-center text-xs lg:text-sm font-bold flex-shrink-0 ${
+                            standing.user_id === user?.id ? 'bg-royalBlue text-white' : 'bg-neutral-300 text-neutral-700'
+                          }`}>
+                            {standing.rank}
+                          </div>
+                          <img src={standing.avatar_url} alt="Avatar" className="w-8 h-8 rounded-full border-2 border-gold" />
+                          <div className="min-w-0 flex-1">
+                            <ExpandableUsername 
+                              username={standing.display_name || standing.user_email}
+                              isCurrentUser={standing.user_id === user?.id}
+                            />
+                          </div>
                         </div>
-                        <span className="text-neutral-700 font-medium">{standing.total_points} pts</span>
+                        <div className="flex items-center space-x-2 flex-shrink-0 ml-2">
+                          <p className="font-semibold text-sm lg:text-base text-neutral-900">{standing.total_points} points</p>
+                          {isOwner && standing.user_id !== user?.id && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removeUserFromLeague(standing.user_id);
+                              }}
+                              className="text-red-600 hover:text-red-800 p-1 rounded transition-colors"
+                              title="Remove player from league"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -1509,10 +1550,11 @@ const LeaguePage: React.FC = () => {
                 >
                   <div className="flex items-center space-x-3 min-w-0 flex-1">
                     <div className={`w-6 h-6 lg:w-8 lg:h-8 rounded-full flex items-center justify-center text-xs lg:text-sm font-bold flex-shrink-0 ${
-                      index < 3 ? 'bg-royalBlue text-white' : 'bg-neutral-300 text-neutral-700'
+                      standing.user_id === user?.id ? 'bg-royalBlue text-white' : 'bg-neutral-300 text-neutral-700'
                     }`}>
                       {standing.rank}
                     </div>
+                    <img src={standing.avatar_url} alt="Avatar" className="w-8 h-8 rounded-full border-2 border-gold" />
                     <div className="min-w-0 flex-1">
                       <ExpandableUsername 
                         username={standing.display_name || standing.user_email}
