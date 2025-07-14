@@ -1102,12 +1102,14 @@ const LeaguePage: React.FC = () => {
 
   // Show confetti for a few seconds when the league is completed and podium is shown
   useEffect(() => {
-    if (league?.draft_completed || (league?.end_date && new Date(league.end_date) < new Date())) {
+    if (league?.end_date && new Date(league.end_date) < new Date() && league?.payout_processed && payout) {
       setShowConfetti(true);
-      const timeout = setTimeout(() => setShowConfetti(false), 3000);
+      const timeout = setTimeout(() => setShowConfetti(false), 8000); // 8 seconds for all confetti to fall
       return () => clearTimeout(timeout);
+    } else {
+      setShowConfetti(false);
     }
-  }, [league?.draft_completed, league?.end_date]);
+  }, [league?.end_date, league?.payout_processed, payout]);
 
   // Delete league (admin only)
   const handleDeleteLeague = async () => {
