@@ -7,6 +7,7 @@ import { League, Team, Lineup, ChessPlayer, Bot } from '../types'
 import { Crown, Trophy, Calendar, Edit, Check, X, RefreshCw, Bot as BotIcon, Plus, Trash2 } from 'lucide-react'
 import { fetchLineupPlayerBreakdownByRounds, createBot, removeBot, autoDraftForBot, autoSetLineupForBot } from '../lib/supabase';
 import Confetti from 'react-confetti';
+import pawnRoyaleLogo from '../assets/pawn-royale-logo.png';
 // Remove: import { useQuery } from '@tanstack/react-query';
 // Remove: fetchLeague function
 // Remove: all useQuery calls and destructuring
@@ -529,7 +530,7 @@ const LeaguePage: React.FC = () => {
         display_name: member.display_name,
         total_points: userPoints.get(member.user_id) || 0,
         rank: 0,
-        avatar_url: avatarMap[member.user_id] || 'src/assets/pawn-royale-logo.png',
+        avatar_url: avatarMap[member.user_id] || pawnRoyaleLogo,
       }))
 
       // Add bot to standings if it exists
@@ -547,7 +548,7 @@ const LeaguePage: React.FC = () => {
           display_name: `${bot.name} 🤖`,
           total_points: botPoints,
           rank: 0,
-          avatar_url: 'src/assets/pawn-royale-logo.png',
+          avatar_url: pawnRoyaleLogo,
         })
       }
 

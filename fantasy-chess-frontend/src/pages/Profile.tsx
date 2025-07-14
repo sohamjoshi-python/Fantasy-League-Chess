@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { User } from '../types'
+import pawnRoyaleLogo from '../assets/pawn-royale-logo.png';
 
 type Avatar = {
   id: string;
@@ -97,7 +98,7 @@ const Profile: React.FC<ProfileProps> = ({ showOnlyShop = false, onCloseShop }) 
     <div className="w-full max-w-lg mx-auto bg-white rounded-lg shadow-lg p-6 lg:p-8 mt-4 lg:mt-8 border-2 border-royalBlue">
       <h1 className="text-xl lg:text-2xl font-bold mb-4 lg:mb-6 text-neutral-900">Profile</h1>
       {/* Use profile for all profile fields and avatar display */}
-      <img src={profile?.selected_avatar_url || '/assets/pawn-royale-logo.png'} alt="Avatar" className="w-24 h-24 rounded-full border-4 border-royalBlue mb-4" />
+      <img src={profile?.selected_avatar_url || pawnRoyaleLogo} alt="Avatar" className="w-24 h-24 rounded-full border-4 border-royalBlue mb-4" />
       {profile && <button onClick={() => setShowAvatarShop(true)} className="bg-royalBlue text-white px-4 py-2 rounded-lg mb-2">Change Avatar</button>}
       <a href="/avatar-shop" className="block text-royalBlue underline mb-2">Go to Avatar Shop</a>
       <a href="/leaderboard" className="block text-royalBlue underline mb-4">View Leaderboard</a>
@@ -228,7 +229,7 @@ const AvatarShop: React.FC<{ user: User; onClose: () => void }> = ({ user, onClo
           <div className="grid grid-cols-3 gap-4">
             {avatars.map(avatar => (
               <div key={avatar.id} className="flex flex-col items-center">
-                <img src={avatar.image_url || '/assets/pawn-royale-logo.png'} alt={avatar.name} className="w-16 h-16 rounded-full border mb-2" />
+                <img src={avatar.image_url || pawnRoyaleLogo} alt={avatar.name} className="w-16 h-16 rounded-full border mb-2" />
                 <div className="text-xs mb-1">{avatar.name}</div>
                 {avatar.owned ? (
                   <button onClick={() => handleEquip(avatar)} className="text-xs bg-royalBlue text-white px-2 py-1 rounded">Equip</button>
