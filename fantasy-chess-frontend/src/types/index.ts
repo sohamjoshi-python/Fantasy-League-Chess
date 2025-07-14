@@ -3,6 +3,7 @@ export type User = {
   username: string;
   coins: number;
   selected_avatar_url?: string;
+  email: string;
 };
 
 export interface Bot {

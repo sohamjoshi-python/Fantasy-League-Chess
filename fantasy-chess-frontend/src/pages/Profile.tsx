@@ -83,9 +83,10 @@ const Profile: React.FC = () => {
   return (
     <div className="w-full max-w-lg mx-auto bg-white rounded-lg shadow-lg p-6 lg:p-8 mt-4 lg:mt-8 border-2 border-royalBlue">
       <h1 className="text-xl lg:text-2xl font-bold mb-4 lg:mb-6 text-neutral-900">Profile</h1>
-      <img src={user?.selected_avatar_url || '/default-avatar.png'} alt="Avatar" className="w-24 h-24 rounded-full border-4 border-royalBlue mb-4" />
-      {user && <button onClick={() => setShowAvatarShop(true)} className="bg-royalBlue text-white px-4 py-2 rounded-lg mb-4">Change Avatar</button>}
-      {showAvatarShop && user && <AvatarShop user={user} onClose={() => setShowAvatarShop(false)} />}
+      {/* Use profile for all profile fields and avatar display */}
+      <img src={profile?.selected_avatar_url || '/default-avatar.png'} alt="Avatar" className="w-24 h-24 rounded-full border-4 border-royalBlue mb-4" />
+      {profile && <button onClick={() => setShowAvatarShop(true)} className="bg-royalBlue text-white px-4 py-2 rounded-lg mb-4">Change Avatar</button>}
+      {showAvatarShop && profile && <AvatarShop user={profile} onClose={() => setShowAvatarShop(false)} />}
       <form onSubmit={handleSave} className="space-y-6">
         <div>
           <label className="block text-sm font-medium text-neutral-700 mb-2">Email</label>
@@ -100,7 +101,7 @@ const Profile: React.FC = () => {
           <label className="block text-sm font-medium text-neutral-700 mb-2">Username</label>
           <input
             type="text"
-            value={username}
+            value={profile?.username || ''}
             onChange={e => setUsername(e.target.value)}
             className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-royalBlue text-neutral-900 text-sm lg:text-base"
             placeholder="Enter your username"
@@ -156,7 +157,6 @@ async function equipAvatar(userId: string, avatarId: string) {
 
 const AvatarShop: React.FC<{ user: User; onClose: () => void }> = ({ user, onClose }) => {
   const [avatars, setAvatars] = useState<Avatar[]>([]);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
