@@ -35,7 +35,7 @@ const Leaderboard: React.FC = () => {
             {entries.map((entry, i) => (
               <li key={entry.user_id} className="flex items-center gap-4">
                 <span className="text-xl font-bold w-8 text-right">{i + 1}</span>
-                <img src={entry.avatar_url || '/default-avatar.png'} alt="Avatar" className="w-10 h-10 rounded-full border-2 border-gold" />
+                <img src={entry.avatar_url || '/assets/pawn-royale-logo.png'} alt="Avatar" className="w-10 h-10 rounded-full border-2 border-gold" />
                 <span className="font-semibold text-neutral-900">{entry.display_name}</span>
                 <span className="ml-auto text-royalBlue font-bold">{entry.wins} wins</span>
               </li>
