@@ -108,10 +108,12 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="w-full py-6 bg-white text-royalBlue text-center font-medium tracking-wide mt-auto border-t-2 border-royalBlue">
-        &copy; {new Date().getFullYear()} Pawn Royale. All rights reserved.
-      </footer>
+      {/* ToS/Privacy links */}
+      <div className="w-full py-4 bg-white text-center text-xs text-neutral-500 mt-8">
+        <a href="/tos" className="underline hover:text-royalBlue mx-2">Terms of Service</a>
+        |
+        <a href="/privacy" className="underline hover:text-royalBlue mx-2">Privacy Policy</a>
+      </div>
     </div>
   )
 }

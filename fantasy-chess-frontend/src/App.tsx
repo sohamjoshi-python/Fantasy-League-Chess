@@ -9,6 +9,8 @@ import LeaguePage from './pages/League'
 import Profile from './pages/Profile'
 import Help from './pages/Help'
 import Leaderboard from './pages/Leaderboard';
+import Tos from './pages/tos';
+import Privacy from './pages/privacy';
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import React from 'react';
 
@@ -40,6 +42,8 @@ function App() {
               <Route path="/help" element={<Help />} />
               <Route path="/leaderboard" element={<Leaderboard />} />
               <Route path="/avatar-shop" element={<AvatarShopPage />} />
+              <Route path="/tos" element={<Tos />} />
+              <Route path="/privacy" element={<Privacy />} />
             </Routes>
           </main>
         </div>
