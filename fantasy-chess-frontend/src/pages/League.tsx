@@ -529,7 +529,7 @@ const LeaguePage: React.FC = () => {
         display_name: member.display_name,
         total_points: userPoints.get(member.user_id) || 0,
         rank: 0,
-        avatar_url: avatarMap[member.user_id] || '/assets/pawn-royale-logo.png',
+        avatar_url: avatarMap[member.user_id] || 'src/assets/pawn-royale-logo.png',
       }))
 
       // Add bot to standings if it exists
@@ -547,7 +547,7 @@ const LeaguePage: React.FC = () => {
           display_name: `${bot.name} 🤖`,
           total_points: botPoints,
           rank: 0,
-          avatar_url: '/assets/pawn-royale-logo.png',
+          avatar_url: 'src/assets/pawn-royale-logo.png',
         })
       }
 
