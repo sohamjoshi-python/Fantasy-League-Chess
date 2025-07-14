@@ -146,12 +146,19 @@ const Profile: React.FC<ProfileProps> = ({ showOnlyShop = false, onCloseShop }) 
 
 // Replace stubbed backend functions with real API calls:
 async function fetchAvatars(userId: string): Promise<Avatar[]> {
-  const res = await fetch('/functions/v1/fetch-avatars', {
-    method: 'POST',
-    body: JSON.stringify({ user_id: userId }),
-    headers: { 'Content-Type': 'application/json' }
-  });
-  return await res.json();
+  try {
+    const res = await fetch('/functions/v1/fetch-avatars', {
+      method: 'POST',
+      body: JSON.stringify({ user_id: userId }),
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (!res.ok) {
+      return [];
+    }
+    return await res.json();
+  } catch (e) {
+    return [];
+  }
 }
 async function buyAvatar(userId: string, avatarId: string) {
   const res = await fetch('/functions/v1/buy-avatar', {
@@ -175,7 +182,14 @@ const AvatarShop: React.FC<{ user: User; onClose: () => void }> = ({ user, onClo
   const [error, setError] = useState('');
 
   useEffect(() => {
-    fetchAvatars(user.id).then(setAvatars);
+    fetchAvatars(user.id).then((data) => {
+      if (!data || !Array.isArray(data) || data.length === 0) {
+        setError('Could not load avatars. Please try again later.');
+      } else {
+        setAvatars(data);
+        setError('');
+      }
+    });
   }, [user.id]);
 
   const handleBuy = async (avatar: Avatar) => {
@@ -196,19 +210,21 @@ const AvatarShop: React.FC<{ user: User; onClose: () => void }> = ({ user, onClo
         <button onClick={onClose} className="absolute top-2 right-2 text-neutral-500">✕</button>
         <h3 className="text-lg font-bold mb-4">Avatar Shop</h3>
         {error && <div className="text-red-500 mb-2">{error}</div>}
-        <div className="grid grid-cols-3 gap-4">
-          {avatars.map(avatar => (
-            <div key={avatar.id} className="flex flex-col items-center">
-              <img src={avatar.image_url || '/assets/pawn-royale-logo.png'} alt={avatar.name} className="w-16 h-16 rounded-full border mb-2" />
-              <div className="text-xs mb-1">{avatar.name}</div>
-              {avatar.owned ? (
-                <button onClick={() => handleEquip(avatar)} className="text-xs bg-royalBlue text-white px-2 py-1 rounded">Equip</button>
-              ) : (
-                <button onClick={() => handleBuy(avatar)} className="text-xs bg-gold text-white px-2 py-1 rounded" disabled={user.coins < avatar.price}>Buy ({avatar.price} coins)</button>
-              )}
-            </div>
-          ))}
-        </div>
+        {!error && (
+          <div className="grid grid-cols-3 gap-4">
+            {avatars.map(avatar => (
+              <div key={avatar.id} className="flex flex-col items-center">
+                <img src={avatar.image_url || '/assets/pawn-royale-logo.png'} alt={avatar.name} className="w-16 h-16 rounded-full border mb-2" />
+                <div className="text-xs mb-1">{avatar.name}</div>
+                {avatar.owned ? (
+                  <button onClick={() => handleEquip(avatar)} className="text-xs bg-royalBlue text-white px-2 py-1 rounded">Equip</button>
+                ) : (
+                  <button onClick={() => handleBuy(avatar)} className="text-xs bg-gold text-white px-2 py-1 rounded" disabled={user.coins < avatar.price}>Buy ({avatar.price} coins)</button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
