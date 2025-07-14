@@ -144,10 +144,11 @@ const Profile: React.FC<ProfileProps> = ({ showOnlyShop = false, onCloseShop }) 
   )
 }
 
-// Replace stubbed backend functions with real API calls:
+const SUPABASE_EDGE_BASE = 'https://wdbwzvnkfbyzazodfhsw.supabase.co/functions/v1';
+
 async function fetchAvatars(userId: string): Promise<Avatar[]> {
   try {
-    const res = await fetch('/functions/v1/fetch-avatars', {
+    const res = await fetch(`${SUPABASE_EDGE_BASE}/fetch-avatars`, {
       method: 'POST',
       body: JSON.stringify({ user_id: userId }),
       headers: { 'Content-Type': 'application/json' }
@@ -161,7 +162,7 @@ async function fetchAvatars(userId: string): Promise<Avatar[]> {
   }
 }
 async function buyAvatar(userId: string, avatarId: string) {
-  const res = await fetch('/functions/v1/buy-avatar', {
+  const res = await fetch(`${SUPABASE_EDGE_BASE}/buy-avatar`, {
     method: 'POST',
     body: JSON.stringify({ user_id: userId, avatar_id: avatarId }),
     headers: { 'Content-Type': 'application/json' }
@@ -169,7 +170,7 @@ async function buyAvatar(userId: string, avatarId: string) {
   return await res.json();
 }
 async function equipAvatar(userId: string, avatarId: string) {
-  const res = await fetch('/functions/v1/equip-avatar', {
+  const res = await fetch(`${SUPABASE_EDGE_BASE}/equip-avatar`, {
     method: 'POST',
     body: JSON.stringify({ user_id: userId, avatar_id: avatarId }),
     headers: { 'Content-Type': 'application/json' }
