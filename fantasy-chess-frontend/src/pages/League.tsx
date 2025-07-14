@@ -1540,7 +1540,7 @@ const LeaguePage: React.FC = () => {
             </>
           ) : (
             <div className="space-y-3">
-              {standings.map((standing, index) => (
+              {standings.map((standing) => (
                 <div
                   key={standing.user_id}
                   className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors group ${
