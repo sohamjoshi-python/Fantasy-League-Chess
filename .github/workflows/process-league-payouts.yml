@@ -1,25 +1,18 @@
-name: Process League Payouts (Daily)
+name: Call Supabase Payout Edge Function Daily
 
 on:
   schedule:
-    - cron: '0 3 * * *'  # Every day at 3am UTC
+    - cron: '0 3 * * *'
   workflow_dispatch:
 
 jobs:
-  process-payouts:
+  call-edge-function:
     runs-on: ubuntu-latest
     steps:
-      - name: Install PostgreSQL client
-        run: sudo apt-get install -y postgresql-client
-
-      - name: Run process_league_payouts SQL function
+      - name: Call Supabase Edge Function
         env:
-          SB_URL: ${{ secrets.SB_URL }}
-          SB_KEY: ${{ secrets.SB_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
-          export PGHOST=$(echo $SB_URL | sed -E 's|https?://([^:/]+).*|\1|')
-          export PGUSER=postgres
-          export PGPASSWORD=$SB_KEY
-          export PGDATABASE=postgres
-          export PGPORT=5432
-          psql "host=$PGHOST user=$PGUSER password=$PGPASSWORD dbname=$PGDATABASE port=$PGPORT sslmode=require" -c "SELECT process_league_payouts();"
+          curl -X POST \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+            https://wdbwzvnkfbyzazodfhsw.supabase.co/functions/v1/smart-worker
