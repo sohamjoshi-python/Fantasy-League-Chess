@@ -1,0 +1,26 @@
+name: Process League Payouts (Daily)
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # Runs every day at midnight UTC
+  workflow_dispatch:      # Allows manual triggering from GitHub UI
+
+jobs:
+  process-payouts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install PostgreSQL client
+        run: sudo apt-get install -y postgresql-client
+
+      - name: Run process_league_payouts
+        env:
+          PGHOST: ${{ secrets.PGHOST }}
+          PGUSER: ${{ secrets.PGUSER }}
+          PGPASSWORD: ${{ secrets.PGPASSWORD }}
+          PGDATABASE: ${{ secrets.PGDATABASE }}
+          PGPORT: ${{ secrets.PGPORT }}
+        run: |
+          psql "host=$PGHOST user=$PGUSER password=$PGPASSWORD dbname=$PGDATABASE port=$PGPORT" -c "SELECT process_league_payouts();"
