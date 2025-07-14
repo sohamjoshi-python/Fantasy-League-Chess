@@ -27,14 +27,14 @@ const ExpandableUsername: React.FC<{
   const displayText = username + (isCurrentUser ? " (You)" : "");
 
   return (
-    <div
-      className={`relative inline-block ${className}`}
-      style={{ maxWidth }}
+    <span
+      className={`relative align-baseline ${className}`}
+      style={{ maxWidth, verticalAlign: "baseline" }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
       <span
-        className="truncate overflow-hidden whitespace-nowrap block text-neutral-900 font-medium text-sm lg:text-base"
+        className="truncate overflow-hidden whitespace-nowrap font-medium text-sm lg:text-base text-neutral-900"
         style={{ maxWidth, cursor: "pointer" }}
         title={displayText}
       >
@@ -48,7 +48,7 @@ const ExpandableUsername: React.FC<{
           {displayText}
         </div>
       )}
-    </div>
+    </span>
   );
 };
 
