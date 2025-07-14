@@ -1840,12 +1840,6 @@ const LeaguePage: React.FC = () => {
                                 />
                               </div>
                               <div className="text-xs lg:text-sm text-neutral-600">ELO: {player.elo}</div>
-                              {player.accuracy !== undefined && player.accuracy !== null && (
-                                <div className="text-xs text-neutral-500">Avg Centipawn Loss (ACL): {player.accuracy.toFixed(2)}</div>
-                              )}
-                              {player.games !== undefined && (
-                                <div className="text-xs text-neutral-500">Games: {player.games}</div>
-                              )}
                             </button>
                           ))}
                       </div>
