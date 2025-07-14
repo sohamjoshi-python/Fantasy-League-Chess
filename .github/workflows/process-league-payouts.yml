@@ -17,7 +17,7 @@ jobs:
           SB_URL: ${{ secrets.SB_URL }}
           SB_KEY: ${{ secrets.SB_KEY }}
         run: |
-          export PGHOST=$(echo $SB_URL | sed -E 's|https?://([^:/]+).*|\\1|')
+          export PGHOST=$(echo $SB_URL | sed -E 's|https?://([^:/]+).*|\1|')
           export PGUSER=postgres
           export PGPASSWORD=$SB_KEY
           export PGDATABASE=postgres
