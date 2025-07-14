@@ -164,19 +164,15 @@ const AvatarShop: React.FC<{ user: User; onClose: () => void }> = ({ user, onClo
   }, [user.id]);
 
   const handleBuy = async (avatar: Avatar) => {
-    setLoading(true);
     const res = await buyAvatar(user.id, avatar.id);
     if (res.error) setError(res.error);
     else setAvatars(await fetchAvatars(user.id));
-    setLoading(false);
   };
 
   const handleEquip = async (avatar: Avatar) => {
-    setLoading(true);
     const res = await equipAvatar(user.id, avatar.id);
     if (res.error) setError(res.error);
     else onClose();
-    setLoading(false);
   };
 
   return (
