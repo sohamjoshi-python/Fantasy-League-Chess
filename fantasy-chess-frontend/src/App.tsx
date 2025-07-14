@@ -10,7 +10,6 @@ import Profile from './pages/Profile'
 import Help from './pages/Help'
 import Leaderboard from './pages/Leaderboard';
 import { AuthProvider, useAuth } from './contexts/AuthContext'
-import AvatarShop from './pages/Profile'; // We'll render AvatarShop from Profile for now
 import React from 'react';
 
 function AvatarShopPage() {
