@@ -1257,6 +1257,13 @@ const LeaguePage: React.FC = () => {
     }
   };
 
+  // Helper to check if lineup changes are allowed (Monday or Tuesday UTC)
+  function isLineupChangeAllowed() {
+    const now = new Date();
+    const day = now.getUTCDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+    return day === 1 || day === 2;
+  }
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -1649,56 +1656,73 @@ const LeaguePage: React.FC = () => {
             </div>
 
             {isEditingLineup ? (
-              <div className="space-y-4">
-                <p className="text-xs lg:text-sm text-neutral-600">Select 5 players for your lineup:</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {teamPlayers.map((player) => (
+              isLineupChangeAllowed() ? (
+                <div className="space-y-4">
+                  <p className="text-xs lg:text-sm text-neutral-600">Select 5 players for your lineup:</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {teamPlayers.map((player) => (
+                      <button
+                        type="button"
+                        key={player.id}
+                        onClick={() => {
+                          if (selectedLineupPlayers.includes(player.id)) {
+                            setSelectedLineupPlayers(selectedLineupPlayers.filter(id => id !== player.id))
+                          } else if (selectedLineupPlayers.length < 5) {
+                            setSelectedLineupPlayers([...selectedLineupPlayers, player.id])
+                          }
+                        }}
+                        className={`p-3 rounded-lg border-2 text-left transition-colors ${
+                          selectedLineupPlayers.includes(player.id)
+                            ? 'border-royalBlue bg-royalBlue bg-opacity-10'
+                            : 'border-neutral-200 hover:border-royalBlue'
+                        }`}
+                      >
+                        <div className="font-medium text-sm lg:text-base text-neutral-900">
+                          <ExpandablePlayerName playerName={player.name} />
+                        </div>
+                        <div className="text-xs lg:text-sm text-neutral-600">ELO: {player.elo}</div>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex space-x-3">
                     <button
                       type="button"
-                      key={player.id}
-                      onClick={() => {
-                        if (selectedLineupPlayers.includes(player.id)) {
-                          setSelectedLineupPlayers(selectedLineupPlayers.filter(id => id !== player.id))
-                        } else if (selectedLineupPlayers.length < 5) {
-                          setSelectedLineupPlayers([...selectedLineupPlayers, player.id])
-                        }
-                      }}
-                      className={`p-3 rounded-lg border-2 text-left transition-colors ${
-                        selectedLineupPlayers.includes(player.id)
-                          ? 'border-royalBlue bg-royalBlue bg-opacity-10'
-                          : 'border-neutral-200 hover:border-royalBlue'
-                      }`}
+                      onClick={saveLineup}
+                      disabled={selectedLineupPlayers.length !== 5}
+                      className="flex items-center space-x-1 bg-[#1e293b] hover:bg-royalBlue disabled:bg-neutral-400 text-white px-3 lg:px-4 py-2 rounded-lg text-sm lg:text-base shadow-lg transition-colors"
                     >
-                      <div className="font-medium text-sm lg:text-base text-neutral-900">
-                        <ExpandablePlayerName playerName={player.name} />
-                      </div>
-                      <div className="text-xs lg:text-sm text-neutral-600">ELO: {player.elo}</div>
+                      <Check className="h-4 w-4" />
+                      <span>Save Lineup</span>
                     </button>
-                  ))}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsEditingLineup(false)
+                        setSelectedLineupPlayers(currentLineup?.player_ids || [])
+                      }}
+                      className="flex items-center space-x-1 bg-neutral-600 hover:bg-neutral-700 text-white px-3 lg:px-4 py-2 rounded-lg text-sm lg:text-base shadow-lg transition-colors"
+                    >
+                      <X className="h-4 w-4" />
+                      <span>Cancel</span>
+                    </button>
+                  </div>
                 </div>
-                <div className="flex space-x-3">
-                  <button
-                    type="button"
-                    onClick={saveLineup}
-                    disabled={selectedLineupPlayers.length !== 5}
-                    className="flex items-center space-x-1 bg-[#1e293b] hover:bg-royalBlue disabled:bg-neutral-400 text-white px-3 lg:px-4 py-2 rounded-lg text-sm lg:text-base shadow-lg transition-colors"
-                  >
-                    <Check className="h-4 w-4" />
-                    <span>Save Lineup</span>
-                  </button>
+              ) : (
+                <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200 text-yellow-900 text-center">
+                  <p className="font-semibold">Lineup changes are only allowed on Monday and Tuesday (UTC).</p>
                   <button
                     type="button"
                     onClick={() => {
                       setIsEditingLineup(false)
                       setSelectedLineupPlayers(currentLineup?.player_ids || [])
                     }}
-                    className="flex items-center space-x-1 bg-neutral-600 hover:bg-neutral-700 text-white px-3 lg:px-4 py-2 rounded-lg text-sm lg:text-base shadow-lg transition-colors"
+                    className="flex items-center space-x-1 bg-neutral-600 hover:bg-neutral-700 text-white px-3 lg:px-4 py-2 rounded-lg text-sm lg:text-base shadow-lg transition-colors mt-4"
                   >
                     <X className="h-4 w-4" />
                     <span>Cancel</span>
                   </button>
                 </div>
-              </div>
+              )
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                 {lineupPlayers.map((player) => (
