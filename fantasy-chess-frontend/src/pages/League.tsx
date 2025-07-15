@@ -838,6 +838,7 @@ const LeaguePage: React.FC = () => {
 
       await loadLeagueData()
     } catch (err) {
+      console.error('Draft start error:', err);
       setError('Failed to start draft')
     } finally {
       setLoading(false)
