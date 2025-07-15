@@ -2184,6 +2184,21 @@ const LeaguePage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {error && (
+        <div className="fixed inset-0 flex items-center justify-center z-50">
+          <div className="bg-white border border-red-300 rounded-lg shadow-lg p-6 max-w-sm w-full text-center z-50">
+            <p className="text-red-700 font-semibold mb-4">{error}</p>
+            <button
+              className="bg-royalBlue text-white px-4 py-2 rounded"
+              onClick={() => setError('')}
+            >
+              Close
+            </button>
+          </div>
+          <div className="fixed inset-0 bg-black opacity-30 z-40"></div>
+        </div>
+      )}
     </div>
   )
 }
