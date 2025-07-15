@@ -646,13 +646,15 @@ const LeaguePage: React.FC = () => {
       const currentWeek = getCurrentWeekStart()
       const { error } = await supabase
         .from('lineups')
-        .upsert({
-          user_id: user.id,
-          league_id: league?.id,
-          week_start_date: currentWeek,
-          player_ids: uniquePlayerIds,
-          total_points: 0
-        })
+        .upsert([
+          {
+            user_id: user.id,
+            league_id: league?.id,
+            week_start_date: currentWeek,
+            player_ids: uniquePlayerIds,
+            total_points: 0
+          }
+        ], { onConflict: 'user_id,league_id,week_start_date' })
 
       if (error) {
         // Show a clear error message if available
