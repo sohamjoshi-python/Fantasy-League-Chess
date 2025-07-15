@@ -8,6 +8,7 @@ import { Crown, Trophy, Calendar, Edit, Check, X, RefreshCw, Bot as BotIcon, Plu
 import { fetchLineupPlayerBreakdownByRounds, createBot, removeBot, autoDraftForBot, autoSetLineupForBot } from '../lib/supabase';
 import Confetti from 'react-confetti';
 import pawnRoyaleLogo from '../assets/pawn-royale-logo.png';
+import { notifyUser } from '../lib/notify';
 // Remove: import { useQuery } from '@tanstack/react-query';
 // Remove: fetchLeague function
 // Remove: all useQuery calls and destructuring
@@ -818,6 +819,23 @@ const LeaguePage: React.FC = () => {
         draft_order: fullDraftOrder,
         current_draft_turn: 0
       }).eq('id', league?.id)
+
+      // Fetch all league members
+      const { data: members } = await supabase
+        .from('league_members')
+        .select('email, display_name')
+        .eq('league_id', league.id);
+
+      if (members) {
+        for (const member of members) {
+          await notifyUser(
+            member.email,
+            `The Draft Has Started for ${league.name}!`,
+            `Hi ${member.display_name},\n\nThe draft for your league \"${league.name}\" has started! Log in now to make your picks and build your team.\n\nGood luck!`
+          );
+        }
+      }
+
       await loadLeagueData()
     } catch (err) {
       setError('Failed to start draft')
