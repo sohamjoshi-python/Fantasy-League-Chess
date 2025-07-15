@@ -644,22 +644,41 @@ const LeaguePage: React.FC = () => {
       setLoading(true)
 
       const currentWeek = getCurrentWeekStart()
-      const { error } = await supabase
+      // Manual upsert logic: try update first
+      const { data: updateData, error: updateError } = await supabase
         .from('lineups')
-        .upsert([
-          {
-            user_id: user.id,
-            league_id: league?.id,
-            week_start_date: currentWeek,
-            player_ids: uniquePlayerIds,
-            total_points: 0
-          }
-        ], { onConflict: 'user_id,league_id,week_start_date' })
+        .update({
+          player_ids: uniquePlayerIds,
+          total_points: 0
+        })
+        .match({
+          user_id: user.id,
+          league_id: league.id,
+          week_start_date: currentWeek
+        });
+      const updatedRows = updateData as any[] | null;
 
-      if (error) {
-        // Show a clear error message if available
-        setError(error.message || JSON.stringify(error) || 'Failed to save lineup');
+      if (updateError) {
+        setError(updateError.message || 'Failed to update lineup');
         return;
+      }
+      if (!updatedRows || updatedRows.length === 0) {
+        // No row updated, insert new
+        const { error: insertError } = await supabase
+          .from('lineups')
+          .insert([
+            {
+              user_id: user.id,
+              league_id: league.id,
+              week_start_date: currentWeek,
+              player_ids: uniquePlayerIds,
+              total_points: 0
+            }
+          ]);
+        if (insertError) {
+          setError(insertError.message || 'Failed to insert lineup');
+          return;
+        }
       }
 
       setIsEditingLineup(false)
