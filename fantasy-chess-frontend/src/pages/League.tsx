@@ -640,12 +640,6 @@ const LeaguePage: React.FC = () => {
       return;
     }
 
-    // Prevent saving if not allowed (not Monday or Tuesday UTC)
-    if (!isLineupChangeAllowed()) {
-      setError('You cannot edit your lineup at this time. Lineup changes are only allowed on Monday and Tuesday (UTC).');
-      return;
-    }
-
     try {
       setLoading(true)
 
@@ -1263,11 +1257,11 @@ const LeaguePage: React.FC = () => {
     }
   };
 
-  // Helper to check if lineup changes are allowed (Monday or Tuesday UTC)
+  // Helper to check if lineup changes are allowed (not Tuesday UTC)
   function isLineupChangeAllowed() {
     const now = new Date();
     const day = now.getUTCDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
-    return day === 1 || day === 2;
+    return day !== 2; // Disallow Tuesday (2)
   }
 
   if (loading) {
@@ -1652,7 +1646,13 @@ const LeaguePage: React.FC = () => {
               {league.draft_completed && !isEditingLineup && (
                 <button
                   type="button"
-                  onClick={() => setIsEditingLineup(true)}
+                  onClick={() => {
+                    if (!isLineupChangeAllowed()) {
+                      setError('You cannot edit your lineup on Tuesday (UTC). Please try again on another day.');
+                      return;
+                    }
+                    setIsEditingLineup(true);
+                  }}
                   className="flex items-center space-x-1 text-royalBlue hover:text-purple text-sm lg:text-base transition-colors"
                 >
                   <Edit className="h-4 w-4" />
