@@ -7,14 +7,16 @@ import { League, Team, Lineup, ChessPlayer } from '../types'
 import { Crown, Users, Trophy, Calendar, Plus, ExternalLink } from 'lucide-react'
 import { fetchLineupPlayerBreakdownByRounds } from '../lib/supabase';
 
-function getCurrentTuesday() {
+function getCurrentWeekStart() {
   const now = new Date();
-  const day = now.getDay();
-  // 2 = Tuesday (0=Sunday, 1=Monday, 2=Tuesday, ...)
-  const diff = (day >= 2) ? day - 2 : 6 + day;
-  const tuesday = new Date(now);
-  tuesday.setDate(now.getDate() - diff);
-  return tuesday.toISOString().split('T')[0].replace(/-/g, '.');
+  const dayOfWeek = now.getDay();
+  const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - daysToSubtract);
+  const year = monday.getFullYear();
+  const month = String(monday.getMonth() + 1).padStart(2, '0');
+  const day = String(monday.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 const Dashboard: React.FC = () => {
@@ -142,7 +144,7 @@ const Dashboard: React.FC = () => {
           if (players) {
             // setTeamPlayers(players) // This line was removed as per the edit hint
           }
-          const currentWeek = getCurrentTuesday()
+          const currentWeek = getCurrentWeekStart()
           const { data: lineups } = await supabase
             .from('lineups')
             .select('*')

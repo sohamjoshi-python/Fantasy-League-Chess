@@ -633,6 +633,13 @@ const LeaguePage: React.FC = () => {
   const saveLineup = async () => {
     if (!league || !user || selectedLineupPlayers.length !== 5) return
 
+    // Prevent duplicate player IDs in the lineup
+    const uniquePlayerIds = Array.from(new Set(selectedLineupPlayers));
+    if (uniquePlayerIds.length !== 5) {
+      setError('You cannot select the same player more than once in your lineup.');
+      return;
+    }
+
     try {
       setLoading(true)
 
@@ -643,17 +650,22 @@ const LeaguePage: React.FC = () => {
           user_id: user.id,
           league_id: league?.id,
           week_start_date: currentWeek,
-          player_ids: selectedLineupPlayers,
+          player_ids: uniquePlayerIds,
           total_points: 0
         })
 
-      if (error) throw error
+      if (error) {
+        // Show a clear error message if available
+        setError(error.message || JSON.stringify(error) || 'Failed to save lineup');
+        return;
+      }
 
       setIsEditingLineup(false)
       await loadLeagueData()
-    } catch (error) {
+    } catch (error: any) {
+      // Show a clear error message if available
+      setError(error?.message || error?.toString() || 'Failed to save lineup')
       console.error('Error saving lineup:', error)
-      setError('Failed to save lineup')
     } finally {
       setLoading(false)
     }
