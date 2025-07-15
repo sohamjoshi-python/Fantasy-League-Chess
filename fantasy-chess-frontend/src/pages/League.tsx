@@ -644,41 +644,31 @@ const LeaguePage: React.FC = () => {
       setLoading(true)
 
       const currentWeek = getCurrentWeekStart()
-      // Manual upsert logic: try update first
-      const { data: updateData, error: updateError } = await supabase
+      // Delete any existing lineup for this user/league/week
+      await supabase
         .from('lineups')
-        .update({
-          player_ids: uniquePlayerIds,
-          total_points: 0
-        })
+        .delete()
         .match({
           user_id: user.id,
           league_id: league.id,
           week_start_date: currentWeek
         });
-      const updatedRows = updateData as any[] | null;
 
-      if (updateError) {
-        setError(updateError.message || 'Failed to update lineup');
+      // Now insert the new lineup
+      const { error: insertError } = await supabase
+        .from('lineups')
+        .insert([
+          {
+            user_id: user.id,
+            league_id: league.id,
+            week_start_date: currentWeek,
+            player_ids: uniquePlayerIds,
+            total_points: 0
+          }
+        ]);
+      if (insertError) {
+        setError(insertError.message || 'Failed to insert lineup');
         return;
-      }
-      if (!updatedRows || updatedRows.length === 0) {
-        // No row updated, insert new
-        const { error: insertError } = await supabase
-          .from('lineups')
-          .insert([
-            {
-              user_id: user.id,
-              league_id: league.id,
-              week_start_date: currentWeek,
-              player_ids: uniquePlayerIds,
-              total_points: 0
-            }
-          ]);
-        if (insertError) {
-          setError(insertError.message || 'Failed to insert lineup');
-          return;
-        }
       }
 
       setIsEditingLineup(false)
