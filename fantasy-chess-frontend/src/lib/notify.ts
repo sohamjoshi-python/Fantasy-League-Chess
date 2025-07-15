@@ -1,8 +1,10 @@
-export async function notifyUser(to: string, subject: string, text: string) {
-  // TODO: Replace <your-project-ref> with your actual Supabase project ref
-  await fetch('https://wdbwzvnkfbyzazodfhsw.functions.supabase.co/send-email', {
+export async function notifyUser(to: string, subject: string, text: string, accessToken: string) {
+  await fetch('https://wdbwzvnkfbyzazodfhsw.supabase.co/functions/v1/send-email', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${accessToken}`,
+    },
     body: JSON.stringify({ to, subject, text }),
   });
 } 

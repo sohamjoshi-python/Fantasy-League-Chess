@@ -826,12 +826,16 @@ const LeaguePage: React.FC = () => {
         .select('email, display_name')
         .eq('league_id', league.id);
 
-      if (members) {
+      // Get the current user's access token
+      const accessToken = await getAccessToken();
+
+      if (members && accessToken) {
         for (const member of members) {
           await notifyUser(
             member.email,
             `The Draft Has Started for ${league.name}!`,
-            `Hi ${member.display_name},\n\nThe draft for your league \"${league.name}\" has started! Log in now to make your picks and build your team.\n\nGood luck!`
+            `Hi ${member.display_name},\n\nThe draft for your league \"${league.name}\" has started! Log in now to make your picks and build your team.\n\nGood luck!`,
+            accessToken
           );
         }
       }
@@ -2226,3 +2230,9 @@ const LeaguePage: React.FC = () => {
 }
 
 export default LeaguePage 
+
+// Helper to get the current user's access token
+async function getAccessToken() {
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.access_token;
+}
