@@ -640,6 +640,12 @@ const LeaguePage: React.FC = () => {
       return;
     }
 
+    // Prevent saving if not allowed (not Monday or Tuesday UTC)
+    if (!isLineupChangeAllowed()) {
+      setError('You cannot edit your lineup at this time. Lineup changes are only allowed on Monday and Tuesday (UTC).');
+      return;
+    }
+
     try {
       setLoading(true)
 
