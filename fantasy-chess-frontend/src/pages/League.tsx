@@ -1289,902 +1289,7 @@ const LeaguePage: React.FC = () => {
   }
 
   return (
-    <div className="w-full max-w-6xl mx-auto bg-white min-h-screen p-4 lg:p-6">
-      {/* League Header */}
-      <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6 mb-6 lg:mb-8 border-2 border-gold">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-4">
-          <div className="flex items-center space-x-2">
-            <h1 className="text-2xl lg:text-3xl font-bold text-neutral-900 mb-2 lg:mb-0">{league?.name}</h1>
-            {new Date(league?.end_date) < new Date() && (
-              <span className="ml-2 px-2 py-1 bg-red-200 text-red-800 rounded text-xs font-bold">
-                League Ended
-              </span>
-            )}
-          </div>
-          <div className="flex items-center space-x-4">
-            <button type="button" onClick={handleReload} className="flex items-center px-3 py-1 bg-neutral-100 rounded hover:bg-neutral-200 text-neutral-700 text-sm font-medium transition-colors">
-              <RefreshCw className="w-4 h-4 mr-1" /> Reload
-            </button>
-            <div className="text-xs lg:text-sm text-neutral-600">
-              {league?.member_ids.length} members
-            </div>
-            <div className="text-xs lg:text-sm text-neutral-600">
-              {league?.buy_in} coins buy-in
-            </div>
-          </div>
-        </div>
-        
-        {league?.description && (
-          <p className="text-neutral-600 mb-4 text-sm lg:text-base">{league?.description}</p>
-        )}
-        {/* Winner and payout display */}
-        {new Date(league?.end_date) < new Date() && league?.payout_processed && payout && (
-          <div className="bg-green-100 rounded-lg p-4 my-4 border border-green-200">
-            <h3 className="font-bold text-lg text-green-800">🏆 Winner: {winnerName}</h3>
-            <p className="text-green-700">Prize: {payout.amount} coins</p>
-            <p className="text-green-700">Payout processed: {new Date(payout.processed_at).toLocaleString()}</p>
-          </div>
-        )}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="flex items-center space-x-2">
-            <Calendar className="h-4 w-4 lg:h-5 lg:w-5 text-gold" />
-            <span className="text-xs lg:text-sm text-neutral-600">
-              Starts: {new Date(league?.start_date).toLocaleDateString()}
-              <span className="relative group cursor-pointer ml-1">
-                <svg className="w-3 h-3 text-royalBlue inline-block" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
-                <span className="absolute left-1/2 -translate-x-1/2 mt-2 w-64 bg-white text-neutral-900 text-xs rounded shadow-lg border border-royalBlue px-3 py-2 z-50 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                  The start date is when the league begins and points start accumulating. The draft must be completed before this date.
-                </span>
-              </span>
-            </span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Trophy className="h-4 w-4 lg:h-5 lg:w-5 text-gold" />
-            <span className="text-xs lg:text-sm text-neutral-600">
-              Join Code: {league?.join_code}
-            </span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Crown className="h-4 w-4 lg:h-5 lg:w-5 text-gold" />
-            <span className="text-xs lg:text-sm text-neutral-600">
-              Draft: {league?.draft_completed ? 'Completed' : 'In Progress'}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Bot Management Section - Only visible to league owner */}
-      {isOwner && (
-        <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6 mb-6 lg:mb-8 border-2 border-royalBlue">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg lg:text-xl font-bold text-neutral-900 flex items-center">
-              <BotIcon className="w-5 h-5 mr-2 text-royalBlue" />
-              Bot Management
-            </h2>
-            {!bot && league && new Date(league.end_date) >= new Date() && (
-              <button
-                type="button"
-                onClick={() => setShowAddBotModal(true)}
-                className="flex items-center space-x-1 bg-[#1e293b] hover:bg-royalBlue text-white px-3 py-2 rounded-lg text-sm font-medium shadow-lg transition-colors"
-                disabled={botLoading}
-              >
-                <Plus className="w-4 h-4" />
-                <span>Add Bot</span>
-              </button>
-            )}
-          </div>
-
-          {bot ? (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 bg-neutral-50 rounded-lg border border-royalBlue">
-                <div className="flex items-center space-x-3">
-                  <BotIcon className="w-6 h-6 text-royalBlue" />
-                  <div>
-                    <h3 className="font-semibold text-neutral-900">{bot.name}</h3>
-                    <p className="text-sm text-neutral-600">Auto-drafts highest ELO players</p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleRemoveBot}
-                  className="flex items-center space-x-1 bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-sm font-medium shadow-lg transition-colors"
-                  disabled={botLoading}
-                >
-                  <Trash2 className="w-4 h-4" />
-                  <span>Remove</span>
-                </button>
-              </div>
-
-              {/* Bot actions during draft */}
-              {draftStarted && !league.draft_completed && (
-                <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                  <h4 className="font-semibold text-blue-900 mb-2">Draft Actions</h4>
-                  <p className="text-sm text-blue-700 mb-3">
-                    The bot will automatically draft the highest ELO player available when it's their turn.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={handleBotDraft}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-lg transition-colors"
-                    disabled={botLoading}
-                  >
-                    {botLoading ? 'Processing...' : 'Force Bot Draft'}
-                  </button>
-                </div>
-              )}
-
-              {/* Bot actions for lineup */}
-              {league.draft_completed && (
-                <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-                  <h4 className="font-semibold text-green-900 mb-2">Lineup Actions</h4>
-                  <p className="text-sm text-green-700 mb-3">
-                    The bot will automatically set a lineup with the 5 highest ELO players from their team.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={handleBotSetLineup}
-                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-lg transition-colors"
-                    disabled={botLoading}
-                  >
-                    {botLoading ? 'Processing...' : 'Set Bot Lineup'}
-                  </button>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="text-center py-6">
-              <BotIcon className="w-12 h-12 mx-auto mb-3 text-neutral-400" />
-              {league && new Date(league.end_date) < new Date() ? (
-                <p className="text-neutral-600 text-sm lg:text-base mb-4">
-                  This league has ended. Bots cannot be added to completed leagues.
-                </p>
-              ) : (
-                <>
-                  <p className="text-neutral-600 text-sm lg:text-base mb-4">
-                    Add a bot to automatically draft the highest ELO players and set optimal lineups.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setShowAddBotModal(true)}
-                    className="flex items-center space-x-1 bg-[#1e293b] hover:bg-royalBlue text-white px-4 py-2 rounded-lg font-medium shadow-lg transition-colors mx-auto"
-                    disabled={botLoading}
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>Add Bot</span>
-                  </button>
-                </>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-      <div className="flex gap-4 mb-4">
-        {isOwner && (
-          <button
-            onClick={handleDeleteLeague}
-            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded font-semibold shadow-lg"
-            disabled={loading}
-          >
-            Delete League
-          </button>
-        )}
-        {!isOwner && user?.id && league?.member_ids?.includes(user.id) && (
-          <button
-            onClick={handleLeaveLeague}
-            className="bg-neutral-300 hover:bg-neutral-400 text-neutral-900 px-4 py-2 rounded font-semibold shadow-lg"
-            disabled={loading}
-          >
-            Leave League
-          </button>
-        )}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
-        {/* Standings */}
-        <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6 border-2 border-gold relative">
-          {showConfetti && <Confetti className="pointer-events-none" style={{zIndex: 30}} />}
-          <h2 className="text-lg lg:text-xl font-bold mb-4 text-neutral-900">Standings</h2>
-          {league?.end_date && new Date(league.end_date) < new Date() && league?.payout_processed && payout ? (
-            <>
-              {showConfetti && <Confetti className="pointer-events-none" style={{zIndex: 30}} />}
-              {/* Podium for Top 3 */}
-              <div className="flex justify-center items-end mb-8 gap-4">
-                {/* 2nd Place */}
-                {standings[1] && (
-                  <div className="flex flex-col items-center">
-                    <div className="w-16 h-16 lg:w-20 lg:h-20 rounded-full bg-silver flex items-center justify-center text-2xl font-bold text-white border-4 border-silver mb-2">2</div>
-                    <div className="flex items-center gap-2">
-                      <img src={standings[1].avatar_url} alt="Avatar" className="w-8 h-8 rounded-full border-2 border-gold" />
-                      <ExpandableUsername username={standings[1].display_name || standings[1].user_email} />
-                    </div>
-                    <span className="text-neutral-600 text-sm">{standings[1].total_points} pts</span>
-                  </div>
-                )}
-                {/* 1st Place */}
-                {standings[0] && (
-                  <div className="flex flex-col items-center">
-                    <div className="w-20 h-20 lg:w-24 lg:h-24 rounded-full bg-royalBlue flex items-center justify-center text-3xl font-extrabold text-white border-4 border-royalBlue mb-2 shadow-lg">1</div>
-                    <div className="flex items-center gap-2">
-                      <img src={standings[0].avatar_url} alt="Avatar" className="w-10 h-10 rounded-full border-2 border-gold" />
-                      <ExpandableUsername username={standings[0].display_name || standings[0].user_email} />
-                    </div>
-                    <span className="text-neutral-900 font-bold text-base">{standings[0].total_points} pts</span>
-                  </div>
-                )}
-                {/* 3rd Place */}
-                {standings[2] && (
-                  <div className="flex flex-col items-center">
-                    <div className="w-16 h-16 lg:w-20 lg:h-20 rounded-full bg-[#cd7f32] flex items-center justify-center text-2xl font-bold text-white border-4 border-[#cd7f32] mb-2">3</div>
-                    <div className="flex items-center gap-2">
-                      <img src={standings[2].avatar_url} alt="Avatar" className="w-8 h-8 rounded-full border-2 border-gold" />
-                      <ExpandableUsername username={standings[2].display_name || standings[2].user_email} />
-                    </div>
-                    <span className="text-neutral-600 text-sm">{standings[2].total_points} pts</span>
-                  </div>
-                )}
-              </div>
-              {/* The rest of the players */}
-              {standings.length > 3 && (
-                <div className="mt-6">
-                  <h3 className="text-base font-semibold mb-2 text-neutral-900">Other Players</h3>
-                  <div className="space-y-2">
-                    {standings.slice(3).map((standing) => (
-                      <div
-                        key={standing.user_id}
-                        className="flex items-center justify-between p-2 rounded bg-neutral-50 border border-neutral-200"
-                      >
-                        <div className="flex items-center space-x-3 min-w-0 flex-1">
-                          <div className={`w-6 h-6 lg:w-8 lg:h-8 rounded-full flex items-center justify-center text-xs lg:text-sm font-bold flex-shrink-0 ${
-                            standing.user_id === user?.id ? 'bg-royalBlue text-white' : 'bg-neutral-300 text-neutral-700'
-                          }`}>
-                            {standing.rank}
-                          </div>
-                          <img src={standing.avatar_url} alt="Avatar" className="w-8 h-8 rounded-full border-2 border-gold" />
-                          <div className="min-w-0 flex-1">
-                            <ExpandableUsername 
-                              username={standing.display_name || standing.user_email}
-                              isCurrentUser={standing.user_id === user?.id}
-                            />
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-2 flex-shrink-0 ml-2">
-                          <p className="font-semibold text-sm lg:text-base text-neutral-900">{standing.total_points} points</p>
-                          {isOwner && standing.user_id !== user?.id && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                removeUserFromLeague(standing.user_id);
-                              }}
-                              className="text-red-600 hover:text-red-800 p-1 rounded transition-colors"
-                              title="Remove player from league"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="space-y-3">
-              {standings.map((standing) => (
-                <div
-                  key={standing.user_id}
-                  className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors group ${
-                    standing.user_id === user?.id ? 'bg-royalBlue bg-opacity-10 border border-royalBlue' : 'bg-neutral-50 hover:bg-neutral-100'
-                  }`}
-                  onClick={() => handleUserClick(standing)}
-                >
-                  <div className="flex items-center space-x-3 min-w-0 flex-1">
-                    <div className={`w-6 h-6 lg:w-8 lg:h-8 rounded-full flex items-center justify-center text-xs lg:text-sm font-bold flex-shrink-0 ${
-                      standing.user_id === user?.id ? 'bg-royalBlue text-white' : 'bg-neutral-300 text-neutral-700'
-                    }`}>
-                      {standing.rank}
-                    </div>
-                    <img src={standing.avatar_url} alt="Avatar" className="w-8 h-8 rounded-full border-2 border-gold" />
-                    <div className="min-w-0 flex-1">
-                      <ExpandableUsername 
-                        username={standing.display_name || standing.user_email}
-                        isCurrentUser={standing.user_id === user?.id}
-                      />
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2 flex-shrink-0 ml-2">
-                    <p className="font-semibold text-sm lg:text-base text-neutral-900">{standing.total_points} points</p>
-                    {isOwner && standing.user_id !== user?.id && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          removeUserFromLeague(standing.user_id);
-                        }}
-                        className="text-red-600 hover:text-red-800 p-1 rounded transition-colors"
-                        title="Remove player from league"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Team Management */}
-        <div className="space-y-4 lg:space-y-6">
-          {/* Your Team */}
-          <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6 border-2 border-gold">
-            <h3 className="text-lg lg:text-xl font-bold mb-4 text-neutral-900">Your Team</h3>
-            {teamPlayers.length === 0 ? (
-              <div className="text-neutral-500 text-sm">You haven't drafted any players yet.</div>
-            ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-                {teamPlayers.map((player) => (
-                  <div key={player.id} className="bg-neutral-50 rounded-lg p-3 text-center border border-gold">
-                    <ExpandablePlayerName 
-                      playerName={player.name}
-                      href={`https://www.chess.com/member/${player.name}/`}
-                    />
-                    <div className="text-xs text-neutral-600">ELO: {player.elo}</div>
-                    {player.accuracy !== undefined && player.accuracy !== null && (
-                      <div className="text-xs text-neutral-500">Avg Centipawn Loss (ACL): {player.accuracy.toFixed(2)}</div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Current Lineup */}
-          <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6 border-2 border-gold">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg lg:text-xl font-bold text-neutral-900">Current Lineup</h3>
-              {league.draft_completed && !isEditingLineup && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!isLineupChangeAllowed()) {
-                      setError('You cannot edit your lineup on Tuesday (UTC). Please try again on another day.');
-                      return;
-                    }
-                    setIsEditingLineup(true);
-                  }}
-                  className="flex items-center space-x-1 text-royalBlue hover:text-purple text-sm lg:text-base transition-colors"
-                >
-                  <Edit className="h-4 w-4" />
-                  <span>Edit</span>
-                </button>
-              )}
-            </div>
-
-            {isEditingLineup ? (
-              isLineupChangeAllowed() ? (
-                <div className="space-y-4">
-                  <p className="text-xs lg:text-sm text-neutral-600">Select 5 players for your lineup:</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {teamPlayers.map((player) => (
-                      <button
-                        type="button"
-                        key={player.id}
-                        onClick={() => {
-                          if (selectedLineupPlayers.includes(player.id)) {
-                            setSelectedLineupPlayers(selectedLineupPlayers.filter(id => id !== player.id))
-                          } else if (selectedLineupPlayers.length < 5) {
-                            setSelectedLineupPlayers([...selectedLineupPlayers, player.id])
-                          }
-                        }}
-                        className={`p-3 rounded-lg border-2 text-left transition-colors ${
-                          selectedLineupPlayers.includes(player.id)
-                            ? 'border-royalBlue bg-royalBlue bg-opacity-10'
-                            : 'border-neutral-200 hover:border-royalBlue'
-                        }`}
-                      >
-                        <div className="font-medium text-sm lg:text-base text-neutral-900">
-                          <ExpandablePlayerName playerName={player.name} />
-                        </div>
-                        <div className="text-xs lg:text-sm text-neutral-600">ELO: {player.elo}</div>
-                      </button>
-                    ))}
-                  </div>
-                  <div className="flex space-x-3">
-                    <button
-                      type="button"
-                      onClick={saveLineup}
-                      disabled={selectedLineupPlayers.length !== 5}
-                      className="flex items-center space-x-1 bg-[#1e293b] hover:bg-royalBlue disabled:bg-neutral-400 text-white px-3 lg:px-4 py-2 rounded-lg text-sm lg:text-base shadow-lg transition-colors"
-                    >
-                      <Check className="h-4 w-4" />
-                      <span>Save Lineup</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsEditingLineup(false)
-                        setSelectedLineupPlayers(currentLineup?.player_ids || [])
-                      }}
-                      className="flex items-center space-x-1 bg-neutral-600 hover:bg-neutral-700 text-white px-3 lg:px-4 py-2 rounded-lg text-sm lg:text-base shadow-lg transition-colors"
-                    >
-                      <X className="h-4 w-4" />
-                      <span>Cancel</span>
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200 text-yellow-900 text-center">
-                  <p className="font-semibold">Lineup changes are only allowed on Monday and Tuesday (UTC).</p>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsEditingLineup(false)
-                      setSelectedLineupPlayers(currentLineup?.player_ids || [])
-                    }}
-                    className="flex items-center space-x-1 bg-neutral-600 hover:bg-neutral-700 text-white px-3 lg:px-4 py-2 rounded-lg text-sm lg:text-base shadow-lg transition-colors mt-4"
-                  >
-                    <X className="h-4 w-4" />
-                    <span>Cancel</span>
-                  </button>
-                </div>
-              )
-            ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-                {lineupPlayers.map((player) => (
-                  <div key={player.id} className="bg-neutral-50 rounded-lg p-3 text-center border border-gold">
-                    <ExpandablePlayerName 
-                      playerName={player.name}
-                      href={`https://www.chess.com/member/${player.name}/`}
-                    />
-                    <div className="text-xs text-neutral-600">ELO: {player.elo}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Point Breakdown Table */}
-          <div className="mt-6">
-            <div className="mb-2 flex items-center space-x-2">
-              <h4 className="font-semibold text-neutral-900">Point Breakdown</h4>
-              {availableWeeks.length > 0 && (
-                <select
-                  className="ml-2 border border-neutral-300 rounded px-2 py-1 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-royalBlue"
-                  value={selectedWeek || ''}
-                  onChange={e => setSelectedWeek(e.target.value)}
-                >
-                  {availableWeeks.map(week => (
-                    <option key={week} value={week}>{week}</option>
-                  ))}
-                </select>
-              )}
-              <span className="text-xs text-neutral-500">(Select week)</span>
-            </div>
-            {breakdownLoading ? (
-              <div className="text-neutral-600">Loading breakdown...</div>
-            ) : breakdownError ? (
-              <div className="text-red-600">{breakdownError}</div>
-            ) : (playerBreakdown.early.length > 0 || playerBreakdown.late.length > 0) ? (
-              <div className="space-y-6">
-                {/* Early Round */}
-                {playerBreakdown.early.length > 0 && (
-                  <div>
-                    <h4 className="text-lg font-semibold mb-3 text-neutral-900">Early Round</h4>
-                    <table className="min-w-full text-sm">
-                      <thead>
-                        <tr>
-                          <th className="text-left px-2 py-1 text-neutral-900">Player</th>
-                          <th className="text-center px-2 py-1 text-neutral-900">Record</th>
-                          <th className="text-right px-2 py-1 text-neutral-900">Points</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {playerBreakdown.early.map((row) => (
-                          <tr key={row.player_id || row.player_name}>
-                            <td className="px-2 py-1 text-neutral-700">
-                              <ExpandablePlayerName playerName={row.player_name} />
-                            </td>
-                            <td className="px-2 py-1 text-center text-neutral-700">
-                              {row.wins !== undefined && row.total_games !== undefined 
-                                ? `${row.wins}/${row.total_games}` 
-                                : '-'
-                              }
-                            </td>
-                            <td className="px-2 py-1 text-right text-neutral-700">{Number(row.player_points).toFixed(2)}</td>
-                          </tr>
-                        ))}
-                        <tr className="font-bold border-t border-neutral-300">
-                          <td className="px-2 py-1 text-neutral-900">TOTAL</td>
-                          <td className="px-2 py-1 text-center">-</td>
-                          <td className="px-2 py-1 text-right text-neutral-900">{playerBreakdown.early.reduce((sum, p) => sum + Number(p.player_points), 0).toFixed(2)}</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-                
-                {/* Late Round */}
-                {playerBreakdown.late.length > 0 && (
-                  <div>
-                    <h4 className="text-lg font-semibold mb-3 text-neutral-900">Late Round</h4>
-                    <table className="min-w-full text-sm">
-                      <thead>
-                        <tr>
-                          <th className="text-left px-2 py-1 text-neutral-900">Player</th>
-                          <th className="text-center px-2 py-1 text-neutral-900">Record</th>
-                          <th className="text-right px-2 py-1 text-neutral-900">Points</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {playerBreakdown.late.map((row) => (
-                          <tr key={row.player_id || row.player_name}>
-                            <td className="px-2 py-1 text-neutral-700">
-                              <ExpandablePlayerName playerName={row.player_name} />
-                            </td>
-                            <td className="px-2 py-1 text-center text-neutral-700">
-                              {row.wins !== undefined && row.total_games !== undefined 
-                                ? `${row.wins}/${row.total_games}` 
-                                : '-'
-                              }
-                            </td>
-                            <td className="px-2 py-1 text-right text-neutral-700">{Number(row.player_points).toFixed(2)}</td>
-                          </tr>
-                        ))}
-                        <tr className="font-bold border-t border-neutral-300">
-                          <td className="px-2 py-1 text-neutral-900">TOTAL</td>
-                          <td className="px-2 py-1 text-center">-</td>
-                          <td className="px-2 py-1 text-right text-neutral-900">{playerBreakdown.late.reduce((sum, p) => sum + Number(p.player_points), 0).toFixed(2)}</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-                
-                {/* Combined Total */}
-                <div className="bg-neutral-50 rounded-lg p-4 border border-gold">
-                  <h4 className="text-lg font-semibold mb-2 text-neutral-900">Week Total</h4>
-                  <p className="text-2xl font-bold text-gold">
-                    {(playerBreakdown.early.reduce((sum, p) => sum + Number(p.player_points), 0) + 
-                      playerBreakdown.late.reduce((sum, p) => sum + Number(p.player_points), 0)).toFixed(2)} points
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="text-neutral-600">No breakdown available for this week.</div>
-            )}
-          </div>
-
-          {/* Draft Section */}
-
-          {!league.draft_completed && (
-            <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6 border-2 border-gold">
-              <h3 className="text-lg lg:text-xl font-bold mb-4 text-neutral-900">Draft</h3>
-              {/* Show Start Draft button for owner if draft not started and before start date */}
-              {isOwner && !draftStarted && beforeStartDate && (
-                <button
-                  type="button"
-                  onClick={handleStartDraft}
-                  className="mb-4 px-6 py-2 bg-[#1e293b] hover:bg-royalBlue text-white rounded-lg font-semibold shadow-lg transition-colors"
-                  disabled={loading}
-                >
-                  Start Draft
-                </button>
-              )}
-              {/* Show message if draft not started */}
-              {!draftStarted && (
-                <div className="text-center py-6 lg:py-8">
-                  <p className="text-neutral-600 text-sm lg:text-base">
-                    The draft has not started yet. The league owner can start the draft at any time before the league start date.
-                  </p>
-                </div>
-              )}
-              {/* Draft UI if started */}
-
-              {draftStarted && (
-                <>
-                  {/* Debug/Fix buttons */}
-                  {!league.member_ids.includes(user?.id || '') && (
-                    <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                      <p className="text-red-800 text-sm mb-2">You are not a member of this league. Click to join:</p>
-                      <button
-                        type="button"
-                        onClick={addUserToLeague}
-                        className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 shadow-lg transition-colors"
-                      >
-                        Join League
-                      </button>
-                    </div>
-                  )}
-                  {league.draft_order.length < league.member_ids.length * 10 && (
-                    <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                      <p className="text-yellow-800 text-sm mb-2">Draft order appears to be incorrect. Click to fix:</p>
-                      <button
-                        type="button"
-                        onClick={fixDraftOrder}
-                        className="px-3 py-1 bg-yellow-600 text-white rounded text-sm hover:bg-yellow-700 shadow-lg transition-colors"
-                      >
-                        Fix Draft Order
-                      </button>
-                    </div>
-                  )}
-                  <input
-                    type="text"
-                    value={search}
-                    onChange={e => setSearch(e.target.value)}
-                    placeholder="Search players by name..."
-                    className="mb-4 w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-royalBlue text-neutral-900 placeholder-neutral-500"
-                  />
-                  {isUserTurn() ? (
-                    <div>
-                      <p className="text-royalBlue font-medium mb-4 text-sm lg:text-base">It's your turn to draft!</p>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-64 overflow-y-auto">
-                        {availablePlayers
-                          .filter(player => player.name.toLowerCase().includes(search.toLowerCase()))
-                          .map((player) => (
-                            <button
-                              type="button"
-                              key={player.id}
-                              onClick={() => {
-                                setSelectedDraftPlayer(player);
-                                setShowDraftPopup(true);
-                              }}
-                              className="p-3 rounded-lg border border-neutral-200 hover:border-royalBlue text-left w-full transition-colors"
-                            >
-                              <div className="font-semibold text-base lg:text-lg text-neutral-900">
-                                <ExpandablePlayerName 
-                                  playerName={player.name}
-                                  href={`https://www.chess.com/member/${player.name}/`}
-                                  className="text-base lg:text-lg"
-                                />
-                              </div>
-                              <div className="text-xs lg:text-sm text-neutral-600">ELO: {player.elo}</div>
-                            </button>
-                          ))}
-                      </div>
-                      {/* Draft Player Popup */}
-                      {showDraftPopup && selectedDraftPlayer && (
-                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                          <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto border-2 border-gold">
-                            <div className="p-6">
-                              <div className="flex items-center justify-between mb-6">
-                                <h2 className="text-xl font-bold text-neutral-900">
-                                  {selectedDraftPlayer.name}
-                                </h2>
-                                <button
-                                  type="button"
-                                  onClick={() => setShowDraftPopup(false)}
-                                  className="text-neutral-400 hover:text-neutral-600 transition-colors"
-                                >
-                                  <X className="h-6 w-6" />
-                                </button>
-                              </div>
-                              <div className="mb-4">
-                                <div className="text-sm text-neutral-700 mb-2">ELO: <span className="font-semibold">{selectedDraftPlayer.elo}</span></div>
-                                {selectedDraftPlayer.accuracy !== undefined && selectedDraftPlayer.accuracy !== null && (
-                                  <div className="text-sm text-neutral-700 mb-2">Avg Centipawn Loss (ACL): <span className="font-semibold">{selectedDraftPlayer.accuracy.toFixed(2)}</span></div>
-                                )}
-                                {selectedDraftPlayer.games !== undefined && (
-                                  <div className="text-sm text-neutral-700 mb-2">Games: <span className="font-semibold">{selectedDraftPlayer.games}</span></div>
-                                )}
-                                <a
-                                  href={`https://www.chess.com/member/${selectedDraftPlayer.name}/`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-block mt-2 text-royalBlue hover:underline text-sm"
-                                >
-                                  View Chess.com Profile
-                                </a>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={async () => {
-                                  await draftPlayer(selectedDraftPlayer.id);
-                                  setShowDraftPopup(false);
-                                  setSelectedDraftPlayer(null);
-                                }}
-                                className="w-full bg-royalBlue hover:bg-purple text-white px-4 py-2 rounded-lg font-medium shadow-lg transition-colors"
-                                disabled={loading}
-                              >
-                                {loading ? 'Drafting...' : 'Confirm Draft'}
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="text-center py-6 lg:py-8">
-                      {league.current_draft_turn >= league.draft_order.length ? (
-                        <p className="text-royalBlue text-sm lg:text-base font-semibold">Draft complete!</p>
-                      ) : (
-                        (() => {
-                          const currentDraftUserId = league.draft_order[league.current_draft_turn];
-                          
-                          // Check if it's the bot's turn
-                          if (currentDraftUserId === bot?.id) {
-                            return (
-                              <div className="space-y-2">
-                                <p className="text-blue-600 text-sm lg:text-base font-medium">
-                                  🤖 {bot.name} is drafting...
-                                </p>
-                                <p className="text-neutral-500 text-xs">Bot will automatically select the highest ELO player</p>
-                              </div>
-                            );
-                          }
-                          
-                          const displayName = userMap[currentDraftUserId] || 'Unknown Player';
-                          
-                          return (
-                            <p className="text-neutral-600 text-sm lg:text-base">
-                              Waiting for <ExpandableUsername username={displayName} /> to draft...
-                            </p>
-                          );
-                        })()
-                      )}
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* User Popup Modal */}
-      {showUserPopup && selectedUser && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border-2 border-gold">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-neutral-900">
-                  <ExpandableUsername 
-                    username={selectedUser.display_name || selectedUser.user_email}
-                    isCurrentUser={selectedUser.user_id === user?.id}
-                    className="text-xl font-bold"
-                  />
-                </h2>
-                <button
-                  type="button"
-                  onClick={() => setShowUserPopup(false)}
-                  className="text-neutral-400 hover:text-neutral-600 transition-colors"
-                >
-                  <X className="h-6 w-6" />
-                </button>
-              </div>
-
-              {/* Team Section */}
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold mb-3 text-neutral-900">Team ({selectedUserTeam.length} players)</h3>
-                {selectedUserTeam.length === 0 ? (
-                  <p className="text-neutral-500 text-sm">No players drafted yet.</p>
-                ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                    {selectedUserTeam.map((player) => (
-                      <div key={player.id} className="bg-neutral-50 rounded-lg p-3 text-center border border-gold">
-                        <ExpandablePlayerName 
-                          playerName={player.name}
-                          href={`https://www.chess.com/member/${player.name}/`}
-                          className="text-sm"
-                        />
-                        <div className="text-xs text-neutral-600">ELO: {player.elo}</div>
-                        {player.accuracy !== undefined && player.accuracy !== null && (
-                          <div className="text-xs text-neutral-500">Avg Centipawn Loss (ACL): {player.accuracy.toFixed(2)}</div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Current Lineup Section */}
-              <div>
-                <h3 className="text-lg font-semibold mb-3 text-neutral-900">Current Lineup ({selectedUserLineup.length}/5 players)</h3>
-                {selectedUserLineup.length === 0 ? (
-                  <p className="text-neutral-500 text-sm">No lineup set for this week.</p>
-                ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-                    {selectedUserLineup.map((player) => (
-                      <div key={player.id} className="bg-royalBlue bg-opacity-10 rounded-lg p-3 text-center border border-royalBlue">
-                        <ExpandablePlayerName 
-                          playerName={player.name}
-                          href={`https://www.chess.com/member/${player.name}/`}
-                          className="text-sm"
-                        />
-                        <div className="text-xs text-neutral-600">ELO: {player.elo}</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Add Bot Modal */}
-      {showAddBotModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full border-2 border-royalBlue">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-neutral-900 flex items-center">
-                  <BotIcon className="w-5 h-5 mr-2 text-royalBlue" />
-                  Add Bot
-                </h2>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowAddBotModal(false)
-                    setBotName('')
-                    setBotNameError('')
-                  }}
-                  className="text-neutral-400 hover:text-neutral-600 transition-colors"
-                >
-                  <X className="h-6 w-6" />
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label htmlFor="botName" className="block text-sm font-medium text-neutral-900 mb-2">
-                    Bot Name
-                  </label>
-                  <input
-                    type="text"
-                    id="botName"
-                    value={botName}
-                    onChange={(e) => {
-                      setBotName(e.target.value)
-                      setBotNameError('')
-                    }}
-                    placeholder="Enter bot name..."
-                    className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-royalBlue text-neutral-900 placeholder-neutral-500"
-                    disabled={botLoading}
-                  />
-                  {botNameError && (
-                    <p className="text-red-600 text-sm mt-1">{botNameError}</p>
-                  )}
-                </div>
-
-                <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                  <h3 className="font-semibold text-blue-900 mb-2">Bot Behavior</h3>
-                  <ul className="text-sm text-blue-700 space-y-1">
-                    <li>• Automatically drafts the highest ELO player available</li>
-                    <li>• Sets lineups with the 5 highest ELO players from their team</li>
-                    <li>• Only one bot allowed per league</li>
-                    <li>• Can be removed at any time by the league owner</li>
-                  </ul>
-                </div>
-
-                <div className="flex space-x-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={handleAddBot}
-                    className="flex-1 bg-[#1e293b] hover:bg-royalBlue text-white px-4 py-2 rounded-lg font-medium shadow-lg transition-colors"
-                    disabled={botLoading || !botName.trim()}
-                  >
-                    {botLoading ? 'Creating...' : 'Add Bot'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowAddBotModal(false)
-                      setBotName('')
-                      setBotNameError('')
-                    }}
-                    className="flex-1 bg-neutral-600 hover:bg-neutral-700 text-white px-4 py-2 rounded-lg font-medium shadow-lg transition-colors"
-                    disabled={botLoading}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
+    <>
       {error && (
         <div className="fixed inset-0 flex items-center justify-center z-50">
           <div className="bg-white border border-red-300 rounded-lg shadow-lg p-6 max-w-sm w-full text-center z-50">
@@ -2199,7 +1304,905 @@ const LeaguePage: React.FC = () => {
           <div className="fixed inset-0 bg-black opacity-30 z-40"></div>
         </div>
       )}
-    </div>
+      <div className="main-content">
+        <div className="w-full max-w-6xl mx-auto bg-white min-h-screen p-4 lg:p-6">
+          {/* League Header */}
+          <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6 mb-6 lg:mb-8 border-2 border-gold">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-4">
+              <div className="flex items-center space-x-2">
+                <h1 className="text-2xl lg:text-3xl font-bold text-neutral-900 mb-2 lg:mb-0">{league?.name}</h1>
+                {new Date(league?.end_date) < new Date() && (
+                  <span className="ml-2 px-2 py-1 bg-red-200 text-red-800 rounded text-xs font-bold">
+                    League Ended
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center space-x-4">
+                <button type="button" onClick={handleReload} className="flex items-center px-3 py-1 bg-neutral-100 rounded hover:bg-neutral-200 text-neutral-700 text-sm font-medium transition-colors">
+                  <RefreshCw className="w-4 h-4 mr-1" /> Reload
+                </button>
+                <div className="text-xs lg:text-sm text-neutral-600">
+                  {league?.member_ids.length} members
+                </div>
+                <div className="text-xs lg:text-sm text-neutral-600">
+                  {league?.buy_in} coins buy-in
+                </div>
+              </div>
+            </div>
+            
+            {league?.description && (
+              <p className="text-neutral-600 mb-4 text-sm lg:text-base">{league?.description}</p>
+            )}
+            {/* Winner and payout display */}
+            {new Date(league?.end_date) < new Date() && league?.payout_processed && payout && (
+              <div className="bg-green-100 rounded-lg p-4 my-4 border border-green-200">
+                <h3 className="font-bold text-lg text-green-800">🏆 Winner: {winnerName}</h3>
+                <p className="text-green-700">Prize: {payout.amount} coins</p>
+                <p className="text-green-700">Payout processed: {new Date(payout.processed_at).toLocaleString()}</p>
+              </div>
+            )}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="flex items-center space-x-2">
+                <Calendar className="h-4 w-4 lg:h-5 lg:w-5 text-gold" />
+                <span className="text-xs lg:text-sm text-neutral-600">
+                  Starts: {new Date(league?.start_date).toLocaleDateString()}
+                  <span className="relative group cursor-pointer ml-1">
+                    <svg className="w-3 h-3 text-royalBlue inline-block" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                    <span className="absolute left-1/2 -translate-x-1/2 mt-2 w-64 bg-white text-neutral-900 text-xs rounded shadow-lg border border-royalBlue px-3 py-2 z-50 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                      The start date is when the league begins and points start accumulating. The draft must be completed before this date.
+                    </span>
+                  </span>
+                </span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Trophy className="h-4 w-4 lg:h-5 lg:w-5 text-gold" />
+                <span className="text-xs lg:text-sm text-neutral-600">
+                  Join Code: {league?.join_code}
+                </span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Crown className="h-4 w-4 lg:h-5 lg:w-5 text-gold" />
+                <span className="text-xs lg:text-sm text-neutral-600">
+                  Draft: {league?.draft_completed ? 'Completed' : 'In Progress'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Bot Management Section - Only visible to league owner */}
+          {isOwner && (
+            <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6 mb-6 lg:mb-8 border-2 border-royalBlue">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg lg:text-xl font-bold text-neutral-900 flex items-center">
+                  <BotIcon className="w-5 h-5 mr-2 text-royalBlue" />
+                  Bot Management
+                </h2>
+                {!bot && league && new Date(league.end_date) >= new Date() && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAddBotModal(true)}
+                    className="flex items-center space-x-1 bg-[#1e293b] hover:bg-royalBlue text-white px-3 py-2 rounded-lg text-sm font-medium shadow-lg transition-colors"
+                    disabled={botLoading}
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Add Bot</span>
+                  </button>
+                )}
+              </div>
+
+              {bot ? (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-neutral-50 rounded-lg border border-royalBlue">
+                    <div className="flex items-center space-x-3">
+                      <BotIcon className="w-6 h-6 text-royalBlue" />
+                      <div>
+                        <h3 className="font-semibold text-neutral-900">{bot.name}</h3>
+                        <p className="text-sm text-neutral-600">Auto-drafts highest ELO players</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleRemoveBot}
+                      className="flex items-center space-x-1 bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-sm font-medium shadow-lg transition-colors"
+                      disabled={botLoading}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      <span>Remove</span>
+                    </button>
+                  </div>
+
+                  {/* Bot actions during draft */}
+                  {draftStarted && !league.draft_completed && (
+                    <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                      <h4 className="font-semibold text-blue-900 mb-2">Draft Actions</h4>
+                      <p className="text-sm text-blue-700 mb-3">
+                        The bot will automatically draft the highest ELO player available when it's their turn.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleBotDraft}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-lg transition-colors"
+                        disabled={botLoading}
+                      >
+                        {botLoading ? 'Processing...' : 'Force Bot Draft'}
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Bot actions for lineup */}
+                  {league.draft_completed && (
+                    <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                      <h4 className="font-semibold text-green-900 mb-2">Lineup Actions</h4>
+                      <p className="text-sm text-green-700 mb-3">
+                        The bot will automatically set a lineup with the 5 highest ELO players from their team.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleBotSetLineup}
+                        className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-lg transition-colors"
+                        disabled={botLoading}
+                      >
+                        {botLoading ? 'Processing...' : 'Set Bot Lineup'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-6">
+                  <BotIcon className="w-12 h-12 mx-auto mb-3 text-neutral-400" />
+                  {league && new Date(league.end_date) < new Date() ? (
+                    <p className="text-neutral-600 text-sm lg:text-base mb-4">
+                      This league has ended. Bots cannot be added to completed leagues.
+                    </p>
+                  ) : (
+                    <>
+                      <p className="text-neutral-600 text-sm lg:text-base mb-4">
+                        Add a bot to automatically draft the highest ELO players and set optimal lineups.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setShowAddBotModal(true)}
+                        className="flex items-center space-x-1 bg-[#1e293b] hover:bg-royalBlue text-white px-4 py-2 rounded-lg font-medium shadow-lg transition-colors mx-auto"
+                        disabled={botLoading}
+                      >
+                        <Plus className="w-4 h-4" />
+                        <span>Add Bot</span>
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="flex gap-4 mb-4">
+            {isOwner && (
+              <button
+                onClick={handleDeleteLeague}
+                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded font-semibold shadow-lg"
+                disabled={loading}
+              >
+                Delete League
+              </button>
+            )}
+            {!isOwner && user?.id && league?.member_ids?.includes(user.id) && (
+              <button
+                onClick={handleLeaveLeague}
+                className="bg-neutral-300 hover:bg-neutral-400 text-neutral-900 px-4 py-2 rounded font-semibold shadow-lg"
+                disabled={loading}
+              >
+                Leave League
+              </button>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+            {/* Standings */}
+            <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6 border-2 border-gold relative">
+              {showConfetti && <Confetti className="pointer-events-none" style={{zIndex: 30}} />}
+              <h2 className="text-lg lg:text-xl font-bold mb-4 text-neutral-900">Standings</h2>
+              {league?.end_date && new Date(league.end_date) < new Date() && league?.payout_processed && payout ? (
+                <>
+                  {showConfetti && <Confetti className="pointer-events-none" style={{zIndex: 30}} />}
+                  {/* Podium for Top 3 */}
+                  <div className="flex justify-center items-end mb-8 gap-4">
+                    {/* 2nd Place */}
+                    {standings[1] && (
+                      <div className="flex flex-col items-center">
+                        <div className="w-16 h-16 lg:w-20 lg:h-20 rounded-full bg-silver flex items-center justify-center text-2xl font-bold text-white border-4 border-silver mb-2">2</div>
+                        <div className="flex items-center gap-2">
+                          <img src={standings[1].avatar_url} alt="Avatar" className="w-8 h-8 rounded-full border-2 border-gold" />
+                          <ExpandableUsername username={standings[1].display_name || standings[1].user_email} />
+                        </div>
+                        <span className="text-neutral-600 text-sm">{standings[1].total_points} pts</span>
+                      </div>
+                    )}
+                    {/* 1st Place */}
+                    {standings[0] && (
+                      <div className="flex flex-col items-center">
+                        <div className="w-20 h-20 lg:w-24 lg:h-24 rounded-full bg-royalBlue flex items-center justify-center text-3xl font-extrabold text-white border-4 border-royalBlue mb-2 shadow-lg">1</div>
+                        <div className="flex items-center gap-2">
+                          <img src={standings[0].avatar_url} alt="Avatar" className="w-10 h-10 rounded-full border-2 border-gold" />
+                          <ExpandableUsername username={standings[0].display_name || standings[0].user_email} />
+                        </div>
+                        <span className="text-neutral-900 font-bold text-base">{standings[0].total_points} pts</span>
+                      </div>
+                    )}
+                    {/* 3rd Place */}
+                    {standings[2] && (
+                      <div className="flex flex-col items-center">
+                        <div className="w-16 h-16 lg:w-20 lg:h-20 rounded-full bg-[#cd7f32] flex items-center justify-center text-2xl font-bold text-white border-4 border-[#cd7f32] mb-2">3</div>
+                        <div className="flex items-center gap-2">
+                          <img src={standings[2].avatar_url} alt="Avatar" className="w-8 h-8 rounded-full border-2 border-gold" />
+                          <ExpandableUsername username={standings[2].display_name || standings[2].user_email} />
+                        </div>
+                        <span className="text-neutral-600 text-sm">{standings[2].total_points} pts</span>
+                      </div>
+                    )}
+                  </div>
+                  {/* The rest of the players */}
+                  {standings.length > 3 && (
+                    <div className="mt-6">
+                      <h3 className="text-base font-semibold mb-2 text-neutral-900">Other Players</h3>
+                      <div className="space-y-2">
+                        {standings.slice(3).map((standing) => (
+                          <div
+                            key={standing.user_id}
+                            className="flex items-center justify-between p-2 rounded bg-neutral-50 border border-neutral-200"
+                          >
+                            <div className="flex items-center space-x-3 min-w-0 flex-1">
+                              <div className={`w-6 h-6 lg:w-8 lg:h-8 rounded-full flex items-center justify-center text-xs lg:text-sm font-bold flex-shrink-0 ${
+                                standing.user_id === user?.id ? 'bg-royalBlue text-white' : 'bg-neutral-300 text-neutral-700'
+                              }`}>
+                                {standing.rank}
+                              </div>
+                              <img src={standing.avatar_url} alt="Avatar" className="w-8 h-8 rounded-full border-2 border-gold" />
+                              <div className="min-w-0 flex-1">
+                                <ExpandableUsername 
+                                  username={standing.display_name || standing.user_email}
+                                  isCurrentUser={standing.user_id === user?.id}
+                                />
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-2 flex-shrink-0 ml-2">
+                              <p className="font-semibold text-sm lg:text-base text-neutral-900">{standing.total_points} points</p>
+                              {isOwner && standing.user_id !== user?.id && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    removeUserFromLeague(standing.user_id);
+                                  }}
+                                  className="text-red-600 hover:text-red-800 p-1 rounded transition-colors"
+                                  title="Remove player from league"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="space-y-3">
+                  {standings.map((standing) => (
+                    <div
+                      key={standing.user_id}
+                      className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors group ${
+                        standing.user_id === user?.id ? 'bg-royalBlue bg-opacity-10 border border-royalBlue' : 'bg-neutral-50 hover:bg-neutral-100'
+                      }`}
+                      onClick={() => handleUserClick(standing)}
+                    >
+                      <div className="flex items-center space-x-3 min-w-0 flex-1">
+                        <div className={`w-6 h-6 lg:w-8 lg:h-8 rounded-full flex items-center justify-center text-xs lg:text-sm font-bold flex-shrink-0 ${
+                          standing.user_id === user?.id ? 'bg-royalBlue text-white' : 'bg-neutral-300 text-neutral-700'
+                        }`}>
+                          {standing.rank}
+                        </div>
+                        <img src={standing.avatar_url} alt="Avatar" className="w-8 h-8 rounded-full border-2 border-gold" />
+                        <div className="min-w-0 flex-1">
+                          <ExpandableUsername 
+                            username={standing.display_name || standing.user_email}
+                            isCurrentUser={standing.user_id === user?.id}
+                          />
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2 flex-shrink-0 ml-2">
+                        <p className="font-semibold text-sm lg:text-base text-neutral-900">{standing.total_points} points</p>
+                        {isOwner && standing.user_id !== user?.id && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeUserFromLeague(standing.user_id);
+                            }}
+                            className="text-red-600 hover:text-red-800 p-1 rounded transition-colors"
+                            title="Remove player from league"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Team Management */}
+            <div className="space-y-4 lg:space-y-6">
+              {/* Your Team */}
+              <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6 border-2 border-gold">
+                <h3 className="text-lg lg:text-xl font-bold mb-4 text-neutral-900">Your Team</h3>
+                {teamPlayers.length === 0 ? (
+                  <div className="text-neutral-500 text-sm">You haven't drafted any players yet.</div>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                    {teamPlayers.map((player) => (
+                      <div key={player.id} className="bg-neutral-50 rounded-lg p-3 text-center border border-gold">
+                        <ExpandablePlayerName 
+                          playerName={player.name}
+                          href={`https://www.chess.com/member/${player.name}/`}
+                        />
+                        <div className="text-xs text-neutral-600">ELO: {player.elo}</div>
+                        {player.accuracy !== undefined && player.accuracy !== null && (
+                          <div className="text-xs text-neutral-500">Avg Centipawn Loss (ACL): {player.accuracy.toFixed(2)}</div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Current Lineup */}
+              <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6 border-2 border-gold">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg lg:text-xl font-bold text-neutral-900">Current Lineup</h3>
+                  {league.draft_completed && !isEditingLineup && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!isLineupChangeAllowed()) {
+                          setError('You cannot edit your lineup on Tuesday (UTC). Please try again on another day.');
+                          return;
+                        }
+                        setIsEditingLineup(true);
+                      }}
+                      className="flex items-center space-x-1 text-royalBlue hover:text-purple text-sm lg:text-base transition-colors"
+                    >
+                      <Edit className="h-4 w-4" />
+                      <span>Edit</span>
+                    </button>
+                  )}
+                </div>
+
+                {isEditingLineup ? (
+                  isLineupChangeAllowed() ? (
+                    <div className="space-y-4">
+                      <p className="text-xs lg:text-sm text-neutral-600">Select 5 players for your lineup:</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {teamPlayers.map((player) => (
+                          <button
+                            type="button"
+                            key={player.id}
+                            onClick={() => {
+                              if (selectedLineupPlayers.includes(player.id)) {
+                                setSelectedLineupPlayers(selectedLineupPlayers.filter(id => id !== player.id))
+                              } else if (selectedLineupPlayers.length < 5) {
+                                setSelectedLineupPlayers([...selectedLineupPlayers, player.id])
+                              }
+                            }}
+                            className={`p-3 rounded-lg border-2 text-left transition-colors ${
+                              selectedLineupPlayers.includes(player.id)
+                                ? 'border-royalBlue bg-royalBlue bg-opacity-10'
+                                : 'border-neutral-200 hover:border-royalBlue'
+                            }`}
+                          >
+                            <div className="font-medium text-sm lg:text-base text-neutral-900">
+                              <ExpandablePlayerName playerName={player.name} />
+                            </div>
+                            <div className="text-xs lg:text-sm text-neutral-600">ELO: {player.elo}</div>
+                          </button>
+                        ))}
+                      </div>
+                      <div className="flex space-x-3">
+                        <button
+                          type="button"
+                          onClick={saveLineup}
+                          disabled={selectedLineupPlayers.length !== 5}
+                          className="flex items-center space-x-1 bg-[#1e293b] hover:bg-royalBlue disabled:bg-neutral-400 text-white px-3 lg:px-4 py-2 rounded-lg text-sm lg:text-base shadow-lg transition-colors"
+                        >
+                          <Check className="h-4 w-4" />
+                          <span>Save Lineup</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsEditingLineup(false)
+                            setSelectedLineupPlayers(currentLineup?.player_ids || [])
+                          }}
+                          className="flex items-center space-x-1 bg-neutral-600 hover:bg-neutral-700 text-white px-3 lg:px-4 py-2 rounded-lg text-sm lg:text-base shadow-lg transition-colors"
+                        >
+                          <X className="h-4 w-4" />
+                          <span>Cancel</span>
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200 text-yellow-900 text-center">
+                      <p className="font-semibold">Lineup changes are only allowed on Monday and Tuesday (UTC).</p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsEditingLineup(false)
+                          setSelectedLineupPlayers(currentLineup?.player_ids || [])
+                        }}
+                        className="flex items-center space-x-1 bg-neutral-600 hover:bg-neutral-700 text-white px-3 lg:px-4 py-2 rounded-lg text-sm lg:text-base shadow-lg transition-colors mt-4"
+                      >
+                        <X className="h-4 w-4" />
+                        <span>Cancel</span>
+                      </button>
+                    </div>
+                  )
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                    {lineupPlayers.map((player) => (
+                      <div key={player.id} className="bg-neutral-50 rounded-lg p-3 text-center border border-gold">
+                        <ExpandablePlayerName 
+                          playerName={player.name}
+                          href={`https://www.chess.com/member/${player.name}/`}
+                        />
+                        <div className="text-xs text-neutral-600">ELO: {player.elo}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Point Breakdown Table */}
+              <div className="mt-6">
+                <div className="mb-2 flex items-center space-x-2">
+                  <h4 className="font-semibold text-neutral-900">Point Breakdown</h4>
+                  {availableWeeks.length > 0 && (
+                    <select
+                      className="ml-2 border border-neutral-300 rounded px-2 py-1 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-royalBlue"
+                      value={selectedWeek || ''}
+                      onChange={e => setSelectedWeek(e.target.value)}
+                    >
+                      {availableWeeks.map(week => (
+                        <option key={week} value={week}>{week}</option>
+                      ))}
+                    </select>
+                  )}
+                  <span className="text-xs text-neutral-500">(Select week)</span>
+                </div>
+                {breakdownLoading ? (
+                  <div className="text-neutral-600">Loading breakdown...</div>
+                ) : breakdownError ? (
+                  <div className="text-red-600">{breakdownError}</div>
+                ) : (playerBreakdown.early.length > 0 || playerBreakdown.late.length > 0) ? (
+                  <div className="space-y-6">
+                    {/* Early Round */}
+                    {playerBreakdown.early.length > 0 && (
+                      <div>
+                        <h4 className="text-lg font-semibold mb-3 text-neutral-900">Early Round</h4>
+                        <table className="min-w-full text-sm">
+                          <thead>
+                            <tr>
+                              <th className="text-left px-2 py-1 text-neutral-900">Player</th>
+                              <th className="text-center px-2 py-1 text-neutral-900">Record</th>
+                              <th className="text-right px-2 py-1 text-neutral-900">Points</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {playerBreakdown.early.map((row) => (
+                              <tr key={row.player_id || row.player_name}>
+                                <td className="px-2 py-1 text-neutral-700">
+                                  <ExpandablePlayerName playerName={row.player_name} />
+                                </td>
+                                <td className="px-2 py-1 text-center text-neutral-700">
+                                  {row.wins !== undefined && row.total_games !== undefined 
+                                    ? `${row.wins}/${row.total_games}` 
+                                    : '-'
+                                  }
+                                </td>
+                                <td className="px-2 py-1 text-right text-neutral-700">{Number(row.player_points).toFixed(2)}</td>
+                              </tr>
+                            ))}
+                            <tr className="font-bold border-t border-neutral-300">
+                              <td className="px-2 py-1 text-neutral-900">TOTAL</td>
+                              <td className="px-2 py-1 text-center">-</td>
+                              <td className="px-2 py-1 text-right text-neutral-900">{playerBreakdown.early.reduce((sum, p) => sum + Number(p.player_points), 0).toFixed(2)}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                    
+                    {/* Late Round */}
+                    {playerBreakdown.late.length > 0 && (
+                      <div>
+                        <h4 className="text-lg font-semibold mb-3 text-neutral-900">Late Round</h4>
+                        <table className="min-w-full text-sm">
+                          <thead>
+                            <tr>
+                              <th className="text-left px-2 py-1 text-neutral-900">Player</th>
+                              <th className="text-center px-2 py-1 text-neutral-900">Record</th>
+                              <th className="text-right px-2 py-1 text-neutral-900">Points</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {playerBreakdown.late.map((row) => (
+                              <tr key={row.player_id || row.player_name}>
+                                <td className="px-2 py-1 text-neutral-700">
+                                  <ExpandablePlayerName playerName={row.player_name} />
+                                </td>
+                                <td className="px-2 py-1 text-center text-neutral-700">
+                                  {row.wins !== undefined && row.total_games !== undefined 
+                                    ? `${row.wins}/${row.total_games}` 
+                                    : '-'
+                                  }
+                                </td>
+                                <td className="px-2 py-1 text-right text-neutral-700">{Number(row.player_points).toFixed(2)}</td>
+                              </tr>
+                            ))}
+                            <tr className="font-bold border-t border-neutral-300">
+                              <td className="px-2 py-1 text-neutral-900">TOTAL</td>
+                              <td className="px-2 py-1 text-center">-</td>
+                              <td className="px-2 py-1 text-right text-neutral-900">{playerBreakdown.late.reduce((sum, p) => sum + Number(p.player_points), 0).toFixed(2)}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                    
+                    {/* Combined Total */}
+                    <div className="bg-neutral-50 rounded-lg p-4 border border-gold">
+                      <h4 className="text-lg font-semibold mb-2 text-neutral-900">Week Total</h4>
+                      <p className="text-2xl font-bold text-gold">
+                        {(playerBreakdown.early.reduce((sum, p) => sum + Number(p.player_points), 0) + 
+                          playerBreakdown.late.reduce((sum, p) => sum + Number(p.player_points), 0)).toFixed(2)} points
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-neutral-600">No breakdown available for this week.</div>
+                )}
+              </div>
+
+              {/* Draft Section */}
+
+              {!league.draft_completed && (
+                <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6 border-2 border-gold">
+                  <h3 className="text-lg lg:text-xl font-bold mb-4 text-neutral-900">Draft</h3>
+                  {/* Show Start Draft button for owner if draft not started and before start date */}
+                  {isOwner && !draftStarted && beforeStartDate && (
+                    <button
+                      type="button"
+                      onClick={handleStartDraft}
+                      className="mb-4 px-6 py-2 bg-[#1e293b] hover:bg-royalBlue text-white rounded-lg font-semibold shadow-lg transition-colors"
+                      disabled={loading}
+                    >
+                      Start Draft
+                    </button>
+                  )}
+                  {/* Show message if draft not started */}
+                  {!draftStarted && (
+                    <div className="text-center py-6 lg:py-8">
+                      <p className="text-neutral-600 text-sm lg:text-base">
+                        The draft has not started yet. The league owner can start the draft at any time before the league start date.
+                      </p>
+                    </div>
+                  )}
+                  {/* Draft UI if started */}
+
+                  {draftStarted && (
+                    <>
+                      {/* Debug/Fix buttons */}
+                      {!league.member_ids.includes(user?.id || '') && (
+                        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                          <p className="text-red-800 text-sm mb-2">You are not a member of this league. Click to join:</p>
+                          <button
+                            type="button"
+                            onClick={addUserToLeague}
+                            className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 shadow-lg transition-colors"
+                          >
+                            Join League
+                          </button>
+                        </div>
+                      )}
+                      {league.draft_order.length < league.member_ids.length * 10 && (
+                        <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                          <p className="text-yellow-800 text-sm mb-2">Draft order appears to be incorrect. Click to fix:</p>
+                          <button
+                            type="button"
+                            onClick={fixDraftOrder}
+                            className="px-3 py-1 bg-yellow-600 text-white rounded text-sm hover:bg-yellow-700 shadow-lg transition-colors"
+                          >
+                            Fix Draft Order
+                          </button>
+                        </div>
+                      )}
+                      <input
+                        type="text"
+                        value={search}
+                        onChange={e => setSearch(e.target.value)}
+                        placeholder="Search players by name..."
+                        className="mb-4 w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-royalBlue text-neutral-900 placeholder-neutral-500"
+                      />
+                      {isUserTurn() ? (
+                        <div>
+                          <p className="text-royalBlue font-medium mb-4 text-sm lg:text-base">It's your turn to draft!</p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-64 overflow-y-auto">
+                            {availablePlayers
+                              .filter(player => player.name.toLowerCase().includes(search.toLowerCase()))
+                              .map((player) => (
+                                <button
+                                  type="button"
+                                  key={player.id}
+                                  onClick={() => {
+                                    setSelectedDraftPlayer(player);
+                                    setShowDraftPopup(true);
+                                  }}
+                                  className="p-3 rounded-lg border border-neutral-200 hover:border-royalBlue text-left w-full transition-colors"
+                                >
+                                  <div className="font-semibold text-base lg:text-lg text-neutral-900">
+                                    <ExpandablePlayerName 
+                                      playerName={player.name}
+                                      href={`https://www.chess.com/member/${player.name}/`}
+                                      className="text-base lg:text-lg"
+                                    />
+                                  </div>
+                                  <div className="text-xs lg:text-sm text-neutral-600">ELO: {player.elo}</div>
+                                </button>
+                              ))}
+                          </div>
+                          {/* Draft Player Popup */}
+                          {showDraftPopup && selectedDraftPlayer && (
+                            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                              <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto border-2 border-gold">
+                                <div className="p-6">
+                                  <div className="flex items-center justify-between mb-6">
+                                    <h2 className="text-xl font-bold text-neutral-900">
+                                      {selectedDraftPlayer.name}
+                                    </h2>
+                                    <button
+                                      type="button"
+                                      onClick={() => setShowDraftPopup(false)}
+                                      className="text-neutral-400 hover:text-neutral-600 transition-colors"
+                                    >
+                                      <X className="h-6 w-6" />
+                                    </button>
+                                  </div>
+                                  <div className="mb-4">
+                                    <div className="text-sm text-neutral-700 mb-2">ELO: <span className="font-semibold">{selectedDraftPlayer.elo}</span></div>
+                                    {selectedDraftPlayer.accuracy !== undefined && selectedDraftPlayer.accuracy !== null && (
+                                      <div className="text-sm text-neutral-700 mb-2">Avg Centipawn Loss (ACL): <span className="font-semibold">{selectedDraftPlayer.accuracy.toFixed(2)}</span></div>
+                                    )}
+                                    {selectedDraftPlayer.games !== undefined && (
+                                      <div className="text-sm text-neutral-700 mb-2">Games: <span className="font-semibold">{selectedDraftPlayer.games}</span></div>
+                                    )}
+                                    <a
+                                      href={`https://www.chess.com/member/${selectedDraftPlayer.name}/`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-block mt-2 text-royalBlue hover:underline text-sm"
+                                    >
+                                      View Chess.com Profile
+                                    </a>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={async () => {
+                                      await draftPlayer(selectedDraftPlayer.id);
+                                      setShowDraftPopup(false);
+                                      setSelectedDraftPlayer(null);
+                                    }}
+                                    className="w-full bg-royalBlue hover:bg-purple text-white px-4 py-2 rounded-lg font-medium shadow-lg transition-colors"
+                                    disabled={loading}
+                                  >
+                                    {loading ? 'Drafting...' : 'Confirm Draft'}
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="text-center py-6 lg:py-8">
+                          {league.current_draft_turn >= league.draft_order.length ? (
+                            <p className="text-royalBlue text-sm lg:text-base font-semibold">Draft complete!</p>
+                          ) : (
+                            (() => {
+                              const currentDraftUserId = league.draft_order[league.current_draft_turn];
+                              
+                              // Check if it's the bot's turn
+                              if (currentDraftUserId === bot?.id) {
+                                return (
+                                  <div className="space-y-2">
+                                    <p className="text-blue-600 text-sm lg:text-base font-medium">
+                                      🤖 {bot.name} is drafting...
+                                    </p>
+                                    <p className="text-neutral-500 text-xs">Bot will automatically select the highest ELO player</p>
+                                  </div>
+                                );
+                              }
+                              
+                              const displayName = userMap[currentDraftUserId] || 'Unknown Player';
+                              
+                              return (
+                                <p className="text-neutral-600 text-sm lg:text-base">
+                                  Waiting for <ExpandableUsername username={displayName} /> to draft...
+                                </p>
+                              );
+                            })()
+                          )}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* User Popup Modal */}
+          {showUserPopup && selectedUser && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border-2 border-gold">
+                <div className="p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-xl font-bold text-neutral-900">
+                      <ExpandableUsername 
+                        username={selectedUser.display_name || selectedUser.user_email}
+                        isCurrentUser={selectedUser.user_id === user?.id}
+                        className="text-xl font-bold"
+                      />
+                    </h2>
+                    <button
+                      type="button"
+                      onClick={() => setShowUserPopup(false)}
+                      className="text-neutral-400 hover:text-neutral-600 transition-colors"
+                    >
+                      <X className="h-6 w-6" />
+                    </button>
+                  </div>
+
+                  {/* Team Section */}
+                  <div className="mb-6">
+                    <h3 className="text-lg font-semibold mb-3 text-neutral-900">Team ({selectedUserTeam.length} players)</h3>
+                    {selectedUserTeam.length === 0 ? (
+                      <p className="text-neutral-500 text-sm">No players drafted yet.</p>
+                    ) : (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                        {selectedUserTeam.map((player) => (
+                          <div key={player.id} className="bg-neutral-50 rounded-lg p-3 text-center border border-gold">
+                            <ExpandablePlayerName 
+                              playerName={player.name}
+                              href={`https://www.chess.com/member/${player.name}/`}
+                              className="text-sm"
+                            />
+                            <div className="text-xs text-neutral-600">ELO: {player.elo}</div>
+                            {player.accuracy !== undefined && player.accuracy !== null && (
+                              <div className="text-xs text-neutral-500">Avg Centipawn Loss (ACL): {player.accuracy.toFixed(2)}</div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Current Lineup Section */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3 text-neutral-900">Current Lineup ({selectedUserLineup.length}/5 players)</h3>
+                    {selectedUserLineup.length === 0 ? (
+                      <p className="text-neutral-500 text-sm">No lineup set for this week.</p>
+                    ) : (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                        {selectedUserLineup.map((player) => (
+                          <div key={player.id} className="bg-royalBlue bg-opacity-10 rounded-lg p-3 text-center border border-royalBlue">
+                            <ExpandablePlayerName 
+                              playerName={player.name}
+                              href={`https://www.chess.com/member/${player.name}/`}
+                              className="text-sm"
+                            />
+                            <div className="text-xs text-neutral-600">ELO: {player.elo}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Add Bot Modal */}
+          {showAddBotModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-lg shadow-xl max-w-md w-full border-2 border-royalBlue">
+                <div className="p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-xl font-bold text-neutral-900 flex items-center">
+                      <BotIcon className="w-5 h-5 mr-2 text-royalBlue" />
+                      Add Bot
+                    </h2>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowAddBotModal(false)
+                        setBotName('')
+                        setBotNameError('')
+                      }}
+                      className="text-neutral-400 hover:text-neutral-600 transition-colors"
+                    >
+                      <X className="h-6 w-6" />
+                    </button>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label htmlFor="botName" className="block text-sm font-medium text-neutral-900 mb-2">
+                        Bot Name
+                      </label>
+                      <input
+                        type="text"
+                        id="botName"
+                        value={botName}
+                        onChange={(e) => {
+                          setBotName(e.target.value)
+                          setBotNameError('')
+                        }}
+                        placeholder="Enter bot name..."
+                        className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-royalBlue text-neutral-900 placeholder-neutral-500"
+                        disabled={botLoading}
+                      />
+                      {botNameError && (
+                        <p className="text-red-600 text-sm mt-1">{botNameError}</p>
+                      )}
+                    </div>
+
+                    <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                      <h3 className="font-semibold text-blue-900 mb-2">Bot Behavior</h3>
+                      <ul className="text-sm text-blue-700 space-y-1">
+                        <li>• Automatically drafts the highest ELO player available</li>
+                        <li>• Sets lineups with the 5 highest ELO players from their team</li>
+                        <li>• Only one bot allowed per league</li>
+                        <li>• Can be removed at any time by the league owner</li>
+                      </ul>
+                    </div>
+
+                    <div className="flex space-x-3 pt-4">
+                      <button
+                        type="button"
+                        onClick={handleAddBot}
+                        className="flex-1 bg-[#1e293b] hover:bg-royalBlue text-white px-4 py-2 rounded-lg font-medium shadow-lg transition-colors"
+                        disabled={botLoading || !botName.trim()}
+                      >
+                        {botLoading ? 'Creating...' : 'Add Bot'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowAddBotModal(false)
+                          setBotName('')
+                          setBotNameError('')
+                        }}
+                        className="flex-1 bg-neutral-600 hover:bg-neutral-700 text-white px-4 py-2 rounded-lg font-medium shadow-lg transition-colors"
+                        disabled={botLoading}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </>
   )
 }
 
