@@ -24,6 +24,7 @@ export interface ChessPlayer {
   games?: number
   created_at: string
   updated_at?: string
+  league_owners?: { [leagueId: string]: string } // Map of leagueId to userId
 }
 
 export interface League {
@@ -45,6 +46,33 @@ export interface League {
   draft_start_time?: string
   payout_processed?: boolean
   bot_id?: string
+  // New marketplace fields
+  marketplace_started?: boolean
+  marketplace_order?: string[]
+  current_marketplace_turn?: number
+  marketplace_completed?: boolean
+  marketplace_start_time?: string
+  max_players_per_team?: number
+}
+
+export interface MarketplaceTurn {
+  id: string
+  league_id: string
+  user_id?: string
+  bot_id?: string
+  turn_number: number
+  action_type: 'buy' | 'skip'
+  player_id?: string
+  price?: number
+  created_at: string
+}
+
+export interface CurrentMarketplaceTurn {
+  current_user_id: string
+  turn_number: number
+  total_turns: number
+  is_completed: boolean
+  user_team_size: number
 }
 
 export interface LeagueMember {

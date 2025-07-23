@@ -9,6 +9,8 @@ import { fetchLineupPlayerBreakdownByRounds, createBot, removeBot, autoDraftForB
 import Confetti from 'react-confetti';
 import pawnRoyaleLogo from '../assets/pawn-royale-logo.png';
 import { notifyUser } from '../lib/notify';
+import Marketplace from '../components/Marketplace';
+import TurnBasedMarketplace from '../components/TurnBasedMarketplace';
 // Remove: import { useQuery } from '@tanstack/react-query';
 // Remove: fetchLeague function
 // Remove: all useQuery calls and destructuring
@@ -199,8 +201,6 @@ const LeaguePage: React.FC = () => {
 
   // Helper: is current user the league owner?
   const isOwner = user?.id && league && user.id === league?.creator_id;
-  // Helper: is draft started?
-  const draftStarted = !!league?.draft_started;
   // Helper: is it before league start date?
   const beforeStartDate = league && new Date() < new Date(league?.start_date);
 
@@ -227,17 +227,9 @@ const LeaguePage: React.FC = () => {
 
   const [bot, setBot] = useState<Bot | null>(null)
   const [botLoading, setBotLoading] = useState(false)
-  const [botDrafting, setBotDrafting] = useState(false)
   const [showAddBotModal, setShowAddBotModal] = useState(false)
   const [botName, setBotName] = useState('')
   const [botNameError, setBotNameError] = useState('')
-
-  // Track the last draft turn the bot drafted for
-  const lastBotDraftTurnRef = React.useRef<number | null>(null);
-
-  // Add to state declarations:
-  const [selectedDraftPlayer, setSelectedDraftPlayer] = useState<ChessPlayer | null>(null);
-  const [showDraftPopup, setShowDraftPopup] = useState(false);
 
   useEffect(() => {
     async function fetchAvailableWeeks() {
@@ -309,62 +301,6 @@ const LeaguePage: React.FC = () => {
       loadLeagueData()
     }
   }, [leagueId, user])
-
-  // Handle bot turns during draft
-  
-  useEffect(() => {
-    if (league && bot && draftStarted && !league.draft_completed && !botDrafting) {
-      const currentDraftUserId = league.draft_order[league.current_draft_turn]
-
-      // Debug logging
-      console.log('Draft debug:', {
-        currentTurn: league.current_draft_turn,
-        currentUserId: currentDraftUserId,
-        botId: bot.id,
-        draftOrder: league.draft_order,
-        isBotTurn: currentDraftUserId === bot.id,
-        botDrafting
-      })
-
-      // Only draft if we haven't already drafted for this turn
-      if (currentDraftUserId === bot.id && lastBotDraftTurnRef.current !== league.current_draft_turn) {
-        const handleBotTurn = async () => {
-          try {
-            setBotDrafting(true)
-            // Fetch bot's team and check size before drafting
-            const { data: team } = await supabase
-              .from('teams')
-              .select('player_ids')
-              .eq('bot_id', bot.id)
-              .eq('league_id', league.id)
-              .single();
-            if (team && Array.isArray(team.player_ids) && team.player_ids.length >= 10) {
-              console.log('Bot team already full, skipping draft');
-              lastBotDraftTurnRef.current = league.current_draft_turn;
-              return;
-            }
-            console.log('🤖 Bot is drafting...')
-            const { success, error } = await autoDraftForBot(bot.id, league.id)
-            if (success) {
-              console.log('✅ Bot draft successful')
-              lastBotDraftTurnRef.current = league.current_draft_turn;
-              // Reload league data to update draft state
-              await loadLeagueData()
-            } else {
-              console.error('❌ Bot auto-draft failed:', error)
-            }
-          } catch (error) {
-            console.error('❌ Error in bot auto-draft:', error)
-          } finally {
-            setBotDrafting(false)
-          }
-        }
-
-        // Execute immediately without delay
-        handleBotTurn()
-      }
-    }
-  }, [league?.current_draft_turn, bot, draftStarted, league?.draft_completed, botDrafting])
 
   const loadLeagueData = async () => {
     if (!leagueId || !user) return
@@ -578,59 +514,6 @@ const LeaguePage: React.FC = () => {
     return `${year}-${month}-${day}`
   }
 
-  const isUserTurn = () => {
-    if (!league || !user) return false
-    const currentDraftUserId = league?.draft_order[league?.current_draft_turn]
-    return currentDraftUserId === user.id
-  }
-
-  const draftPlayer = async (playerId: string) => {
-    if (!league || !user || !isUserTurn()) return
-    try {
-      setLoading(true)
-      
-      // Ensure team exists
-      let team = userTeam
-      if (!team) {
-        const { data: newTeam, error: teamError } = await supabase
-          .from('teams')
-          .insert({ user_id: user.id, league_id: league?.id, player_ids: [] })
-          .select()
-          .single()
-        if (teamError) throw teamError
-        team = newTeam
-        setUserTeam(newTeam)
-      }
-      
-      // Add player to user's team
-      const newPlayerIds = [...(team!.player_ids || []), playerId]
-      const { error: teamUpdateError } = await supabase
-        .from('teams')
-        .update({ player_ids: newPlayerIds })
-        .eq('id', team!.id)
-      if (teamUpdateError) throw teamUpdateError
-      
-      // Update league draft state
-      const newDraftTurn = league?.current_draft_turn + 1
-      // Include bot in draft completion calculation
-      const totalDraftParticipants = bot ? league.member_ids.length + 1 : league.member_ids.length
-      const isDraftComplete = newDraftTurn >= totalDraftParticipants * 10
-      const { error: leagueError } = await supabase
-        .from('leagues')
-        .update({ current_draft_turn: newDraftTurn, draft_completed: isDraftComplete })
-        .eq('id', league?.id)
-      if (leagueError) throw leagueError
-      
-
-      
-      await loadLeagueData()
-    } catch (error: any) {
-      setError(error.message || 'Failed to draft player')
-    } finally {
-      setLoading(false)
-    }
-  }
-
   const saveLineup = async () => {
     if (!league || !user || selectedLineupPlayers.length !== 5) return
 
@@ -680,38 +563,6 @@ const LeaguePage: React.FC = () => {
       console.error('Error saving lineup:', error)
     } finally {
       setLoading(false)
-    }
-  }
-
-  // Helper to generate snake draft order
-  function generateSnakeDraftOrder(memberIds: string[], rounds = 10) {
-    // Deduplicate participant IDs to avoid duplicate turns
-    const uniqueIds = Array.from(new Set(memberIds));
-    const order: string[] = [];
-    for (let round = 0; round < rounds; round++) {
-      if (round % 2 === 0) {
-        order.push(...uniqueIds);
-      } else {
-        order.push(...[...uniqueIds].reverse());
-      }
-    }
-    return order;
-  }
-
-  // Fix draft order if it's incorrect
-  const fixDraftOrder = async () => {
-    if (!league) return
-    try {
-      // Include bot in draft order if it exists
-      const allDraftParticipants = bot ? [...league.member_ids, bot.id] : league.member_ids
-      const fullDraftOrder = generateSnakeDraftOrder(allDraftParticipants, 10)
-      await supabase.from('leagues').update({ 
-        draft_order: fullDraftOrder,
-        current_draft_turn: 0
-      }).eq('id', league?.id)
-      await loadLeagueData()
-    } catch (err) {
-      console.error('Failed to fix draft order:', err)
     }
   }
 
@@ -1282,9 +1133,13 @@ const LeaguePage: React.FC = () => {
 
   // Helper to check if lineup changes are allowed (not Tuesday UTC)
   function isLineupChangeAllowed() {
-    const now = new Date();
-    const day = now.getUTCDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
-    return day !== 2; // Disallow Tuesday (2)
+    // TEMPORARILY DISABLED: Always allow lineup changes
+    return true;
+    
+    // Original logic (commented out for now):
+    // const now = new Date();
+    // const day = now.getUTCDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+    // return day !== 2; // Disallow Tuesday (2)
   }
 
   if (loading) {
@@ -1434,26 +1289,8 @@ const LeaguePage: React.FC = () => {
                     </button>
                   </div>
 
-                  {/* Bot actions during draft */}
-                  {draftStarted && !league.draft_completed && (
-                    <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                      <h4 className="font-semibold text-blue-900 mb-2">Draft Actions</h4>
-                      <p className="text-sm text-blue-700 mb-3">
-                        The bot will automatically draft the highest ELO player available when it's their turn.
-                      </p>
-                      <button
-                        type="button"
-                        onClick={handleBotDraft}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-lg transition-colors"
-                        disabled={botLoading}
-                      >
-                        {botLoading ? 'Processing...' : 'Force Bot Draft'}
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Bot actions for lineup */}
-                  {league.draft_completed && (
+                  {/* Bot actions for marketplace and lineup */}
+                  {league.marketplace_completed && (
                     <div className="p-4 bg-green-50 rounded-lg border border-green-200">
                       <h4 className="font-semibold text-green-900 mb-2">Lineup Actions</h4>
                       <p className="text-sm text-green-700 mb-3">
@@ -1669,9 +1506,11 @@ const LeaguePage: React.FC = () => {
                           href={`https://www.chess.com/member/${player.name}/`}
                         />
                         <div className="text-xs text-neutral-600">ELO: {player.elo}</div>
-                        {player.accuracy !== undefined && player.accuracy !== null && (
-                          <div className="text-xs text-neutral-500">Avg Centipawn Loss (ACL): {player.accuracy.toFixed(2)}</div>
-                        )}
+                        {(player.acpl !== undefined && player.acpl !== null) ? (
+                          <div className="text-xs text-neutral-500">Avg Centipawn Loss (ACPL): {player.acpl.toFixed(2)}</div>
+                        ) : (player.accuracy !== undefined && player.accuracy !== null) ? (
+                          <div className="text-xs text-neutral-500">Accuracy: {player.accuracy.toFixed(2)}%</div>
+                        ) : null}
                       </div>
                     ))}
                   </div>
@@ -1686,10 +1525,11 @@ const LeaguePage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => {
-                        if (!isLineupChangeAllowed()) {
-                          setError('You cannot edit your lineup on Tuesday (UTC). Please try again on another day.');
-                          return;
-                        }
+                        // Temporarily disabled Tuesday restriction
+                        // if (!isLineupChangeAllowed()) {
+                        //   setError('You cannot edit your lineup on Tuesday (UTC). Please try again on another day.');
+                        //   return;
+                        // }
                         setIsEditingLineup(true);
                       }}
                       className="flex items-center space-x-1 text-royalBlue hover:text-purple text-sm lg:text-base transition-colors"
@@ -1894,181 +1734,32 @@ const LeaguePage: React.FC = () => {
                 )}
               </div>
 
-              {/* Draft Section */}
-
+              {/* Turn-Based Marketplace Section */}
               {!league.draft_completed && (
                 <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6 border-2 border-gold">
-                  <h3 className="text-lg lg:text-xl font-bold mb-4 text-neutral-900">Draft</h3>
-                  {/* Show Start Draft button for owner if draft not started and before start date */}
-                  {isOwner && !draftStarted && beforeStartDate && (
-                    <button
-                      type="button"
-                      onClick={handleStartDraft}
-                      className="mb-4 px-6 py-2 bg-[#1e293b] hover:bg-royalBlue text-white rounded-lg font-semibold shadow-lg transition-colors"
-                      disabled={loading}
-                    >
-                      Start Draft
-                    </button>
-                  )}
-                  {/* Show message if draft not started */}
-                  {!draftStarted && (
-                    <div className="text-center py-6 lg:py-8">
-                      <p className="text-neutral-600 text-sm lg:text-base">
-                        The draft has not started yet. The league owner can start the draft at any time before the league start date.
-                      </p>
-                    </div>
-                  )}
-                  {/* Draft UI if started */}
-
-                  {draftStarted && (
-                    <>
-                      {/* Debug/Fix buttons */}
-                      {!league.member_ids.includes(user?.id || '') && (
-                        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                          <p className="text-red-800 text-sm mb-2">You are not a member of this league. Click to join:</p>
-                          <button
-                            type="button"
-                            onClick={addUserToLeague}
-                            className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 shadow-lg transition-colors"
-                          >
-                            Join League
-                          </button>
-                        </div>
-                      )}
-                      {league.draft_order.length < league.member_ids.length * 10 && (
-                        <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                          <p className="text-yellow-800 text-sm mb-2">Draft order appears to be incorrect. Click to fix:</p>
-                          <button
-                            type="button"
-                            onClick={fixDraftOrder}
-                            className="px-3 py-1 bg-yellow-600 text-white rounded text-sm hover:bg-yellow-700 shadow-lg transition-colors"
-                          >
-                            Fix Draft Order
-                          </button>
-                        </div>
-                      )}
-                      <input
-                        type="text"
-                        value={search}
-                        onChange={e => setSearch(e.target.value)}
-                        placeholder="Search players by name..."
-                        className="mb-4 w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-royalBlue text-neutral-900 placeholder-neutral-500"
-                      />
-                      {isUserTurn() ? (
-                        <div>
-                          <p className="text-royalBlue font-medium mb-4 text-sm lg:text-base">It's your turn to draft!</p>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-64 overflow-y-auto">
-                            {availablePlayers
-                              .filter(player => player.name.toLowerCase().includes(search.toLowerCase()))
-                              .map((player) => (
-                                <button
-                                  type="button"
-                                  key={player.id}
-                                  onClick={() => {
-                                    setSelectedDraftPlayer(player);
-                                    setShowDraftPopup(true);
-                                  }}
-                                  className="p-3 rounded-lg border border-neutral-200 hover:border-royalBlue text-left w-full transition-colors"
-                                >
-                                  <div className="font-semibold text-base lg:text-lg text-neutral-900">
-                                    <ExpandablePlayerName 
-                                      playerName={player.name}
-                                      href={`https://www.chess.com/member/${player.name}/`}
-                                      className="text-base lg:text-lg"
-                                    />
-                                  </div>
-                                  <div className="text-xs lg:text-sm text-neutral-600">ELO: {player.elo}</div>
-                                </button>
-                              ))}
-                          </div>
-                          {/* Draft Player Popup */}
-                          {showDraftPopup && selectedDraftPlayer && (
-                            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                              <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto border-2 border-gold">
-                                <div className="p-6">
-                                  <div className="flex items-center justify-between mb-6">
-                                    <h2 className="text-xl font-bold text-neutral-900">
-                                      {selectedDraftPlayer.name}
-                                    </h2>
-                                    <button
-                                      type="button"
-                                      onClick={() => setShowDraftPopup(false)}
-                                      className="text-neutral-400 hover:text-neutral-600 transition-colors"
-                                    >
-                                      <X className="h-6 w-6" />
-                                    </button>
-                                  </div>
-                                  <div className="mb-4">
-                                    <div className="text-sm text-neutral-700 mb-2">ELO: <span className="font-semibold">{selectedDraftPlayer.elo}</span></div>
-                                    {selectedDraftPlayer.accuracy !== undefined && selectedDraftPlayer.accuracy !== null && (
-                                      <div className="text-sm text-neutral-700 mb-2">Avg Centipawn Loss (ACL): <span className="font-semibold">{selectedDraftPlayer.accuracy.toFixed(2)}</span></div>
-                                    )}
-                                    {selectedDraftPlayer.games !== undefined && (
-                                      <div className="text-sm text-neutral-700 mb-2">Games: <span className="font-semibold">{selectedDraftPlayer.games}</span></div>
-                                    )}
-                                    <a
-                                      href={`https://www.chess.com/member/${selectedDraftPlayer.name}/`}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="inline-block mt-2 text-royalBlue hover:underline text-sm"
-                                    >
-                                      View Chess.com Profile
-                                    </a>
-                                  </div>
-                                  <button
-                                    type="button"
-                                    onClick={async () => {
-                                      await draftPlayer(selectedDraftPlayer.id);
-                                      setShowDraftPopup(false);
-                                      setSelectedDraftPlayer(null);
-                                    }}
-                                    className="w-full bg-royalBlue hover:bg-purple text-white px-4 py-2 rounded-lg font-medium shadow-lg transition-colors"
-                                    disabled={loading}
-                                  >
-                                    {loading ? 'Drafting...' : 'Confirm Draft'}
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="text-center py-6 lg:py-8">
-                          {league.current_draft_turn >= league.draft_order.length ? (
-                            <p className="text-royalBlue text-sm lg:text-base font-semibold">Draft complete!</p>
-                          ) : (
-                            (() => {
-                              const currentDraftUserId = league.draft_order[league.current_draft_turn];
-                              
-                              // Check if it's the bot's turn
-                              if (currentDraftUserId === bot?.id) {
-                                return (
-                                  <div className="space-y-2">
-                                    <p className="text-blue-600 text-sm lg:text-base font-medium">
-                                      🤖 {bot.name} is drafting...
-                                    </p>
-                                    <p className="text-neutral-500 text-xs">Bot will automatically select the highest ELO player</p>
-                                  </div>
-                                );
-                              }
-                              
-                              const displayName = userMap[currentDraftUserId] || 'Unknown Player';
-                              
-                              return (
-                                <p className="text-neutral-600 text-sm lg:text-base">
-                                  Waiting for <ExpandableUsername username={displayName} /> to draft...
-                                </p>
-                              );
-                            })()
-                          )}
-                        </div>
-                      )}
-                    </>
-                  )}
+                  <TurnBasedMarketplace league={league} onUpdate={loadLeagueData} />
                 </div>
               )}
             </div>
           </div>
+
+          {/* Debug info for marketplace visibility */}
+          {league && (
+            <div className="mt-4 p-2 bg-gray-100 rounded text-xs">
+              <p><strong>Marketplace Debug:</strong></p>
+              <p>draft_completed: {league.draft_completed ? 'true' : 'false'}</p>
+              <p>marketplace_order length: {league.marketplace_order?.length || 0}</p>
+              <p>marketplace_completed: {league.marketplace_completed ? 'true' : 'false'}</p>
+              <p>Should show marketplace: {(league.draft_completed || (league.marketplace_order && league.marketplace_order.length === 0)) ? 'YES' : 'NO'}</p>
+            </div>
+          )}
+
+          {/* Coin Marketplace - Show after draft is completed */}
+          {league && (league.draft_completed || (league.marketplace_order && league.marketplace_order.length === 0)) && (
+            <div className="mt-8 w-full">
+              <Marketplace leagueId={leagueId!} />
+            </div>
+          )}
 
           {/* User Popup Modal */}
           {showUserPopup && selectedUser && (
@@ -2107,9 +1798,11 @@ const LeaguePage: React.FC = () => {
                               className="text-sm"
                             />
                             <div className="text-xs text-neutral-600">ELO: {player.elo}</div>
-                            {player.accuracy !== undefined && player.accuracy !== null && (
-                              <div className="text-xs text-neutral-500">Avg Centipawn Loss (ACL): {player.accuracy.toFixed(2)}</div>
-                            )}
+                            {(player.acpl !== undefined && player.acpl !== null) ? (
+                              <div className="text-xs text-neutral-500">Avg Centipawn Loss (ACPL): {player.acpl.toFixed(2)}</div>
+                            ) : (player.accuracy !== undefined && player.accuracy !== null) ? (
+                              <div className="text-xs text-neutral-500">Accuracy: {player.accuracy.toFixed(2)}%</div>
+                            ) : null}
                           </div>
                         ))}
                       </div>

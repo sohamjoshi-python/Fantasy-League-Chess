@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js'
+﻿import { createClient } from '@supabase/supabase-js'
 import { Bot } from '../types'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
@@ -662,4 +662,42 @@ export async function getUnreadNotificationCount(): Promise<{ success: boolean, 
   }
   
   return { success: true, count: count || 0 };
+} 
+
+// Temporary debug: expose a function to get the current Supabase session JWT
+if (typeof window !== 'undefined') {
+  // @ts-ignore
+  window.getSupabaseSession = async () => {
+    const { data } = await supabase.auth.getSession();
+    console.log('Supabase session:', data.session);
+    return data.session;
+  };
+} 
+
+// Temporary debug: expose a function to get all leagues from the schema
+if (typeof window !== 'undefined') {
+  // @ts-ignore
+  window.debugGetLeagues = async () => {
+    const { data, error } = await supabase.from('leagues').select('*');
+    if (error) {
+      console.error('Error fetching leagues:', error);
+    } else {
+      console.log('Leagues:', data);
+    }
+    return { data, error };
+  };
+} 
+
+// Temporary debug: expose a function to get all teams from the schema
+if (typeof window !== 'undefined') {
+  // @ts-ignore
+  window.debugGetTeams = async () => {
+    const { data, error } = await supabase.from('teams').select('*');
+    if (error) {
+      console.error('Error fetching teams:', error);
+    } else {
+      console.log('Teams:', data);
+    }
+    return { data, error };
+  };
 } 
