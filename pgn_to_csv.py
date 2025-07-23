@@ -276,4 +276,4 @@ def convert(pgn_file):
             print(games_df.head())
             return None
 
-convert("Late-Titled-Tuesday-Blitz-July-08-2025_2025-07-08-13-00.pgn")
+convert("Late-Titled-Tuesday-Blitz-July-08-2025_2025-07-08-13-00.pgn")  
