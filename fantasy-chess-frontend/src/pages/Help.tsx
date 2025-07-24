@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { ArrowRight, Trophy, Users, Target, BarChart3, HelpCircle, Play } from 'lucide-react'
+import { ArrowRight, Trophy, Users, Target, BarChart3, HelpCircle, Play, Coins, Store, Star } from 'lucide-react'
 import logo from '../assets/pawn-royale-logo.png'
 
 const Help: React.FC = () => {
@@ -23,9 +23,9 @@ const Help: React.FC = () => {
           </h2>
           <p className="text-neutral-700 mb-4">
             Pawn Royale is a competitive game where you draft real chess players and earn points based on their performance 
-            in actual chess tournaments. Build your dream team, set weekly lineups, and compete against other players for prizes!
+            in actual chess tournaments. Build your dream team, set weekly lineups, trade players in the marketplace, and compete against other players for prizes!
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
             <div className="text-center p-4 bg-neutral-50 rounded-lg border border-royalBlue">
               <Users className="w-8 h-8 mx-auto mb-2 text-royalBlue" />
               <h3 className="font-semibold text-neutral-900">Draft Players</h3>
@@ -37,9 +37,45 @@ const Help: React.FC = () => {
               <p className="text-sm text-neutral-700">Choose your weekly team</p>
             </div>
             <div className="text-center p-4 bg-neutral-50 rounded-lg border border-royalBlue">
+              <Store className="w-8 h-8 mx-auto mb-2 text-gold" />
+              <h3 className="font-semibold text-neutral-900">Trade Players</h3>
+              <p className="text-sm text-neutral-700">Buy and sell in marketplace</p>
+            </div>
+            <div className="text-center p-4 bg-neutral-50 rounded-lg border border-royalBlue">
               <Trophy className="w-8 h-8 mx-auto mb-2 text-royalBlue" />
               <h3 className="font-semibold text-neutral-900">Win Prizes</h3>
               <p className="text-sm text-neutral-700">Compete for coin rewards</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Coin System Overview */}
+        <div className="bg-gradient-to-r from-gold to-yellow-400 rounded-xl shadow-lg p-6 mb-8 text-white">
+          <h2 className="text-2xl font-bold mb-4 flex items-center">
+            <Coins className="w-6 h-6 mr-2" />
+            Coin System
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h3 className="font-semibold mb-2">Weekly Rewards</h3>
+              <p className="text-sm mb-2">Every week, all active players receive <strong>50 coins</strong> automatically.</p>
+              <p className="text-sm">Coins are used to:</p>
+              <ul className="text-sm mt-2 space-y-1">
+                <li>• Join leagues (buy-in costs)</li>
+                <li>• Buy players in the marketplace</li>
+                <li>• Purchase avatar customizations</li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="font-semibold mb-2">Standings Bonus</h3>
+              <p className="text-sm mb-2">At the end of each league, players receive bonus coins based on their final rank:</p>
+              <ul className="text-sm mt-2 space-y-1">
+                <li>• <strong>1st Place:</strong> 50 bonus coins</li>
+                <li>• <strong>2nd Place:</strong> 40 bonus coins</li>
+                <li>• <strong>3rd Place:</strong> 30 bonus coins</li>
+                <li>• <strong>4th Place:</strong> 20 bonus coins</li>
+                <li>• <strong>5th+ Place:</strong> 10 bonus coins</li>
+              </ul>
             </div>
           </div>
         </div>
@@ -197,10 +233,50 @@ const Help: React.FC = () => {
             </div>
           </div>
 
-          {/* Step 4: Scoring System */}
+          {/* Step 4: Marketplace Trading */}
           <div className="bg-white rounded-xl shadow-lg p-6 border-2 border-royalBlue">
             <div className="flex items-center mb-4">
-              <div className="w-8 h-8 bg-purple text-white rounded-full flex items-center justify-center font-bold mr-4">4</div>
+              <div className="w-8 h-8 bg-gold text-white rounded-full flex items-center justify-center font-bold mr-4">4</div>
+              <h2 className="text-xl font-bold text-neutral-900">Trade Players in the Marketplace</h2>
+            </div>
+            <div className="ml-12 space-y-4">
+              <div className="flex items-start">
+                <ArrowRight className="w-5 h-5 text-gold mt-0.5 mr-3 flex-shrink-0" />
+                <div>
+                  <h3 className="font-semibold text-neutral-900">Two Marketplace Types</h3>
+                  <p className="text-neutral-700">There are two ways to trade players:</p>
+                  <ul className="list-disc list-inside text-neutral-700 mt-2 space-y-1">
+                    <li><strong>Turn-Based Marketplace:</strong> Take turns buying players after the draft</li>
+                    <li><strong>Regular Marketplace:</strong> Buy and sell players freely throughout the season</li>
+                  </ul>
+                </div>
+              </div>
+              <div className="flex items-start">
+                <ArrowRight className="w-5 h-5 text-gold mt-0.5 mr-3 flex-shrink-0" />
+                <div>
+                  <h3 className="font-semibold text-neutral-900">Buying Players</h3>
+                  <p className="text-neutral-700">Use your coins to purchase players from other league members or the system. Player prices are based on their ELO rating.</p>
+                </div>
+              </div>
+              <div className="flex items-start">
+                <ArrowRight className="w-5 h-5 text-gold mt-0.5 mr-3 flex-shrink-0" />
+                <div>
+                  <h3 className="font-semibold text-neutral-900">Selling Players</h3>
+                  <p className="text-neutral-700">Sell players you no longer want for coins. You can sell to other players or back to the system for 80% of their original value.</p>
+                </div>
+              </div>
+              <div className="bg-neutral-50 p-4 rounded-lg border border-royalBlue">
+                <p className="text-sm text-neutral-700">
+                  <strong>Strategy:</strong> Use the marketplace to improve your team throughout the season! Monitor player performance and trade accordingly.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Step 5: Scoring System */}
+          <div className="bg-white rounded-xl shadow-lg p-6 border-2 border-royalBlue">
+            <div className="flex items-center mb-4">
+              <div className="w-8 h-8 bg-purple text-white rounded-full flex items-center justify-center font-bold mr-4">5</div>
               <h2 className="text-xl font-bold text-neutral-900">Understanding Scoring</h2>
             </div>
             <div className="ml-12 space-y-4">
@@ -232,9 +308,9 @@ const Help: React.FC = () => {
                 </div>
               </div>
               <div className="bg-neutral-50 p-4 rounded-lg border border-royalBlue mb-4">
-                <h4 className="font-semibold text-neutral-900 mb-1">What is Average Centipawn Loss (ACL)?</h4>
+                <h4 className="font-semibold text-neutral-900 mb-1">What is Accuracy?</h4>
                 <p className="text-sm text-neutral-700">
-                  <strong>Average Centipawn Loss (ACL)</strong> is a chess metric that measures the average value lost per move compared to the best possible move (as determined by a chess engine). A lower ACL means more accurate play. In Pawn Royale, we use ACL instead of accuracy to better reflect a player's consistency and skill.
+                  <strong>Accuracy</strong> is a chess metric that measures how well a player performed compared to the best possible moves (as determined by a chess engine). Higher accuracy means more precise play. In Pawn Royale, we use accuracy to better reflect a player's consistency and skill.
                 </p>
               </div>
               <div className="bg-neutral-50 p-4 rounded-lg border border-royalBlue">
@@ -245,10 +321,10 @@ const Help: React.FC = () => {
             </div>
           </div>
 
-          {/* Step 5: Winning and Prizes */}
+          {/* Step 6: Winning and Prizes */}
           <div className="bg-white rounded-xl shadow-lg p-6 border-2 border-royalBlue">
             <div className="flex items-center mb-4">
-              <div className="w-8 h-8 bg-royalBlue text-white rounded-full flex items-center justify-center font-bold mr-4">5</div>
+              <div className="w-8 h-8 bg-royalBlue text-white rounded-full flex items-center justify-center font-bold mr-4">6</div>
               <h2 className="text-xl font-bold text-neutral-900">Winning and Prizes</h2>
             </div>
             <div className="ml-12 space-y-4">
@@ -269,13 +345,20 @@ const Help: React.FC = () => {
               <div className="flex items-start">
                 <ArrowRight className="w-5 h-5 text-royalBlue mt-0.5 mr-3 flex-shrink-0" />
                 <div>
+                  <h3 className="font-semibold text-neutral-900">Standings Bonus</h3>
+                  <p className="text-neutral-700">All players receive bonus coins based on their final rank (1st: 50 coins, 2nd: 40 coins, etc.).</p>
+                </div>
+              </div>
+              <div className="flex items-start">
+                <ArrowRight className="w-5 h-5 text-royalBlue mt-0.5 mr-3 flex-shrink-0" />
+                <div>
                   <h3 className="font-semibold text-neutral-900">Automatic Payout</h3>
-                  <p className="text-neutral-700">Prizes are automatically processed when the league ends and distributed to the winner.</p>
+                  <p className="text-neutral-700">Prizes are automatically processed when the league ends and distributed to all participants.</p>
                 </div>
               </div>
               <div className="bg-neutral-50 p-4 rounded-lg border border-royalBlue">
                 <p className="text-sm text-neutral-700">
-                  <strong>Example:</strong> In a 10-player league with 100 coin buy-ins, the winner gets 1000 coins!
+                  <strong>Example:</strong> In a 10-player league with 100 coin buy-ins, the winner gets 1000 coins plus 50 bonus coins for 1st place!
                 </p>
               </div>
             </div>
@@ -288,7 +371,7 @@ const Help: React.FC = () => {
             <BarChart3 className="w-6 h-6 mr-2 text-purple" />
             Pro Tips & Strategies
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div>
               <h3 className="font-semibold text-neutral-900 mb-2">League Management</h3>
               <ul className="space-y-2 text-neutral-700">
@@ -305,6 +388,15 @@ const Help: React.FC = () => {
                 <li>• Consider players who compete frequently</li>
                 <li>• Don't overlook lower-rated players with good form</li>
                 <li>• Research upcoming tournaments before drafting</li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="font-semibold text-neutral-900 mb-2">Marketplace Strategy</h3>
+              <ul className="space-y-2 text-neutral-700">
+                <li>• Monitor player performance weekly</li>
+                <li>• Buy low on underperforming stars</li>
+                <li>• Sell high on overperforming players</li>
+                <li>• Use the marketplace to improve your team</li>
               </ul>
             </div>
             <div>
@@ -353,7 +445,7 @@ const Help: React.FC = () => {
           <div className="space-y-4">
             <div>
               <h3 className="font-semibold text-neutral-900">How do I get coins?</h3>
-              <p className="text-neutral-700">New users start with 1000 coins. You can earn more by winning leagues!</p>
+              <p className="text-neutral-700">New users start with 1000 coins. You earn 50 coins every week automatically, plus bonus coins based on league standings!</p>
             </div>
             <div>
               <h3 className="font-semibold text-neutral-900">What happens if I don't set a lineup?</h3>
@@ -361,7 +453,7 @@ const Help: React.FC = () => {
             </div>
             <div>
               <h3 className="font-semibold text-neutral-900">Can I trade players?</h3>
-              <p className="text-neutral-700">Currently, player trading is not available. Your drafted team is your team for the season.</p>
+              <p className="text-neutral-700">Yes! Use the marketplace to buy and sell players throughout the season. You can trade with other players or sell back to the system.</p>
             </div>
             <div>
               <h3 className="font-semibold text-neutral-900">How long do leagues last?</h3>
@@ -377,6 +469,10 @@ const Help: React.FC = () => {
                 <strong>Only start the draft after ALL intended members have joined.</strong> Once the draft begins, 
                 no new players can join the league, and the draft order is permanently locked in place.
               </p>
+            </div>
+            <div>
+              <h3 className="font-semibold text-neutral-900">How does the marketplace work?</h3>
+              <p className="text-neutral-700">There are two marketplace types: turn-based (after draft) and regular (throughout season). Use coins to buy players from other members or sell players you no longer want.</p>
             </div>
             <div className="bg-gold-50 p-4 rounded-lg border border-gold-200 my-4">
               <h4 className="font-semibold text-gold-900 mb-1">Profile & Avatar Customizations</h4>
