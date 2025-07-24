@@ -669,7 +669,6 @@ if (typeof window !== 'undefined') {
   // @ts-ignore
   window.getSupabaseSession = async () => {
     const { data } = await supabase.auth.getSession();
-    console.log('Supabase session:', data.session);
     return data.session;
   };
 } 
@@ -681,8 +680,6 @@ if (typeof window !== 'undefined') {
     const { data, error } = await supabase.from('leagues').select('*');
     if (error) {
       console.error('Error fetching leagues:', error);
-    } else {
-      console.log('Leagues:', data);
     }
     return { data, error };
   };
@@ -695,8 +692,6 @@ if (typeof window !== 'undefined') {
     const { data, error } = await supabase.from('teams').select('*');
     if (error) {
       console.error('Error fetching teams:', error);
-    } else {
-      console.log('Teams:', data);
     }
     return { data, error };
   };

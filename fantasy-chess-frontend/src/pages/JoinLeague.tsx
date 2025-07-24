@@ -199,19 +199,23 @@ const JoinLeague: React.FC = () => {
       setLoading(true)
       setError('')
 
-      console.log('Attempting to join with code:', joinCode.trim().toUpperCase());
-
+      const joinCodeInput = joinCode.trim().toUpperCase();
+      
+      // Look up the league by join code
       const { data: league, error: leagueError } = await supabase
         .from('leagues')
         .select('*')
-        .eq('join_code', joinCode.trim().toUpperCase())
-        .single()
+        .eq('join_code', joinCodeInput)
+        .single();
 
-      console.log('League lookup result:', { league, leagueError });
+      if (leagueError) {
+        setError('Invalid join code');
+        return;
+      }
 
-      if (leagueError || !league) {
-        setError('Invalid join code')
-        return
+      if (!league) {
+        setError('League not found');
+        return;
       }
 
       if (league.draft_started || new Date(league.start_date) <= new Date()) {

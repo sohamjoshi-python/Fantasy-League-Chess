@@ -336,12 +336,7 @@ const LeaguePage: React.FC = () => {
         return
       }
 
-      console.log('loadLeagueData - fetched league data:', leagueData);
-      console.log('draft_started:', leagueData.draft_started);
-      console.log('draft_completed:', leagueData.draft_completed);
-      console.log('marketplace_started:', leagueData.marketplace_started);
-      console.log('marketplace_order:', leagueData.marketplace_order);
-      console.log('current_marketplace_turn:', leagueData.current_marketplace_turn);
+
       
       setLeague(leagueData);
       await autoCompleteTeamsIfNeeded(leagueData);

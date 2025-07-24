@@ -90,8 +90,7 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
   const loadData = async () => {
     try {
       setLoading(true);
-      console.log('=== LOAD DATA DEBUG START ===');
-      console.log('Loading data for user:', user?.id, 'league:', leagueId);
+
       
       // Load league data first
       const { data: leagueData, error: leagueError } = await supabase
@@ -106,7 +105,7 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
       }
       
       setLeague(leagueData);
-      console.log('League data loaded:', leagueData);
+
       
       // Load all chess players with pagination
       let allPlayersData: ChessPlayer[] = [];
@@ -123,7 +122,7 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
         if (players.length < pageSize) break;
         page++;
       }
-      console.log('Total players loaded with pagination:', allPlayersData.length);
+
       setAllPlayers(allPlayersData);
       
       // Get user's team to determine owned players
@@ -135,7 +134,6 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
         .single();
       
       if (teamError) {
-        console.log('No team found for user, creating empty team');
         // Create empty team if it doesn't exist
         const { error: createError } = await supabase
           .from('teams')
@@ -152,25 +150,16 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
       }
       
       const userPlayerIds = userTeam?.player_ids || [];
-      console.log('User team player IDs:', userPlayerIds);
       
       // Filter owned players based on teams table
       const filteredOwnedPlayers = allPlayersData.filter(p => 
         userPlayerIds.includes(p.id)
       );
       
-      console.log('Ownership analysis:', {
-        totalPlayers: allPlayersData.length,
-        playersOwnedByUser: filteredOwnedPlayers.length,
-        userPlayerIds: userPlayerIds
-      });
-      
-      console.log('Filtered owned players count:', filteredOwnedPlayers.length);
       setOwnedPlayers(filteredOwnedPlayers);
       
       await loadTransactions();
       await loadUserCoinBalance();
-      console.log('=== LOAD DATA DEBUG END ===');
     } catch (err) {
       setError('Failed to load marketplace data');
       console.error(err);
@@ -220,14 +209,6 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
   // Buy a player: add to user's team
   const buyPlayer = async (playerId: string, price: number) => {
     try {
-      console.log('=== BUY PLAYER DEBUG START ===');
-      console.log('Buying player:', { playerId, price, userCoinBalance, leagueId, userId: user?.id });
-      
-      if (userCoinBalance < price) {
-        setError('Insufficient coins');
-        return;
-      }
-
       // Get current user's team
       const { data: userTeam, error: teamError } = await supabase
         .from('teams')
@@ -242,7 +223,6 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
       }
 
       const currentPlayerIds = userTeam?.player_ids || [];
-      console.log('Current player IDs in team:', currentPlayerIds);
 
       // Check if player is already owned
       if (currentPlayerIds.includes(playerId)) {
@@ -263,8 +243,6 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
         throw updateTeamError;
       }
 
-      console.log('Team updated successfully');
-
       // Deduct coins from user's balance
       const { error: coinError } = await supabase
         .from('league_coin_balances')
@@ -279,8 +257,6 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
         console.error('Failed to deduct coins:', coinError);
         throw coinError;
       }
-
-      console.log('Coins deducted successfully');
 
       // Add transaction record
       const { error: transactionError } = await supabase
@@ -305,7 +281,6 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
       // Refresh marketplace listings to update what shows in marketplace vs owned
       await filterMarketplaceListings();
       
-      console.log('=== BUY PLAYER DEBUG END ===');
       setError(null);
     } catch (err) {
       console.error('Buy player error:', err);
@@ -328,15 +303,6 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
   const sellPlayer = async () => {
     if (!sellingPlayer) return;
     try {
-      console.log('=== SELL PLAYER DEBUG START ===');
-      console.log('Selling player:', {
-        playerId: sellingPlayer.player.id,
-        playerName: sellingPlayer.player.name,
-        price: sellingPlayer.price,
-        leagueId,
-        userId: user?.id
-      });
-
       // Get current user's team
       const { data: userTeam, error: teamError } = await supabase
         .from('teams')
@@ -351,7 +317,6 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
       }
 
       const currentPlayerIds = userTeam?.player_ids || [];
-      console.log('Current player IDs in team:', currentPlayerIds);
 
       // Check if player is owned by user
       if (!currentPlayerIds.includes(sellingPlayer.player.id)) {
@@ -372,10 +337,7 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
         throw updateTeamError;
       }
 
-      console.log('Player removed from team successfully');
-
       const refund = Math.floor(sellingPlayer.price * 0.8);
-      console.log('Calculated refund:', refund);
 
       // Add coins to user's balance
       const { error: coinError } = await supabase
@@ -391,8 +353,6 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
         console.error('Failed to add coins:', coinError);
         throw coinError;
       }
-
-      console.log('Coins added successfully');
 
       // Add transaction record
       const { error: transactionError } = await supabase
@@ -417,7 +377,6 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
       // Refresh marketplace listings to update what shows in marketplace vs owned
       await filterMarketplaceListings();
 
-      console.log('=== SELL PLAYER DEBUG END ===');
       setError(null);
     } catch (err) {
       console.error('Sell player error:', err);
@@ -431,57 +390,16 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
     setLoading(true);
     setError(null);
     try {
-      console.log('=== SELL TO MARKETPLACE DEBUG START ===');
-      console.log('Sell to Marketplace debug:', {
-        player_username: sellingToMarketplace.player.name,
-        player_elo: sellingToMarketplace.player.elo,
-        purchase_price: sellingToMarketplace.price,
-        user_id: user?.id,
-        league_id: leagueId,
-        player_id: sellingToMarketplace.player.id,
-        full_price: sellingToMarketplace.price
-      });
-
-      // Debug: Check player before selling
-      const playerBefore = allPlayers.find(p => p.id === sellingToMarketplace.player.id);
-      console.log('Player before sell to marketplace:', {
-        id: playerBefore?.id,
-        name: playerBefore?.name,
-        league_owners: playerBefore?.league_owners
-      });
-      if (playerBefore) {
-        let ownersBefore = playerBefore.league_owners;
-        if (typeof ownersBefore === 'string') {
-          try { ownersBefore = JSON.parse(ownersBefore); } catch { ownersBefore = {}; }
-        }
-        console.log('league_owners before sell to marketplace:', JSON.stringify(ownersBefore));
-        console.log('Current league ownership:', ownersBefore && ownersBefore[leagueId]);
-      }
-
-      // Debug: Log RPC call parameters
-      console.log('Calling remove_league_owner_for_player with:', {
+      // Remove league ownership for this player
+      const { error: updateError } = await supabase.rpc('remove_league_owner_for_player', {
         p_player_id: sellingToMarketplace.player.id,
         p_league_id: leagueId
-      });
-
-      const { data: updateData, error: updateError } = await supabase.rpc('remove_league_owner_for_player', {
-        p_player_id: sellingToMarketplace.player.id,
-        p_league_id: leagueId
-      });
-
-      console.log('remove_league_owner_for_player response:', { 
-        data: updateData, 
-        error: updateError,
-        dataType: typeof updateData,
-        errorType: typeof updateError
       });
       
       if (updateError) {
         console.error('remove_league_owner_for_player error:', updateError);
         throw updateError;
       }
-
-      console.log('remove_league_owner_for_player succeeded');
 
       // Remove player from user's team
       const { data: userTeam, error: teamError } = await supabase
@@ -497,7 +415,6 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
       }
 
       const currentPlayerIds = userTeam?.player_ids || [];
-      console.log('Current player IDs in team:', currentPlayerIds);
 
       // Check if player is owned by user
       if (!currentPlayerIds.includes(sellingToMarketplace.player.id)) {
@@ -518,11 +435,8 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
         throw updateTeamError;
       }
 
-      console.log('Player removed from team successfully');
-
       // Add the full sale price as refund (price is already the 80% value)
       const refund = sellingToMarketplace.price;
-      console.log('Sale price (refund):', refund);
 
       const { error: coinError } = await supabase.rpc('add_league_coins', {
         p_user_id: user?.id,
@@ -534,8 +448,6 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
         console.error('add_league_coins error:', coinError);
         throw coinError;
       }
-
-      console.log('add_league_coins succeeded');
 
       // Record the transaction
       const { error: transactionError } = await supabase
@@ -559,25 +471,6 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
       // Refresh marketplace listings to update what shows in marketplace vs owned
       await filterMarketplaceListings();
 
-      // Debug: Check player after selling and reloading
-      const playerAfter = allPlayers.find(p => p.id === sellingToMarketplace.player.id);
-      console.log('Player after sell to marketplace and reload:', {
-        id: playerAfter?.id,
-        name: playerAfter?.name,
-        league_owners: playerAfter?.league_owners
-      });
-      
-      if (playerAfter) {
-        let ownersAfter = playerAfter.league_owners;
-        if (typeof ownersAfter === 'string') {
-          try { ownersAfter = JSON.parse(ownersAfter); } catch { ownersAfter = {}; }
-        }
-        console.log('league_owners after sell to marketplace:', JSON.stringify(ownersAfter));
-        console.log('Current league ownership after sell:', ownersAfter && ownersAfter[leagueId]);
-        console.log('Ownership removed:', !ownersAfter || !ownersAfter[leagueId]);
-      }
-
-      console.log('=== SELL TO MARKETPLACE DEBUG END ===');
       setSellingToMarketplace(null);
     } catch (err) {
       setError('Failed to sell player to marketplace: ' + JSON.stringify(err));
