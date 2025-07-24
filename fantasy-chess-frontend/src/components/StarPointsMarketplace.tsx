@@ -1,6 +1,47 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import { MarketplaceListing, UserPlayer, AvailablePlayer, StarPointTransaction } from '../types'
+
+// Type definitions for this component
+interface MarketplaceListing {
+  id: string;
+  listing_id: string;
+  player_id: string;
+  player_name: string;
+  player_elo: number;
+  player_country?: string;
+  price: number;
+  seller_id: string;
+  seller_name: string;
+  seller_type: 'user' | 'bot';
+  created_at: string;
+}
+
+interface UserPlayer {
+  id: string;
+  player_id: string;
+  player_name: string;
+  player_elo: number;
+  player_country?: string;
+  league_id: string;
+  user_id?: string;
+  bot_id?: string;
+  purchase_price: number;
+  created_at: string;
+}
+
+
+
+interface StarPointTransaction {
+  id: string;
+  user_id?: string;
+  bot_id?: string;
+  league_id: string;
+  transaction_type: string;
+  amount: number;
+  balance_after: number;
+  description: string;
+  created_at: string;
+}
 
 interface StarPointsMarketplaceProps {
   leagueId: string
@@ -19,7 +60,7 @@ const StarPointsMarketplace: React.FC<StarPointsMarketplaceProps> = ({
 }) => {
   const [marketplaceListings, setMarketplaceListings] = useState<MarketplaceListing[]>([])
   const [userPlayers, setUserPlayers] = useState<UserPlayer[]>([])
-  const [availablePlayers, setAvailablePlayers] = useState<AvailablePlayer[]>([])
+
   const [transactions, setTransactions] = useState<StarPointTransaction[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'marketplace' | 'my-players' | 'transactions'>('marketplace')
@@ -67,17 +108,7 @@ const StarPointsMarketplace: React.FC<StarPointsMarketplaceProps> = ({
         setUserPlayers(formattedPlayers)
       }
 
-      // Load available players for lineup
-      const { data: available } = await supabase
-        .rpc('get_user_available_players', { 
-          user_uuid: userId || null, 
-          bot_uuid: botId || null,
-          league_uuid: leagueId 
-        })
 
-      if (available) {
-        setAvailablePlayers(available)
-      }
 
       // Load transactions
       const { data: txns } = await supabase
@@ -195,33 +226,7 @@ const StarPointsMarketplace: React.FC<StarPointsMarketplaceProps> = ({
     }
   }
 
-  const buyFromInitialMarketplace = async (playerId: string, price: number) => {
-    try {
-      const { data, error } = await supabase
-        .rpc('buy_from_initial_marketplace', {
-          user_uuid: userId || null,
-          bot_uuid: botId || null,
-          league_uuid: leagueId,
-          player_uuid: playerId
-        })
 
-      if (error) throw error
-
-      if (data) {
-        setSuccess('Player purchased from initial marketplace!')
-        await loadMarketplaceData()
-        
-        // Update user's/bot's star points
-        const newBalance = userStarPoints - price
-        onStarPointsUpdate(newBalance)
-      } else {
-        setError('Failed to purchase player. Insufficient star points or player already owned.')
-      }
-    } catch (error) {
-      console.error('Error buying from initial marketplace:', error)
-      setError('Failed to purchase player')
-    }
-  }
 
   if (loading) {
     return (

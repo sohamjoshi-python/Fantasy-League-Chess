@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { ChessPlayer, League, CurrentMarketplaceTurn, MarketplaceTurn } from '../types';
@@ -54,7 +54,6 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
     league.draft_completed || 
     (league.marketplace_order && league.marketplace_order.length === 0)
   );
-  const [autoSkippedTurn, setAutoSkippedTurn] = useState<number | null>(null);
 
   const isOwner = user?.id && league && user.id === league?.creator_id;
   const isUserTurn = currentTurn?.current_user_id === user?.id;
@@ -203,7 +202,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
   const loadUserTeam = async () => {
     if (!user?.id) return;
     try {
-      const { data: team, error: teamError, status } = await supabase
+      const { data: team, error: teamError } = await supabase
         .from('teams')
         .select('player_ids')
         .eq('league_id', league.id)

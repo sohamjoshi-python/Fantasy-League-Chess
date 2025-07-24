@@ -3,15 +3,9 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { User } from '../types'
-import pawnRoyaleLogo from '../assets/pawn-royale-logo.png';
 
-type Avatar = {
-  id: string;
-  name: string;
-  image_url: string;
-  price: number;
-  owned: boolean;
-};
+
+
 
 interface ProfileProps {
   showOnlyShop?: boolean;
@@ -25,7 +19,7 @@ const Profile: React.FC<ProfileProps> = ({ showOnlyShop = false, onCloseShop }) 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
-  const [showAvatarShop, setShowAvatarShop] = useState(false)
+
 
   useEffect(() => {
     if (user) {
@@ -109,7 +103,6 @@ const Profile: React.FC<ProfileProps> = ({ showOnlyShop = false, onCloseShop }) 
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold text-neutral-900">Profile Settings</h2>
         <button
-          onClick={() => setShowAvatarShop(true)}
           className="bg-royalBlue hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-semibold transition-colors"
         >
           Avatar Shop
@@ -159,104 +152,8 @@ const Profile: React.FC<ProfileProps> = ({ showOnlyShop = false, onCloseShop }) 
   )
 }
 
-const SUPABASE_EDGE_BASE = 'https://wdbwzvnkfbyzazodfhsw.supabase.co/functions/v1';
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-async function fetchAvatars(userId: string): Promise<Avatar[]> {
-  try {
-    const res = await fetch(`${SUPABASE_EDGE_BASE}/fetch-avatars`, {
-      method: 'POST',
-      body: JSON.stringify({ user_id: userId }),
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': SUPABASE_ANON_KEY,
-        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-      }
-    });
-    if (!res.ok) {
-      return [];
-    }
-    return await res.json();
-  } catch (e) {
-    return [];
-  }
-}
-async function buyAvatar(userId: string, avatarId: string) {
-  const res = await fetch(`${SUPABASE_EDGE_BASE}/buy-avatar`, {
-    method: 'POST',
-    body: JSON.stringify({ user_id: userId, avatar_id: avatarId }),
-    headers: {
-      'Content-Type': 'application/json',
-      'apikey': SUPABASE_ANON_KEY,
-      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-    }
-  });
-  return await res.json();
-}
-async function equipAvatar(userId: string, avatarId: string) {
-  const res = await fetch(`${SUPABASE_EDGE_BASE}/equip-avatar`, {
-    method: 'POST',
-    body: JSON.stringify({ user_id: userId, avatar_id: avatarId }),
-    headers: {
-      'Content-Type': 'application/json',
-      'apikey': SUPABASE_ANON_KEY,
-      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-    }
-  });
-  return await res.json();
-}
 
-const AvatarShop: React.FC<{ user: User; onClose: () => void }> = ({ user, onClose }) => {
-  const [avatars, setAvatars] = useState<Avatar[]>([]);
-  const [error, setError] = useState('');
 
-  useEffect(() => {
-    fetchAvatars(user.id).then((data) => {
-      if (!data || !Array.isArray(data) || data.length === 0) {
-        setError('Could not load avatars. Please try again later.');
-      } else {
-        setAvatars(data);
-        setError('');
-      }
-    });
-  }, [user.id]);
-
-  const handleBuy = async (avatar: Avatar) => {
-    const res = await buyAvatar(user.id, avatar.id);
-    if (res.error) setError(res.error);
-    else setAvatars(await fetchAvatars(user.id));
-  };
-
-  const handleEquip = async (avatar: Avatar) => {
-    const res = await equipAvatar(user.id, avatar.id);
-    if (res.error) setError(res.error);
-    else onClose();
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-lg relative">
-        <button onClick={onClose} className="absolute top-2 right-2 text-neutral-500">✕</button>
-        <h3 className="text-lg font-bold mb-4">Avatar Shop</h3>
-        {error && <div className="text-red-500 mb-2">{error}</div>}
-        {!error && (
-          <div className="grid grid-cols-3 gap-4">
-            {avatars.map(avatar => (
-              <div key={avatar.id} className="flex flex-col items-center">
-                <img src={avatar.image_url || pawnRoyaleLogo} alt={avatar.name} className="w-16 h-16 rounded-full border mb-2" />
-                <div className="text-xs mb-1">{avatar.name}</div>
-                {avatar.owned ? (
-                  <button onClick={() => handleEquip(avatar)} className="text-xs bg-royalBlue text-white px-2 py-1 rounded">Equip</button>
-                ) : (
-                  <button onClick={() => handleBuy(avatar)} className="text-xs bg-gold text-white px-2 py-1 rounded" disabled={user.coins < avatar.price}>Buy ({avatar.price} coins)</button>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
 
 export default Profile 

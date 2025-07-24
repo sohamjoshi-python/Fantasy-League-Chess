@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { CoinTransaction, calculatePlayerPrice, getPlayerTier } from '../types/coin-system';
 import { useAuth } from '../contexts/AuthContext';
@@ -780,9 +780,7 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
                         <div className="space-y-1 text-sm text-gray-600">
                           <p>ELO: {listing.elo} • {getPlayerTier(listing.elo)}</p>
                           {details?.fide_id && <p>FIDE ID: {details.fide_id}</p>}
-                          {(details?.acpl !== undefined && details?.acpl !== null) ? (
-                            <p>Avg Centipawn Loss (ACPL): {details.acpl.toFixed(1)} ({details.games} games)</p>
-                          ) : (details?.accuracy !== undefined && details?.accuracy !== null) ? (
+                          {(details?.accuracy !== undefined && details?.accuracy !== null) ? (
                             <p>Accuracy: {details.accuracy.toFixed(1)}% ({details.games} games)</p>
                           ) : null}
                           <p className="text-xs text-gray-500">
@@ -839,9 +837,7 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
                         <div className="space-y-1 text-sm text-gray-600">
                           <p>ELO: {player.elo} • {getPlayerTier(player.elo)}</p>
                           {details?.fide_id && <p>FIDE ID: {details.fide_id}</p>}
-                          {(details?.acpl !== undefined && details?.acpl !== null) ? (
-                            <p>Avg Centipawn Loss (ACPL): {details.acpl.toFixed(1)} ({details.games} games)</p>
-                          ) : (details?.accuracy !== undefined && details?.accuracy !== null) ? (
+                          {(details?.accuracy !== undefined && details?.accuracy !== null) ? (
                             <p>Accuracy: {details.accuracy.toFixed(1)}% ({details.games} games)</p>
                           ) : null}
                           <p className="text-xs text-gray-500">
@@ -925,9 +921,7 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
                 return (
                   <>
                     {details?.fide_id && <p className="text-sm text-gray-600">FIDE ID: {details.fide_id}</p>}
-                    {(details?.acpl !== undefined && details?.acpl !== null) ? (
-                      <p>Avg Centipawn Loss (ACPL): {details.acpl.toFixed(1)} ({details.games} games)</p>
-                    ) : (details?.accuracy !== undefined && details?.accuracy !== null) ? (
+                    {(details?.accuracy !== undefined && details?.accuracy !== null) ? (
                       <p>Accuracy: {details.accuracy.toFixed(1)}% ({details.games} games)</p>
                     ) : null}
                     {details?.country && <p className="text-sm text-gray-600">Country: {details.country}</p>}
@@ -969,9 +963,7 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
                 return (
                   <>
                     {details?.fide_id && <p className="text-sm text-gray-600">FIDE ID: {details.fide_id}</p>}
-                    {(details?.acpl !== undefined && details?.acpl !== null) ? (
-                      <p>Avg Centipawn Loss (ACPL): {details.acpl.toFixed(1)} ({details.games} games)</p>
-                    ) : (details?.accuracy !== undefined && details?.accuracy !== null) ? (
+                    {(details?.accuracy !== undefined && details?.accuracy !== null) ? (
                       <p>Accuracy: {details.accuracy.toFixed(1)}% ({details.games} games)</p>
                     ) : null}
                     {details?.country && <p className="text-sm text-gray-600">Country: {details.country}</p>}
@@ -1024,9 +1016,7 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
                 return (
                   <>
                     {details?.fide_id && <p className="text-sm text-gray-600">FIDE ID: {details.fide_id}</p>}
-                    {(details?.acpl !== undefined && details?.acpl !== null) ? (
-                      <p>Avg Centipawn Loss (ACPL): {details.acpl.toFixed(1)} ({details.games} games)</p>
-                    ) : (details?.accuracy !== undefined && details?.accuracy !== null) ? (
+                    {(details?.accuracy !== undefined && details?.accuracy !== null) ? (
                       <p>Accuracy: {details.accuracy.toFixed(1)}% ({details.games} games)</p>
                     ) : null}
                     {details?.country && <p className="text-sm text-gray-600">Country: {details.country}</p>}

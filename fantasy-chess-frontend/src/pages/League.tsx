@@ -3,12 +3,12 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
-import { League, Team, Lineup, ChessPlayer, Bot } from '../types'
+import { League, Lineup, ChessPlayer, Bot } from '../types'
 import { Crown, Trophy, Calendar, Edit, Check, X, RefreshCw, Bot as BotIcon, Plus, Trash2 } from 'lucide-react'
-import { fetchLineupPlayerBreakdownByRounds, createBot, removeBot, autoDraftForBot, autoSetLineupForBot } from '../lib/supabase';
+import { fetchLineupPlayerBreakdownByRounds, createBot, removeBot, autoSetLineupForBot } from '../lib/supabase';
 import Confetti from 'react-confetti';
 import pawnRoyaleLogo from '../assets/pawn-royale-logo.png';
-import { notifyUser } from '../lib/notify';
+
 import Marketplace from '../components/Marketplace';
 import TurnBasedMarketplace from '../components/TurnBasedMarketplace';
 // Remove: import { useQuery } from '@tanstack/react-query';
@@ -207,9 +207,7 @@ const LeaguePage: React.FC = () => {
   // TODO: Refactor other fetches (team, players, standings, etc.) to use React Query
 
   const [league, setLeague] = useState<League | null>(null)
-  const [userTeam, setUserTeam] = useState<Team | null>(null)
   const [teamPlayers, setTeamPlayers] = useState<ChessPlayer[]>([])
-  const [availablePlayers, setAvailablePlayers] = useState<ChessPlayer[]>([])
   const [currentLineup, setCurrentLineup] = useState<Lineup | null>(null)
   const [lineupPlayers, setLineupPlayers] = useState<ChessPlayer[]>([])
   const [standings, setStandings] = useState<any[]>([])
@@ -222,11 +220,7 @@ const LeaguePage: React.FC = () => {
 
   // Helper: is current user the league owner?
   const isOwner = user?.id && league && user.id === league?.creator_id;
-  // Helper: is it before league start date?
-  const beforeStartDate = league && new Date() < new Date(league?.start_date);
-
   const [userMap, setUserMap] = useState<{ [id: string]: string }>({})
-  const [search, setSearch] = useState('')
 
   // User popup state
   const [selectedUser, setSelectedUser] = useState<any>(null)
@@ -330,8 +324,6 @@ const LeaguePage: React.FC = () => {
       setLoading(true)
 
       // Get league data
-          // Force fresh fetch by adding a cache-busting parameter
-    const timestamp = Date.now();
     const { data: leagueData, error: leagueError } = await supabase
       .from('leagues')
       .select('*')
@@ -369,8 +361,6 @@ const LeaguePage: React.FC = () => {
         .single()
 
       if (teamData) {
-        setUserTeam(teamData)
-
         // Get team players
         const { data: players } = await supabase
           .from('chess_players')
@@ -403,8 +393,7 @@ const LeaguePage: React.FC = () => {
             })
           }
 
-          const available = allPlayers.filter(player => !draftedPlayerIds.has(player.id))
-          setAvailablePlayers(available)
+
         }
       }
 
@@ -596,141 +585,9 @@ const LeaguePage: React.FC = () => {
     }
   }
 
-  // Add current user to league if not already a member
-  const addUserToLeague = async () => {
-    if (!league || !user) {
-      console.error('addUserToLeague - missing league or user:', { league: !!league, user: !!user })
-      return
-    }
-    
-    try {
-      setLoading(true)
-      
-      // Check if user is already a member
-      if (league?.member_ids && league?.member_ids.includes(user.id)) {
-        return
-      }
-      
-      // Get user's username from users table
-      let displayName = user.email || user.id.slice(0, 6);
-      try {
-        const { data: userData } = await supabase
-          .from('users')
-          .select('username')
-          .eq('id', user.id)
-          .single();
-        
-        if (userData?.username) {
-          displayName = userData.username;
-        }
-      } catch (err) {
-        console.error('Error getting user username:', err);
-      }
-      
-      const updatedMemberIds = [...(league?.member_ids || []), user.id]
-      
-      // Include bot in draft order if it exists
-      const allDraftParticipants = bot ? [...updatedMemberIds, bot.id] : updatedMemberIds
-      const updatedDraftOrder = generateSnakeDraftOrder(allDraftParticipants, 10)
-      
 
-      
-      // Add user to league_members table first
-      const { error: memberError } = await supabase
-        .from('league_members')
-        .insert({
-          league_id: league?.id,
-          user_id: user.id,
-          display_name: displayName,
-          email: user.email
-        })
-        .single()
-      
-      if (memberError) {
-        console.error('Error adding user to league_members:', memberError)
-        // Continue anyway - the league update might still work
-      }
-      
-      // Update the league with new member and draft order
-      const { error } = await supabase.from('leagues').update({ 
-        member_ids: updatedMemberIds,
-        draft_order: updatedDraftOrder,
-        current_draft_turn: 0
-      }).eq('id', league?.id)
-      
-      if (error) {
-        console.error('Supabase update error:', error)
-        throw error
-      }
-      
 
-      
-      // Update local state immediately
-      if (league) {
-        const updatedLeague = {
-          ...league,
-          member_ids: updatedMemberIds,
-          draft_order: updatedDraftOrder,
-          current_draft_turn: 0
-        }
-        setLeague(updatedLeague) // This line is removed as league is now managed by React Query
-        // fetchUserMap(updatedMemberIds) // This line is removed as league is now managed by React Query
-      }
-      
 
-      
-
-      
-    } catch (err) {
-      console.error('Failed to add user to league:', err)
-      setError('Failed to add user to league')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleStartDraft = async () => {
-    if (!league) return
-    setLoading(true)
-    try {
-      // Generate full snake draft order including bot if it exists
-      const allDraftParticipants = bot ? [...league.member_ids, bot.id] : league.member_ids
-      const fullDraftOrder = generateSnakeDraftOrder(allDraftParticipants, 10)
-      await supabase.from('leagues').update({ 
-        draft_started: true, 
-        draft_start_time: new Date().toISOString(),
-        draft_order: fullDraftOrder,
-        current_draft_turn: 0
-      }).eq('id', league?.id)
-
-      // Fetch all league members
-      const { data: members } = await supabase
-        .from('league_members')
-        .select('email, display_name')
-        .eq('league_id', league.id);
-
-      // Get the current user's access token
-      const accessToken = await getAccessToken();
-
-      if (members && accessToken) {
-        for (const member of members) {
-          await notifyUser(
-            member.email,
-            `The Draft Has Started for ${league.name}!`,
-            `Hi ${member.display_name},\n\nThe draft for your league \"${league.name}\" has started! Log in now to make your picks and build your team.\n\nGood luck!`,
-            accessToken
-          );
-        }
-      }
-
-      await loadLeagueData()
-    } catch (err) {
-      console.error('Draft start error:', err);
-      setError('Failed to start draft')
-    } finally {
-      setLoading(false)
-    }
-  }
 
   // Manual reload button
   const handleReload = () => {
@@ -826,26 +683,7 @@ const LeaguePage: React.FC = () => {
     }
   }
 
-  const handleBotDraft = async () => {
-    if (!league || !bot) return
 
-    try {
-      setBotLoading(true)
-
-      const { success, error } = await autoDraftForBot(bot.id, league.id)
-      
-      if (success) {
-        // Reload league data to update draft state
-        await loadLeagueData()
-      } else {
-        console.error('Failed to auto-draft for bot:', error)
-      }
-    } catch (error: any) {
-      console.error('Error auto-drafting for bot:', error)
-    } finally {
-      setBotLoading(false)
-    }
-  }
 
   const handleBotSetLineup = async () => {
     if (!league || !bot) return
@@ -1538,9 +1376,7 @@ const LeaguePage: React.FC = () => {
                           href={`https://www.chess.com/member/${player.name}/`}
                         />
                         <div className="text-xs text-neutral-600">ELO: {player.elo}</div>
-                        {(player.acpl !== undefined && player.acpl !== null) ? (
-                          <div className="text-xs text-neutral-500">Avg Centipawn Loss (ACPL): {player.acpl.toFixed(2)}</div>
-                        ) : (player.accuracy !== undefined && player.accuracy !== null) ? (
+                        {(player.accuracy !== undefined && player.accuracy !== null) ? (
                           <div className="text-xs text-neutral-500">Accuracy: {player.accuracy.toFixed(2)}%</div>
                         ) : null}
                       </div>
@@ -1830,9 +1666,7 @@ const LeaguePage: React.FC = () => {
                               className="text-sm"
                             />
                             <div className="text-xs text-neutral-600">ELO: {player.elo}</div>
-                            {(player.acpl !== undefined && player.acpl !== null) ? (
-                              <div className="text-xs text-neutral-500">Avg Centipawn Loss (ACPL): {player.acpl.toFixed(2)}</div>
-                            ) : (player.accuracy !== undefined && player.accuracy !== null) ? (
+                            {(player.accuracy !== undefined && player.accuracy !== null) ? (
                               <div className="text-xs text-neutral-500">Accuracy: {player.accuracy.toFixed(2)}%</div>
                             ) : null}
                           </div>
@@ -1956,8 +1790,4 @@ const LeaguePage: React.FC = () => {
 
 export default LeaguePage 
 
-// Helper to get the current user's access token
-async function getAccessToken() {
-  const { data: { session } } = await supabase.auth.getSession();
-  return session?.access_token;
-}
+
