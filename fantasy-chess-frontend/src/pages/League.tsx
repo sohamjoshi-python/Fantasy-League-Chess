@@ -446,7 +446,7 @@ const LeaguePage: React.FC = () => {
       // Get all league members first
       const { data: members } = await supabase
         .from('league_members')
-        .select('user_id, display_name, email')
+        .select('user_id, display_name')
         .eq('league_id', leagueId)
 
       if (!members) return
@@ -477,8 +477,7 @@ const LeaguePage: React.FC = () => {
 
       const standingsData = members.map(member => ({
         user_id: member.user_id,
-        user_email: member.email,
-        display_name: member.display_name,
+        display_name: member.display_name || `User_${member.user_id.slice(0, 6)}`,
         total_points: userPoints.get(member.user_id) || 0,
         rank: 0,
         avatar_url: avatarMap[member.user_id] || pawnRoyaleLogo,
@@ -495,7 +494,6 @@ const LeaguePage: React.FC = () => {
         }
         standingsData.push({
           user_id: bot.id,
-          user_email: `${bot.name}@bot`,
           display_name: `${bot.name} 🤖`,
           total_points: botPoints,
           rank: 0,
@@ -785,37 +783,29 @@ const LeaguePage: React.FC = () => {
   const fetchUserMap = async (ids: string[]) => {
     if (!ids.length || !leagueId) return;
     
-    
-    
-    
     try {
       const { data: members, error } = await supabase
         .from('league_members')
-        .select('user_id, display_name, email')
+        .select('user_id, display_name')
         .eq('league_id', leagueId)
         .in('user_id', ids);
-      
-      
-      
-      
       
       if (members && !error && members.length > 0) {
         const map: { [id: string]: string } = {};
         members.forEach((member) => {
-          // Use display_name if available and not empty, otherwise use email, otherwise use truncated ID
+          // Use display_name if available and not empty, otherwise use truncated ID
           const displayName = member.display_name && member.display_name.trim() !== '' 
             ? member.display_name 
-            : member.email || member.user_id.slice(0, 6);
+            : `User_${member.user_id.slice(0, 6)}`;
           map[member.user_id] = displayName;
         });
         
         setUserMap(map);
       } else {
-        
         // Fallback: create a simple map with user IDs
         const fallbackMap: { [id: string]: string } = {};
         ids.forEach(id => {
-          fallbackMap[id] = id.slice(0, 6);
+          fallbackMap[id] = `User_${id.slice(0, 6)}`;
         });
         
         setUserMap(fallbackMap);
@@ -825,7 +815,7 @@ const LeaguePage: React.FC = () => {
       // Fallback: create a simple map with user IDs
       const fallbackMap: { [id: string]: string } = {};
       ids.forEach(id => {
-        fallbackMap[id] = id.slice(0, 6);
+        fallbackMap[id] = `User_${id.slice(0, 6)}`;
       });
       
       setUserMap(fallbackMap);
@@ -1237,7 +1227,7 @@ const LeaguePage: React.FC = () => {
                         <div className="w-16 h-16 lg:w-20 lg:h-20 rounded-full bg-silver flex items-center justify-center text-2xl font-bold text-white border-4 border-silver mb-2">2</div>
                         <div className="flex items-center gap-2">
                           <img src={standings[1].avatar_url} alt="Avatar" className="w-8 h-8 rounded-full border-2 border-gold" />
-                          <ExpandableUsername username={standings[1].display_name || standings[1].user_email} />
+                          <ExpandableUsername username={standings[1].display_name} />
                         </div>
                         <span className="text-neutral-600 text-sm">{standings[1].total_points} pts</span>
                       </div>
@@ -1248,7 +1238,7 @@ const LeaguePage: React.FC = () => {
                         <div className="w-20 h-20 lg:w-24 lg:h-24 rounded-full bg-royalBlue flex items-center justify-center text-3xl font-extrabold text-white border-4 border-royalBlue mb-2 shadow-lg">1</div>
                         <div className="flex items-center gap-2">
                           <img src={standings[0].avatar_url} alt="Avatar" className="w-10 h-10 rounded-full border-2 border-gold" />
-                          <ExpandableUsername username={standings[0].display_name || standings[0].user_email} />
+                          <ExpandableUsername username={standings[0].display_name} />
                         </div>
                         <span className="text-neutral-900 font-bold text-base">{standings[0].total_points} pts</span>
                       </div>
@@ -1259,7 +1249,7 @@ const LeaguePage: React.FC = () => {
                         <div className="w-16 h-16 lg:w-20 lg:h-20 rounded-full bg-[#cd7f32] flex items-center justify-center text-2xl font-bold text-white border-4 border-[#cd7f32] mb-2">3</div>
                         <div className="flex items-center gap-2">
                           <img src={standings[2].avatar_url} alt="Avatar" className="w-8 h-8 rounded-full border-2 border-gold" />
-                          <ExpandableUsername username={standings[2].display_name || standings[2].user_email} />
+                          <ExpandableUsername username={standings[2].display_name} />
                         </div>
                         <span className="text-neutral-600 text-sm">{standings[2].total_points} pts</span>
                       </div>
@@ -1284,7 +1274,7 @@ const LeaguePage: React.FC = () => {
                               <img src={standing.avatar_url} alt="Avatar" className="w-8 h-8 rounded-full border-2 border-gold" />
                               <div className="min-w-0 flex-1">
                                 <ExpandableUsername 
-                                  username={standing.display_name || standing.user_email}
+                                  username={standing.display_name}
                                   isCurrentUser={standing.user_id === user?.id}
                                 />
                               </div>
@@ -1329,7 +1319,7 @@ const LeaguePage: React.FC = () => {
                         <img src={standing.avatar_url} alt="Avatar" className="w-8 h-8 rounded-full border-2 border-gold" />
                         <div className="min-w-0 flex-1">
                           <ExpandableUsername 
-                            username={standing.display_name || standing.user_email}
+                            username={standing.display_name}
                             isCurrentUser={standing.user_id === user?.id}
                           />
                         </div>

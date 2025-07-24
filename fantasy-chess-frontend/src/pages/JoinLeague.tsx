@@ -120,7 +120,7 @@ const JoinLeague: React.FC = () => {
       }
 
       // Get user's username from users table
-      let displayName = user.email || user.id.slice(0, 6);
+      let displayName = `User_${user.id.slice(0, 6)}`;
       try {
         const { data: userData } = await supabase
           .from('users')
@@ -253,7 +253,7 @@ const JoinLeague: React.FC = () => {
       }
 
       // Get user's display name from users table
-      let displayName = user.email || user.id.slice(0, 6);
+      let displayName = `User_${user.id.slice(0, 6)}`;
       try {
         const { data: userData } = await supabase
           .from('users')
@@ -351,7 +351,7 @@ const JoinLeague: React.FC = () => {
       }
 
       // Get user's username from users table
-      let displayName = user.email || user.id.slice(0, 6);
+      let displayName = `User_${user.id.slice(0, 6)}`;
       try {
         const { data: userData } = await supabase
           .from('users')

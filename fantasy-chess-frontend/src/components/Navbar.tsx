@@ -39,7 +39,6 @@ const Navbar: React.FC = () => {
     if (!user) return;
     
     try {
-      // Get username from users table
       const { data: userData, error } = await supabase
         .from('users')
         .select('username')
@@ -48,19 +47,19 @@ const Navbar: React.FC = () => {
       
       if (error) {
         console.error('Error loading username:', error);
-        setDisplayName(user.email || user.id.slice(0, 6));
+        setDisplayName(`User_${user.id.slice(0, 6)}`);
         return;
       }
       
       if (userData?.username) {
         setDisplayName(userData.username);
       } else {
-        // Fallback to email or truncated ID
-        setDisplayName(user.email || user.id.slice(0, 6));
+        // Fallback to truncated ID
+        setDisplayName(`User_${user.id.slice(0, 6)}`);
       }
     } catch (error) {
       console.error('Error loading display name:', error);
-      setDisplayName(user.email || user.id.slice(0, 6));
+      setDisplayName(`User_${user.id.slice(0, 6)}`);
     }
   };
 
