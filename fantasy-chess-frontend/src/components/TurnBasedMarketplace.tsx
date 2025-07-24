@@ -9,6 +9,33 @@ interface TurnBasedMarketplaceProps {
   onUpdate: () => void;
 }
 
+// Helper function to generate snake draft order
+function generateSnakeDraftOrder(participants: string[], rounds: number): string[] {
+  console.log('generateSnakeDraftOrder called with:', { participants, rounds });
+  const order: string[] = [];
+  
+  // For each round (0-9), add all participants in snake order
+  for (let round = 0; round < rounds; round++) {
+    console.log(`Round ${round}: ${round % 2 === 0 ? 'forward' : 'reverse'} order`);
+    if (round % 2 === 0) {
+      // Even rounds: forward order (1, 2, 3, ...)
+      for (let i = 0; i < participants.length; i++) {
+        order.push(participants[i]);
+        console.log(`  Added participant ${i}: ${participants[i]}`);
+      }
+    } else {
+      // Odd rounds: reverse order (3, 2, 1, ...)
+      for (let i = participants.length - 1; i >= 0; i--) {
+        order.push(participants[i]);
+        console.log(`  Added participant ${i}: ${participants[i]}`);
+      }
+    }
+  }
+  
+  console.log('Final order:', order);
+  return order;
+}
+
 export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMarketplaceProps) {
   const { user } = useAuth();
   const [currentTurn, setCurrentTurn] = useState<CurrentMarketplaceTurn | null>(null);
@@ -76,18 +103,34 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
   const loadCurrentTurn = async () => {
     try {
       console.log('Loading current turn for league:', league.id);
-      const { data, error } = await supabase.rpc('get_current_marketplace_turn', {
-        p_league_id: league.id
-      });
       
-      console.log('get_current_marketplace_turn response:', { data, error });
-      
-      if (error) throw error;
-      if (data && data.length > 0) {
-        setCurrentTurn(data[0]);
-        console.log('Set current turn:', data[0]);
+      // Calculate current turn info from league data
+      if (league.marketplace_order && league.marketplace_order.length > 0) {
+        const currentTurnIndex = league.current_marketplace_turn || 0;
+        const currentUserId = league.marketplace_order[currentTurnIndex];
+        
+        console.log('Marketplace order:', league.marketplace_order);
+        console.log('Current turn index:', currentTurnIndex);
+        console.log('Current user ID at that index:', currentUserId);
+        
+        if (currentUserId) {
+          setCurrentTurn({
+            current_user_id: currentUserId,
+            turn_number: currentTurnIndex,
+            total_turns: league.marketplace_order.length,
+            is_completed: false,
+            user_team_size: 0 // Will be calculated separately
+          });
+          console.log('Set current turn:', currentUserId, 'turn:', currentTurnIndex);
+          
+          // Check if current user has 0 coins and auto-skip if needed
+          await checkAndAutoSkipIfNoCoins(currentUserId);
+        } else {
+          console.log('No current turn data found');
+          setCurrentTurn(null);
+        }
       } else {
-        console.log('No current turn data found');
+        console.log('No marketplace order found');
         setCurrentTurn(null);
       }
     } catch (err) {
@@ -221,49 +264,8 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
       if (error) {
         console.log('Coin balance error:', error);
         if (error.code === 'PGRST116') {
-          // Initialize balance if not exists
-          console.log('Initializing coin balance for user:', user.id, 'league:', league.id);
-          const { data: initData, error: initError } = await supabase.rpc('initialize_league_coin_balance', {
-            p_user_id: user.id,
-            p_bot_id: null,
-            p_league_id: league.id
-          });
-          console.log('initialize_league_coin_balance response:', { initData, initError });
-          if (initError) {
-            console.error('Failed to initialize coin balance:', initError);
-            setUserCoinBalance(0);
-            return;
-          }
-          
-          // If RPC returned false, manually insert the record
-          if (initData === false) {
-            console.log('RPC returned false, manually inserting coin balance record');
-            const { error: insertError } = await supabase
-              .from('league_coin_balances')
-              .insert([
-                {
-                  user_id: user.id,
-                  league_id: league.id,
-                  coin_balance: 50,
-                  created_at: new Date().toISOString(),
-                  updated_at: new Date().toISOString()
-                }
-              ]);
-            if (insertError) {
-              console.error('Failed to manually insert coin balance:', insertError);
-              setUserCoinBalance(0);
-              return;
-            }
-            console.log('Manually inserted coin balance record');
-          }
-          
-          console.log('Coin balance initialized successfully, setting to 50');
-          setUserCoinBalance(50);
-          return;
-        }
-        // For 406 errors, try to manually insert the coin balance
-        if (error.code === '406') {
-          console.log('406 error - trying to manually insert coin balance');
+          // No coin balance record exists, create it
+          console.log('Creating coin balance for user:', user.id, 'league:', league.id);
           const { error: insertError } = await supabase
             .from('league_coin_balances')
             .insert([
@@ -276,36 +278,139 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
               }
             ]);
           if (insertError) {
-            console.error('Failed to manually insert coin balance:', insertError);
-            setUserCoinBalance(0);
-            return;
+            console.error('Failed to create coin balance:', insertError);
+            setUserCoinBalance(50); // Default to 50 coins
+          } else {
+            setUserCoinBalance(50); // Default to 50 coins after creation
           }
-          setUserCoinBalance(50);
-          return;
+        } else {
+          console.error('Error loading coin balance:', error);
+          setUserCoinBalance(50); // Default to 50 coins on error
         }
-        throw error;
+      } else {
+        setUserCoinBalance(data?.coin_balance || 0);
       }
-      setUserCoinBalance(data?.coin_balance || 0);
     } catch (err) {
       console.error('Error loading coin balance:', err);
-      setUserCoinBalance(0);
+      setUserCoinBalance(50); // Default to 50 coins on error
+    }
+  };
+
+  const checkAndAutoSkipIfNoCoins = async (userId: string) => {
+    try {
+      // Only check if it's not the current user's turn (to avoid infinite loops)
+      if (userId === user?.id) {
+        return;
+      }
+      
+      console.log('🔍 Checking if user has 0 coins:', userId);
+      
+      // Get the user's coin balance for this league
+      const { data: coinBalanceData, error: coinError } = await supabase
+        .from('league_coin_balances')
+        .select('coin_balance')
+        .eq('user_id', userId)
+        .eq('league_id', league.id)
+        .single();
+      
+      if (coinError) {
+        console.log('🔍 Could not fetch coin balance for user:', userId, coinError);
+        return;
+      }
+      
+      const coinBalance = coinBalanceData?.coin_balance || 0;
+      console.log('🔍 User coin balance:', userId, coinBalance);
+      
+      // If user has 0 coins, automatically skip their turn
+      if (coinBalance <= 0) {
+        console.log('🔍 User has 0 coins, auto-skipping turn for:', userId);
+        
+        // Call the skip function for this user
+        await handleSkipForUser(userId);
+      }
+    } catch (err) {
+      console.error('Error checking coin balance for auto-skip:', err);
+    }
+  };
+
+  const handleSkipForUser = async (userId: string) => {
+    try {
+      console.log('🔄 Auto-skipping turn for user:', userId);
+      
+      const currentOrder = league.marketplace_order || [];
+      const currentTurnIndex = league.current_marketplace_turn || 0;
+      
+      // Remove the user from the marketplace order
+      const newOrder = currentOrder.filter(id => id !== userId);
+      
+      console.log('🔄 Current order:', currentOrder);
+      console.log('🔄 New order after removing user:', newOrder);
+      console.log('🔄 Current turn index:', currentTurnIndex);
+      console.log('🔄 User being removed:', userId);
+      
+      // When a user skips, we need to handle the turn index properly
+      // The current user is being removed, so we need to find the next user
+      let newTurnIndex = league.current_marketplace_turn || 0;
+      
+      // If the current turn index is at the end or beyond the new order length, reset to 0
+      if (newTurnIndex >= newOrder.length) {
+        newTurnIndex = 0;
+      }
+      
+      // If there are no more users in the order, mark as completed
+      const isCompleted = newOrder.length === 0;
+      
+      // If completed, set turn index to 0, otherwise keep the current index
+      if (isCompleted) {
+        newTurnIndex = 0;
+      }
+      
+      console.log('🔄 New turn index will be:', newTurnIndex);
+      console.log('🔄 Will be completed:', isCompleted);
+      
+      // Update the database
+      console.log('🔄 Updating database with new order:', newOrder);
+      console.log('🔄 New turn index:', newTurnIndex);
+      console.log('🔄 Will be completed:', isCompleted);
+      
+      const { data: updateData, error: updateError } = await supabase
+        .from('leagues')
+        .update({
+          marketplace_order: newOrder,
+          current_marketplace_turn: newTurnIndex,
+          marketplace_completed: isCompleted
+        })
+        .eq('id', league.id)
+        .select();
+
+      console.log('🔄 Database update result:', { updateData, updateError });
+      
+      if (updateError) {
+        console.error('🔄 Database update failed:', updateError);
+        throw updateError;
+      }
+      
+      if (!updateData || updateData.length === 0) {
+        console.error('🔄 Database update returned no data - possible RLS issue');
+        throw new Error('Database update failed - no data returned');
+      }
+      
+      console.log(`✅ Auto-skip completed for user: ${userId}`);
+      
+      // Refresh the league data
+      setTimeout(() => {
+        console.log('🔄 Calling onUpdate() after auto-skip');
+        onUpdate();
+      }, 500);
+    } catch (err) {
+      console.error('Error auto-skipping turn for user:', err);
     }
   };
 
   const loadTurnHistory = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('marketplace_turns')
-        .select('*')
-        .eq('league_id', league.id)
-        .order('turn_number', { ascending: false })
-        .limit(20);
-
-      if (error) throw error;
-      setTurnHistory(data || []);
-    } catch (err) {
-      console.error('Error loading turn history:', err);
-    }
+    // For now, we'll skip loading turn history since the table might not exist
+    // This can be implemented later if needed
+    setTurnHistory([]);
   };
 
   const startMarketplace = async () => {
@@ -315,14 +420,49 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
       setLoading(true);
       console.log('Starting marketplace for league:', league.id);
       
-      const { data, error } = await supabase.rpc('start_marketplace', {
-        p_league_id: league.id
-      });
+      // Get league members from league_members table
+      const { data: members, error: membersError } = await supabase
+        .from('league_members')
+        .select('user_id')
+        .eq('league_id', league.id);
       
-      console.log('start_marketplace response:', { data, error });
+      if (membersError) {
+        console.error('Error fetching league members:', membersError);
+        throw membersError;
+      }
+      
+      const allDraftParticipants = members?.map(m => m.user_id) || [];
+      console.log('Fetched members from league_members table:', allDraftParticipants);
+      console.log('Member IDs type:', typeof allDraftParticipants);
+      console.log('Member IDs length:', allDraftParticipants?.length);
+      
+      // Check if we have multiple participants
+      if (!allDraftParticipants || allDraftParticipants.length < 2) {
+        console.error('Not enough participants for snake draft. Need at least 2, got:', allDraftParticipants?.length);
+        setError('Need at least 2 league members to start a snake draft');
+        return;
+      }
+      
+      const fullDraftOrder = generateSnakeDraftOrder(allDraftParticipants, 10);
+      
+      console.log('Generated draft order:', fullDraftOrder);
+      console.log('Participants:', allDraftParticipants);
+      console.log('Order length:', fullDraftOrder.length);
+      
+      // Update league with marketplace settings
+      const { error } = await supabase
+        .from('leagues')
+        .update({
+          marketplace_started: true,
+          marketplace_start_time: new Date().toISOString(),
+          marketplace_order: fullDraftOrder,
+          current_marketplace_turn: 0,
+          marketplace_completed: false
+        })
+        .eq('id', league.id);
       
       if (error) {
-        console.error('start_marketplace error details:', error);
+        console.error('Failed to start marketplace:', error);
         throw error;
       }
       
@@ -388,23 +528,37 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
 
       console.log(`✅ Team updated, recording marketplace action...`);
 
-      // Call the marketplace action (backend will deduct coins and advance turn)
-      console.log('🔄 Calling record_marketplace_action...');
-      const { error: actionError } = await supabase.rpc('record_marketplace_action', {
-        p_league_id: league.id,
-        p_user_id: user.id,
-        p_action_type: 'buy',
-        p_player_id: playerId,
-        p_price: price,
-        p_bot_id: null
-      });
-      
-      if (actionError) {
-        console.error('❌ Marketplace action error:', actionError);
-        throw actionError;
+      // Deduct coins from user's balance
+      console.log('🔄 Deducting coins from user balance...');
+      const { error: coinError } = await supabase
+        .from('league_coin_balances')
+        .update({ 
+          coin_balance: userCoinBalance - price,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', user.id)
+        .eq('league_id', league.id);
+
+      if (coinError) {
+        console.error('❌ Coin deduction error:', coinError);
+        throw coinError;
       }
 
-      console.log(`✅ Marketplace action recorded successfully`);
+      // Advance to next turn
+      console.log('🔄 Advancing to next turn...');
+      const { error: turnError } = await supabase
+        .from('leagues')
+        .update({ 
+          current_marketplace_turn: (league.current_marketplace_turn || 0) + 1
+        })
+        .eq('id', league.id);
+
+      if (turnError) {
+        console.error('❌ Turn advancement error:', turnError);
+        throw turnError;
+      }
+
+      console.log(`✅ Coins deducted and turn advanced successfully`);
 
       // Reload team, available players, and coin balance
       console.log('🔄 Reloading data...');
@@ -444,22 +598,69 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
 
     setLoading(true);
     try {
-      console.log(`🔄 Skipping turn and removing from draft...`);
+      console.log(`🔄 Skipping turn...`);
       
-      // IMPORTANT: Do NOT call advance_marketplace_turn here!
-      // The backend record_marketplace_action function already advances the turn.
-      const { error: actionError } = await supabase.rpc('record_marketplace_action', {
-        p_league_id: league.id,
-        p_user_id: user.id,
-        p_action_type: 'skip',
-        p_player_id: null,
-        p_price: null,
-        p_bot_id: null
-      });
-      if (actionError) throw actionError;
+      // Remove user from marketplace order
+      const currentOrder = league.marketplace_order || [];
+      const newOrder = currentOrder.filter(id => id !== user.id);
       
-      console.log(`✅ Turn skipped and user removed from draft successfully`);
-      onUpdate();
+      // When a user skips, we need to handle the turn index properly
+      // The current user is being removed, so we need to find the next user
+      let newTurnIndex = league.current_marketplace_turn || 0;
+      
+      // If the current turn index is at the end or beyond the new order length, reset to 0
+      if (newTurnIndex >= newOrder.length) {
+        newTurnIndex = 0;
+      }
+      
+      // If there are no more users in the order, mark as completed
+      const isCompleted = newOrder.length === 0;
+      
+      // If completed, set turn index to 0, otherwise keep the current index
+      if (isCompleted) {
+        newTurnIndex = 0;
+      }
+      
+      console.log('Current order:', currentOrder);
+      console.log('New order after removing user:', newOrder);
+      console.log('Current turn index:', league.current_marketplace_turn);
+      console.log('User being removed:', user.id);
+      console.log('New turn index will be:', newTurnIndex);
+      console.log('Will be completed:', isCompleted);
+      
+            console.log('🔄 Updating database with new order:', newOrder);
+      console.log('🔄 New turn index:', newTurnIndex);
+      console.log('🔄 Will be completed:', isCompleted);
+      
+      const { data: updateData, error: updateError } = await supabase
+        .from('leagues')
+        .update({
+          marketplace_order: newOrder,
+          current_marketplace_turn: newTurnIndex,
+          marketplace_completed: isCompleted
+        })
+        .eq('id', league.id)
+        .select();
+
+      console.log('🔄 Database update result:', { updateData, updateError });
+      
+      if (updateError) {
+        console.error('🔄 Database update failed:', updateError);
+        throw updateError;
+      }
+      
+      if (!updateData || updateData.length === 0) {
+        console.error('🔄 Database update returned no data - possible RLS issue');
+        throw new Error('Database update failed - no data returned');
+      }
+      
+      console.log(`✅ Turn skipped successfully`);
+      
+      // Add a delay to ensure the database update is reflected
+      setTimeout(() => {
+        console.log('🔄 Calling onUpdate() after delay');
+        onUpdate();
+      }, 500);
     } catch (err) {
       console.error('Error skipping turn:', err);
       setError('Failed to skip turn');
@@ -511,16 +712,30 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
           <p>Current Turn: {league?.current_marketplace_turn || 0}</p>
           <p>Marketplace Order Length: {league?.marketplace_order?.length || 0}</p>
           <p>Marketplace Order: {league?.marketplace_order?.join(', ') || 'None'}</p>
+          <p><strong>League Members:</strong></p>
+          <p>Member IDs: {league?.member_ids?.join(', ') || 'None'}</p>
+          <p>Member Count: {league?.member_ids?.length || 0}</p>
         </div>
         
         {isOwner && (
-          <button
-            onClick={startMarketplace}
-            disabled={loading}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold shadow-lg transition-colors disabled:opacity-50"
-          >
-            {loading ? 'Starting...' : 'Start Marketplace'}
-          </button>
+          <div className="space-y-2">
+            <button
+              onClick={startMarketplace}
+              disabled={loading}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold shadow-lg transition-colors disabled:opacity-50"
+            >
+              {loading ? 'Starting...' : 'Start Marketplace'}
+            </button>
+            {league.marketplace_started && (
+              <button
+                onClick={startMarketplace}
+                disabled={loading}
+                className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-lg font-semibold shadow-lg transition-colors disabled:opacity-50 ml-2"
+              >
+                {loading ? 'Restarting...' : 'Restart Marketplace'}
+              </button>
+            )}
+          </div>
         )}
         {!isOwner && (
           <p className="text-gray-500 italic">Waiting for the league owner to start the marketplace...</p>
@@ -556,7 +771,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
   }
 
 
-  return (
+    return (
     <div className="bg-white rounded-lg shadow-lg p-6 border-2 border-blue-200">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-xl font-bold text-gray-900">Turn-Based Marketplace</h3>
@@ -564,7 +779,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
           Coins: {userCoinBalance !== null ? userCoinBalance : '...'} 🪙
         </div>
       </div>
-      
+
       {/* Current Turn Status */}
       <div className="bg-blue-50 p-4 rounded-lg mb-6">
         <h4 className="font-semibold text-blue-900 mb-2">Current Turn</h4>
@@ -592,7 +807,13 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
             <p className="text-sm text-gray-600">Debug: currentTurn is null</p>
           </div>
         )}
-        
+
+        {/* Auto-skip info */}
+        <div className="mt-2 p-2 bg-orange-50 border border-orange-200 rounded text-xs">
+          <p className="text-orange-700 font-semibold">💡 Auto-Skip Feature</p>
+          <p className="text-orange-600">Users with 0 coins are automatically skipped and removed from the draft</p>
+        </div>
+
         {/* Debug info */}
         <div className="mt-4 p-2 bg-gray-100 rounded text-xs">
           <p><strong>Debug:</strong></p>
@@ -605,36 +826,18 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
           <p>league.current_marketplace_turn: {league?.current_marketplace_turn}</p>
           <p>marketplace_order length: {league?.marketplace_order?.length || 0}</p>
           <p>marketplace_order: {(league?.marketplace_order?.length || 0) > 0 ? league?.marketplace_order?.slice(0, 10).join(', ') : 'None (All players removed)'}</p>
-          <p>Expected current user: {(league?.marketplace_order?.length || 0) > 0 ? (league?.marketplace_order?.[(league?.current_marketplace_turn || 0) + 1] || 'None') : 'None (No players in draft)'}</p>
+          <p>Expected current user: {(league?.marketplace_order?.length || 0) > 0 ? (league?.marketplace_order?.[league?.current_marketplace_turn || 0] || 'None') : 'None (No players in draft)'}</p>
           <p>Draft completed: {league?.draft_completed ? 'Yes' : 'No'}</p>
           <p>All players expended coins: {(league?.marketplace_order?.length || 0) === 0 ? 'Yes' : 'No'}</p>
           
-          {/* Debug button for testing */}
+          {/* Restart button for owner */}
           {isOwner && (
             <button
-              onClick={async () => {
-                try {
-                  console.log('Manually advancing turn...');
-                  const { error } = await supabase.rpc('advance_marketplace_turn', {
-                    p_league_id: league.id
-                  });
-                  if (error) {
-                    console.error('Error advancing turn:', error);
-                  } else {
-                    console.log('Turn advanced successfully');
-                    // Re-fetch league state after advancing turn
-                    if (typeof onUpdate === 'function') {
-                      await onUpdate();
-                    }
-                    loadCurrentTurn();
-                  }
-                } catch (err) {
-                  console.error('Failed to advance turn:', err);
-                }
-              }}
-              className="mt-2 bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs"
+              onClick={startMarketplace}
+              disabled={loading}
+              className="mt-2 bg-orange-500 hover:bg-orange-600 text-white px-2 py-1 rounded text-xs"
             >
-              Debug: Advance Turn
+              {loading ? 'Restarting...' : 'Restart Marketplace'}
             </button>
           )}
         </div>
@@ -647,7 +850,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
             {userCoinBalance === 0 ? (
               <>
                 <div className="text-red-600 font-semibold mb-2">
-                  You have 0 coins. You cannot buy any more players.
+                  ⚠️ You have 0 coins. You cannot buy any more players.
                 </div>
                 <button
                   onClick={handleSkip}
@@ -656,6 +859,9 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
                 >
                   Skip Turn (Remove from Draft)
                 </button>
+                <p className="text-sm text-gray-600 mt-2">
+                  💡 Other users with 0 coins will be automatically skipped
+                </p>
               </>
             ) : (
               <>
@@ -679,7 +885,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
 
       {/* Error Message */}
       {error && (
-        <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
           {error}
         </div>
       )}
@@ -795,6 +1001,15 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
           <p className="text-gray-500">No players on your team yet</p>
         )}
       </div>
+
+      {/* Turn History */}
+
+      {/* Error Message */}
+      {error && (
+        <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+          {error}
+        </div>
+      )}
 
       {/* Turn History */}
       <div>

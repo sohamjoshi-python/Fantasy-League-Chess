@@ -163,6 +163,27 @@ const autoCompleteTeamsIfNeeded = async (leagueData: any) => {
   }
 };
 
+// Helper function to generate snake draft order
+const generateSnakeDraftOrder = (participants: string[], rounds: number): string[] => {
+  const draftOrder: string[] = [];
+  
+  for (let round = 0; round < rounds; round++) {
+    if (round % 2 === 0) {
+      // Forward order (1, 2, 3, 4...)
+      for (let i = 0; i < participants.length; i++) {
+        draftOrder.push(participants[i]);
+      }
+    } else {
+      // Reverse order (4, 3, 2, 1...)
+      for (let i = participants.length - 1; i >= 0; i--) {
+        draftOrder.push(participants[i]);
+      }
+    }
+  }
+  
+  return draftOrder;
+};
+
 const LeaguePage: React.FC = () => {
   const { leagueId } = useParams<{ leagueId: string }>()
   const { user } = useAuth()
@@ -309,11 +330,13 @@ const LeaguePage: React.FC = () => {
       setLoading(true)
 
       // Get league data
-      const { data: leagueData, error: leagueError } = await supabase
-        .from('leagues')
-        .select('*')
-        .eq('id', leagueId)
-        .single()
+          // Force fresh fetch by adding a cache-busting parameter
+    const timestamp = Date.now();
+    const { data: leagueData, error: leagueError } = await supabase
+      .from('leagues')
+      .select('*')
+      .eq('id', leagueId)
+      .single()
 
       if (leagueError || !leagueData) {
         console.error('loadLeagueData - league error:', leagueError)
@@ -321,6 +344,13 @@ const LeaguePage: React.FC = () => {
         return
       }
 
+      console.log('loadLeagueData - fetched league data:', leagueData);
+      console.log('draft_started:', leagueData.draft_started);
+      console.log('draft_completed:', leagueData.draft_completed);
+      console.log('marketplace_started:', leagueData.marketplace_started);
+      console.log('marketplace_order:', leagueData.marketplace_order);
+      console.log('current_marketplace_turn:', leagueData.current_marketplace_turn);
+      
       setLeague(leagueData);
       await autoCompleteTeamsIfNeeded(leagueData);
       // Combine all relevant user IDs
@@ -581,17 +611,20 @@ const LeaguePage: React.FC = () => {
         return
       }
       
-      // Get user's display name from Auth metadata
+      // Get user's username from users table
       let displayName = user.email || user.id.slice(0, 6);
       try {
-        const { data: { user: authUser } } = await supabase.auth.getUser();
-        if (authUser?.user_metadata?.display_name) {
-          displayName = authUser.user_metadata.display_name;
-        } else if (authUser?.user_metadata?.full_name) {
-          displayName = authUser.user_metadata.full_name;
+        const { data: userData } = await supabase
+          .from('users')
+          .select('username')
+          .eq('id', user.id)
+          .single();
+        
+        if (userData?.username) {
+          displayName = userData.username;
         }
       } catch (err) {
-        
+        console.error('Error getting user username:', err);
       }
       
       const updatedMemberIds = [...(league?.member_ids || []), user.id]
@@ -656,7 +689,6 @@ const LeaguePage: React.FC = () => {
     }
   }
 
-  // Manual draft start handler
   const handleStartDraft = async () => {
     if (!league) return
     setLoading(true)

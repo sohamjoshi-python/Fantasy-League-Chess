@@ -119,6 +119,22 @@ const JoinLeague: React.FC = () => {
         return
       }
 
+      // Get user's username from users table
+      let displayName = user.email || user.id.slice(0, 6);
+      try {
+        const { data: userData } = await supabase
+          .from('users')
+          .select('username')
+          .eq('id', user.id)
+          .single();
+        
+        if (userData?.username) {
+          displayName = userData.username;
+        }
+      } catch (err) {
+        console.error('Error getting user username:', err);
+      }
+
       const joinCode = generateJoinCode()
       const endDate = new Date(startDate)
       endDate.setMonth(endDate.getMonth() + 1)
@@ -144,19 +160,6 @@ const JoinLeague: React.FC = () => {
         .single()
 
       if (leagueError) throw leagueError
-
-      // Get user's display name from Auth metadata
-      let displayName = user.email || user.id.slice(0, 6);
-      try {
-        const { data: { user: authUser } } = await supabase.auth.getUser();
-        if (authUser?.user_metadata?.display_name) {
-          displayName = authUser.user_metadata.display_name;
-        } else if (authUser?.user_metadata?.full_name) {
-          displayName = authUser.user_metadata.full_name;
-        }
-      } catch (err) {
-        
-      }
 
       // Add creator to league_members table
       const { error: memberError } = await supabase
@@ -245,17 +248,22 @@ const JoinLeague: React.FC = () => {
         return
       }
 
-      // Get user's display name from Auth metadata
+      // Get user's display name from users table
       let displayName = user.email || user.id.slice(0, 6);
       try {
-        const { data: { user: authUser } } = await supabase.auth.getUser();
-        if (authUser?.user_metadata?.display_name) {
-          displayName = authUser.user_metadata.display_name;
-        } else if (authUser?.user_metadata?.full_name) {
-          displayName = authUser.user_metadata.full_name;
+        const { data: userData } = await supabase
+          .from('users')
+          .select('display_name, username')
+          .eq('id', user.id)
+          .single();
+        
+        if (userData?.display_name && userData.display_name.trim() !== '') {
+          displayName = userData.display_name;
+        } else if (userData?.username) {
+          displayName = userData.username;
         }
       } catch (err) {
-        
+        console.error('Error getting user display name:', err);
       }
 
       // Add user to league_members table first
@@ -338,17 +346,20 @@ const JoinLeague: React.FC = () => {
         return
       }
 
-      // Get user's display name from Auth metadata
+      // Get user's username from users table
       let displayName = user.email || user.id.slice(0, 6);
       try {
-        const { data: { user: authUser } } = await supabase.auth.getUser();
-        if (authUser?.user_metadata?.display_name) {
-          displayName = authUser.user_metadata.display_name;
-        } else if (authUser?.user_metadata?.full_name) {
-          displayName = authUser.user_metadata.full_name;
+        const { data: userData } = await supabase
+          .from('users')
+          .select('username')
+          .eq('id', user.id)
+          .single();
+        
+        if (userData?.username) {
+          displayName = userData.username;
         }
       } catch (err) {
-        
+        console.error('Error getting user username:', err);
       }
 
       // Add user to league_members table first

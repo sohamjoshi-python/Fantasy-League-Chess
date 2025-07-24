@@ -88,21 +88,34 @@ const Profile: React.FC<ProfileProps> = ({ showOnlyShop = false, onCloseShop }) 
 
   if (showOnlyShop) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <AvatarShop user={profile!} onClose={onCloseShop || (() => {})} />
+      <div className="bg-white rounded-lg shadow-lg p-6 border-2 border-royalBlue">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold text-neutral-900">Avatar Shop</h2>
+          <button
+            onClick={onCloseShop}
+            className="text-neutral-400 hover:text-neutral-600 transition-colors"
+          >
+            ✕
+          </button>
+        </div>
+        {/* Avatar shop content would go here */}
+        <p className="text-neutral-600">Avatar shop coming soon!</p>
       </div>
-    );
+    )
   }
 
   return (
-    <div className="w-full max-w-lg mx-auto bg-white rounded-lg shadow-lg p-6 lg:p-8 mt-4 lg:mt-8 border-2 border-royalBlue">
-      <h1 className="text-xl lg:text-2xl font-bold mb-4 lg:mb-6 text-neutral-900">Profile</h1>
-      {/* Use profile for all profile fields and avatar display */}
-      <img src={profile?.selected_avatar_url || pawnRoyaleLogo} alt="Avatar" className="w-24 h-24 rounded-full border-4 border-royalBlue mb-4" />
-      {profile && <button onClick={() => setShowAvatarShop(true)} className="bg-royalBlue text-white px-4 py-2 rounded-lg mb-2">Change Avatar</button>}
-      <a href="/avatar-shop" className="block text-royalBlue underline mb-2">Go to Avatar Shop</a>
-      <a href="/leaderboard" className="block text-royalBlue underline mb-4">View Leaderboard</a>
-      {showAvatarShop && profile && <AvatarShop user={profile} onClose={() => setShowAvatarShop(false)} />}
+    <div className="bg-white rounded-lg shadow-lg p-6 border-2 border-royalBlue">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-bold text-neutral-900">Profile Settings</h2>
+        <button
+          onClick={() => setShowAvatarShop(true)}
+          className="bg-royalBlue hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-semibold transition-colors"
+        >
+          Avatar Shop
+        </button>
+      </div>
+      
       <form onSubmit={handleSave} className="space-y-6">
         <div>
           <label className="block text-sm font-medium text-neutral-700 mb-2">Email</label>
@@ -117,11 +130,12 @@ const Profile: React.FC<ProfileProps> = ({ showOnlyShop = false, onCloseShop }) 
           <label className="block text-sm font-medium text-neutral-700 mb-2">Username</label>
           <input
             type="text"
-            value={profile?.username || ''}
+            value={username}
             onChange={e => setUsername(e.target.value)}
             className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-royalBlue text-neutral-900 text-sm lg:text-base"
             placeholder="Enter your username"
           />
+          <p className="text-xs text-neutral-500 mt-1">This is your display name that will appear in leagues and leaderboards</p>
         </div>
         <div>
           <label className="block text-sm font-medium text-neutral-700 mb-2">Coins</label>
