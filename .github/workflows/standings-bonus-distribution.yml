@@ -18,7 +18,7 @@ jobs:
         
         # Call the Supabase Edge Function
         response=$(curl -s -w "\n%{http_code}" -X POST \
-          "${{ secrets.VITE_SUPABASE_URL }}/functions/v1/award-standings-bonus" \
+          "${{ secrets.SB_URL }}/functions/v1/award-standings-bonus" \
           -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
           -H "Content-Type: application/json")
         
@@ -44,4 +44,4 @@ jobs:
           echo "HTTP Status: $http_code"
           echo "Error Response: $response_body"
           exit 1
-        fi 
+        fi
