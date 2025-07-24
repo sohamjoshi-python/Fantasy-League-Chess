@@ -1239,6 +1239,308 @@ export const standingsUpdateTemplate = (data: EmailTemplateData & {
   return baseTemplate(content, `Standings Update - ${data.leagueName}`);
 };
 
+// 23. Inactivity Reminder Email
+export const inactivityReminderTemplate = (data: EmailTemplateData & {
+  daysInactive: number;
+}) => {
+  const content = `
+    <h2>👋 We Miss You!</h2>
+    <p>Hi ${data.userName},</p>
+    <p>It's been <strong>${data.daysInactive} days</strong> since you last played Pawn Royale!</p>
+    
+    <div class="highlight warning">
+      <strong>🎯 Your leagues are waiting!</strong> Don't let your opponents get ahead while you're away.
+    </div>
+
+    <h3>📊 What You're Missing</h3>
+    <ul>
+      <li>Weekly Titled Tuesday tournaments</li>
+      <li>Player trading in the marketplace</li>
+      <li>League standings and competition</li>
+      <li>New achievements and rewards</li>
+    </ul>
+
+    <h3>🎮 Quick Actions</h3>
+    <ul>
+      <li>Set your weekly lineup</li>
+      <li>Check your league standings</li>
+      <li>Trade players in the marketplace</li>
+      <li>Join new leagues</li>
+    </ul>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="https://pawn-royale.vercel.app/dashboard" class="button">Return to Game</a>
+      <a href="https://pawn-royale.vercel.app/leaderboard" class="button">View Leaderboard</a>
+    </div>
+  `;
+  
+  return baseTemplate(content, `We miss you! Come back to Pawn Royale`);
+};
+
+// 24. Weekly Digest Email
+export const weeklyDigestTemplate = (data: EmailTemplateData & {
+  week: string;
+  summary: string;
+  topPerformers: any[];
+  upcomingEvents: any[];
+}) => {
+  const content = `
+    <h2>📊 Your Weekly Pawn Royale Digest</h2>
+    <p>Hi ${data.userName},</p>
+    <p>Here's your weekly summary for <strong>Week ${data.week}</strong>!</p>
+    
+    <div class="highlight success">
+      <strong>📈 Weekly Summary</strong><br>
+      ${data.summary}
+    </div>
+
+    <h3>🏆 Top Performers This Week</h3>
+    ${data.topPerformers.map((performer: any, index: number) => `
+      <div class="player-card">
+        <div class="player-avatar">#${index + 1}</div>
+        <div class="player-info">
+          <div class="player-name">${performer.name}</div>
+          <div class="player-stats">${performer.points} points • ${performer.wins} wins</div>
+        </div>
+      </div>
+    `).join('')}
+
+    <h3>📅 Upcoming Events</h3>
+    <ul>
+      ${data.upcomingEvents.map((event: any) => `
+        <li><strong>${event.name}</strong> - ${event.date}</li>
+      `).join('')}
+    </ul>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="https://pawn-royale.vercel.app/dashboard" class="button">View Full Digest</a>
+      <a href="https://pawn-royale.vercel.app/leaderboard" class="button">Check Standings</a>
+    </div>
+  `;
+  
+  return baseTemplate(content, `Weekly Digest - Week ${data.week}`);
+};
+
+// 25. Special Event Email
+export const specialEventTemplate = (data: EmailTemplateData & {
+  eventName: string;
+  eventDescription: string;
+  eventDate: string;
+  eventRewards: any[];
+}) => {
+  const content = `
+    <h2>🎉 Special Event: ${data.eventName}</h2>
+    <p>Hi ${data.userName},</p>
+    <p>Get ready for an exciting special event in Pawn Royale!</p>
+    
+    <div class="highlight success">
+      <strong>🎯 ${data.eventName}</strong><br>
+      ${data.eventDescription}
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-value">📅</div>
+        <div class="stat-label">Event Date</div>
+        <div class="stat-value">${data.eventDate}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">🏆</div>
+        <div class="stat-label">Special Event</div>
+        <div class="stat-value">Limited Time</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">🎁</div>
+        <div class="stat-label">Rewards</div>
+        <div class="stat-value">Exclusive</div>
+      </div>
+    </div>
+
+    <h3>🎁 Event Rewards</h3>
+    <ul>
+      ${data.eventRewards.map((reward: any) => `
+        <li><strong>${reward.name}</strong> - ${reward.description}</li>
+      `).join('')}
+    </ul>
+
+    <h3>📋 How to Participate</h3>
+    <ul>
+      <li>Make sure your lineup is set</li>
+      <li>Participate in the special tournament</li>
+      <li>Complete event-specific challenges</li>
+      <li>Earn exclusive rewards</li>
+    </ul>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="https://pawn-royale.vercel.app/dashboard" class="button">Join Event</a>
+      <a href="https://pawn-royale.vercel.app/help" class="button">Event Rules</a>
+    </div>
+  `;
+  
+  return baseTemplate(content, `Special Event: ${data.eventName}`);
+};
+
+// 26. Promotion Email
+export const promotionTemplate = (data: EmailTemplateData & {
+  promotionTitle: string;
+  promotionDescription: string;
+  promotionCode: string;
+  validUntil: string;
+}) => {
+  const content = `
+    <h2>🎁 Special Promotion: ${data.promotionTitle}</h2>
+    <p>Hi ${data.userName},</p>
+    <p>We have an exclusive promotion just for you!</p>
+    
+    <div class="highlight success">
+      <strong>🎯 ${data.promotionTitle}</strong><br>
+      ${data.promotionDescription}
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-value">🎁</div>
+        <div class="stat-label">Promotion</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">${data.promotionCode}</div>
+        <div class="stat-label">Promo Code</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">⏰</div>
+        <div class="stat-label">Valid Until</div>
+        <div class="stat-value">${data.validUntil}</div>
+      </div>
+    </div>
+
+    <div class="highlight warning">
+      <strong>⏰ Limited Time Offer!</strong> This promotion is valid until ${data.validUntil}. Don't miss out!
+    </div>
+
+    <h3>📋 How to Redeem</h3>
+    <ul>
+      <li>Use promo code: <strong>${data.promotionCode}</strong></li>
+      <li>Apply it during checkout or in your account settings</li>
+      <li>Enjoy your exclusive benefits</li>
+      <li>Share with friends (if allowed)</li>
+    </ul>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="https://pawn-royale.vercel.app/dashboard" class="button">Redeem Now</a>
+      <a href="https://pawn-royale.vercel.app/help" class="button">Terms & Conditions</a>
+    </div>
+  `;
+  
+  return baseTemplate(content, `Special Promotion: ${data.promotionTitle}`);
+};
+
+// 27. Maintenance Notification Email
+export const maintenanceNotificationTemplate = (data: EmailTemplateData & {
+  maintenanceDate: string;
+  duration: string;
+  reason: string;
+}) => {
+  const content = `
+    <h2>🔧 Scheduled Maintenance</h2>
+    <p>Hi ${data.userName},</p>
+    <p>We want to inform you about upcoming maintenance for Pawn Royale.</p>
+    
+    <div class="highlight warning">
+      <strong>🔧 Maintenance Scheduled</strong><br>
+      We'll be performing system maintenance to improve your gaming experience.
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-value">📅</div>
+        <div class="stat-label">Date</div>
+        <div class="stat-value">${data.maintenanceDate}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">⏱️</div>
+        <div class="stat-label">Duration</div>
+        <div class="stat-value">${data.duration}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">🔧</div>
+        <div class="stat-label">Type</div>
+        <div class="stat-value">Scheduled</div>
+      </div>
+    </div>
+
+    <h3>📋 What to Expect</h3>
+    <ul>
+      <li><strong>Service Interruption:</strong> The game will be temporarily unavailable</li>
+      <li><strong>Duration:</strong> Approximately ${data.duration}</li>
+      <li><strong>Reason:</strong> ${data.reason}</li>
+      <li><strong>Benefits:</strong> Improved performance and new features</li>
+    </ul>
+
+    <h3>📅 Plan Ahead</h3>
+    <ul>
+      <li>Set your lineups before maintenance begins</li>
+      <li>Complete any pending transactions</li>
+      <li>Save your game progress</li>
+      <li>Check back after maintenance is complete</li>
+    </ul>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="https://pawn-royale.vercel.app/dashboard" class="button">Set Lineup Now</a>
+      <a href="https://pawn-royale.vercel.app/help" class="button">Maintenance FAQ</a>
+    </div>
+  `;
+  
+  return baseTemplate(content, `Scheduled Maintenance - ${data.maintenanceDate}`);
+};
+
+// 28. Feature Update Email
+export const featureUpdateTemplate = (data: EmailTemplateData & {
+  featureName: string;
+  featureDescription: string;
+  newCapabilities: string[];
+}) => {
+  const content = `
+    <h2>🚀 New Feature: ${data.featureName}</h2>
+    <p>Hi ${data.userName},</p>
+    <p>We're excited to announce a new feature in Pawn Royale!</p>
+    
+    <div class="highlight success">
+      <strong>🚀 ${data.featureName}</strong><br>
+      ${data.featureDescription}
+    </div>
+
+    <h3>✨ New Capabilities</h3>
+    <ul>
+      ${data.newCapabilities.map((capability: string) => `
+        <li>${capability}</li>
+      `).join('')}
+    </ul>
+
+    <h3>🎯 How This Benefits You</h3>
+    <ul>
+      <li>Enhanced gaming experience</li>
+      <li>More strategic options</li>
+      <li>Improved user interface</li>
+      <li>Better performance</li>
+    </ul>
+
+    <h3>📋 Getting Started</h3>
+    <ul>
+      <li>Log into your account</li>
+      <li>Explore the new feature</li>
+      <li>Read the updated help guide</li>
+      <li>Try it out in your next game</li>
+    </ul>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="https://pawn-royale.vercel.app/dashboard" class="button">Try New Feature</a>
+      <a href="https://pawn-royale.vercel.app/help" class="button">Learn More</a>
+    </div>
+  `;
+  
+  return baseTemplate(content, `New Feature: ${data.featureName}`);
+};
+
 // Export all templates
 export const emailTemplates = {
   weeklyResults: weeklyResultsTemplate,
@@ -1263,4 +1565,10 @@ export const emailTemplates = {
   achievementUnlocked: achievementUnlockedTemplate,
   rivalryAlert: rivalryAlertTemplate,
   standingsUpdate: standingsUpdateTemplate,
+  inactivityReminder: inactivityReminderTemplate,
+  weeklyDigest: weeklyDigestTemplate,
+  specialEvent: specialEventTemplate,
+  promotion: promotionTemplate,
+  maintenanceNotification: maintenanceNotificationTemplate,
+  featureUpdate: featureUpdateTemplate,
 }; 

@@ -459,6 +459,8 @@ export const expandedEmailAutomation = {
 
       const htmlContent = emailTemplates.achievementUnlocked({
         userName: user.display_name || 'Player',
+        leagueName: 'Pawn Royale', // Default league name for achievements
+        leagueId: 'general',
         achievementName: achievement.name,
         achievementDescription: achievement.description,
         achievementIcon: achievement.icon,
@@ -581,8 +583,9 @@ export const expandedEmailAutomation = {
 
       const htmlContent = emailTemplates.inactivityReminder({
         userName: user.display_name || 'Player',
-        daysInactive,
-        activeLeagues: 0 // Would need to calculate this
+        leagueName: 'Pawn Royale',
+        leagueId: 'general',
+        daysInactive
       });
 
       await sendEnhancedEmail({
@@ -609,16 +612,17 @@ export const expandedEmailAutomation = {
 
       const htmlContent = emailTemplates.weeklyDigest({
         userName: user.display_name || 'Player',
-        leagues: digestData.leagues,
-        totalPoints: digestData.totalPoints,
-        rankChanges: digestData.rankChanges,
-        marketplaceActivity: digestData.marketplaceActivity,
-        achievements: digestData.achievements
+        leagueName: 'Pawn Royale',
+        leagueId: 'general',
+        week: digestData.week,
+        summary: digestData.summary,
+        topPerformers: digestData.topPerformers,
+        upcomingEvents: digestData.upcomingEvents
       });
 
       await sendEnhancedEmail({
         to: user.email,
-        subject: `Your Pawn Royale Weekly Digest`,
+        subject: `Your Weekly Pawn Royale Digest - Week ${digestData.week}`,
         htmlContent,
         templateId: 'weeklyDigest',
         userId
@@ -641,11 +645,12 @@ export const expandedEmailAutomation = {
 
       const htmlContent = emailTemplates.specialEvent({
         userName: user.display_name || 'Player',
+        leagueName: 'Pawn Royale',
+        leagueId: 'general',
         eventName: eventData.name,
         eventDescription: eventData.description,
-        eventStartDate: eventData.startDate,
-        eventEndDate: eventData.endDate,
-        rewards: eventData.rewards
+        eventDate: eventData.date,
+        eventRewards: eventData.rewards
       });
 
       await sendEnhancedEmail({
@@ -672,16 +677,17 @@ export const expandedEmailAutomation = {
 
       const htmlContent = emailTemplates.promotion({
         userName: user.display_name || 'Player',
-        promotionName: promotionData.name,
+        leagueName: 'Pawn Royale',
+        leagueId: 'general',
+        promotionTitle: promotionData.title,
         promotionDescription: promotionData.description,
-        discount: promotionData.discount,
-        validUntil: promotionData.validUntil,
-        code: promotionData.code
+        promotionCode: promotionData.code,
+        validUntil: promotionData.validUntil
       });
 
       await sendEnhancedEmail({
         to: user.email,
-        subject: `Special Promotion: ${promotionData.name}`,
+        subject: `Special Promotion: ${promotionData.title}`,
         htmlContent,
         templateId: 'promotion',
         userId
@@ -704,15 +710,16 @@ export const expandedEmailAutomation = {
 
       const htmlContent = emailTemplates.maintenanceNotification({
         userName: user.display_name || 'Player',
-        maintenanceType: maintenanceData.type,
-        startTime: maintenanceData.startTime,
-        endTime: maintenanceData.endTime,
-        description: maintenanceData.description
+        leagueName: 'Pawn Royale',
+        leagueId: 'general',
+        maintenanceDate: maintenanceData.date,
+        duration: maintenanceData.duration,
+        reason: maintenanceData.reason
       });
 
       await sendEnhancedEmail({
         to: user.email,
-        subject: `Scheduled Maintenance - ${maintenanceData.type}`,
+        subject: `Scheduled Maintenance - ${maintenanceData.date}`,
         htmlContent,
         templateId: 'maintenanceNotification',
         userId
@@ -734,10 +741,11 @@ export const expandedEmailAutomation = {
 
       const htmlContent = emailTemplates.featureUpdate({
         userName: user.display_name || 'Player',
+        leagueName: 'Pawn Royale',
+        leagueId: 'general',
         featureName: featureData.name,
         featureDescription: featureData.description,
-        newCapabilities: featureData.capabilities,
-        howToUse: featureData.howToUse
+        newCapabilities: featureData.capabilities
       });
 
       await sendEnhancedEmail({
