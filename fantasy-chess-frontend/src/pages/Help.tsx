@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { ArrowRight, Trophy, Users, Target, BarChart3, HelpCircle, Play, Coins, Store, Star } from 'lucide-react'
+import { ArrowRight, Trophy, Users, Target, BarChart3, HelpCircle, Play, Coins, Store } from 'lucide-react'
 import logo from '../assets/pawn-royale-logo.png'
 
 const Help: React.FC = () => {
