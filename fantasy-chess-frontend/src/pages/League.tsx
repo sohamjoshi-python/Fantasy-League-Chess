@@ -134,10 +134,10 @@ const autoCompleteTeamsIfNeeded = async (leagueData: any) => {
     });
     // Pool of available players
     let available = allPlayers.filter(p => !drafted.has(p.id)).map(p => p.id);
-    // For each team, fill up to 10 players
+    // For each team, fill up to 1 player (minimum needed to start)
     for (const team of teams || []) {
       const current = team.player_ids || [];
-      const needed = 10 - current.length;
+      const needed = 1 - current.length;
       if (needed > 0) {
         // Randomly select needed players
         const chosen: string[] = [];
@@ -153,7 +153,7 @@ const autoCompleteTeamsIfNeeded = async (leagueData: any) => {
           .eq('id', team.id);
       }
     }
-    // After all teams are filled, mark draft as completed
+    // After all teams have at least 1 player, mark draft as completed
     await supabase
       .from('leagues')
       .update({ draft_completed: true })
@@ -1389,7 +1389,7 @@ const LeaguePage: React.FC = () => {
               <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6 border-2 border-gold">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg lg:text-xl font-bold text-neutral-900">Current Lineup</h3>
-                  {league.draft_completed && !isEditingLineup && (
+                  {teamPlayers.length >= 1 && !isEditingLineup && (
                     <button
                       type="button"
                       onClick={() => {
@@ -1411,7 +1411,7 @@ const LeaguePage: React.FC = () => {
                 {isEditingLineup ? (
                   isLineupChangeAllowed() ? (
                     <div className="space-y-4">
-                      <p className="text-xs lg:text-sm text-neutral-600">Select 5 players for your lineup:</p>
+                      <p className="text-xs lg:text-sm text-neutral-600">Select {Math.min(teamPlayers.length, 5)} players for your lineup:</p>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {teamPlayers.map((player) => (
                           <button
@@ -1420,7 +1420,7 @@ const LeaguePage: React.FC = () => {
                             onClick={() => {
                               if (selectedLineupPlayers.includes(player.id)) {
                                 setSelectedLineupPlayers(selectedLineupPlayers.filter(id => id !== player.id))
-                              } else if (selectedLineupPlayers.length < 5) {
+                              } else if (selectedLineupPlayers.length < Math.min(teamPlayers.length, 5)) {
                                 setSelectedLineupPlayers([...selectedLineupPlayers, player.id])
                               }
                             }}
@@ -1441,7 +1441,7 @@ const LeaguePage: React.FC = () => {
                         <button
                           type="button"
                           onClick={saveLineup}
-                          disabled={selectedLineupPlayers.length !== 5}
+                          disabled={selectedLineupPlayers.length !== Math.min(teamPlayers.length, 5)}
                           className="flex items-center space-x-1 bg-[#1e293b] hover:bg-royalBlue disabled:bg-neutral-400 text-white px-3 lg:px-4 py-2 rounded-lg text-sm lg:text-base shadow-lg transition-colors"
                         >
                           <Check className="h-4 w-4" />
@@ -1534,7 +1534,7 @@ const LeaguePage: React.FC = () => {
                                 </td>
                                 <td className="px-2 py-1 text-center text-neutral-700">
                                   {row.wins !== undefined && row.total_games !== undefined 
-                                    ? `${row.wins}/${row.total_games}` 
+                                    ? `${row.wins}/${row.total_games}`
                                     : '-'
                                   }
                                 </td>
@@ -1788,6 +1788,4 @@ const LeaguePage: React.FC = () => {
   )
 }
 
-export default LeaguePage 
-
-
+export default LeaguePage
