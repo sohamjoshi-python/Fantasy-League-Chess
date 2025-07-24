@@ -39,50 +39,51 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
     }
   }, [user, leagueId]);
 
-  useEffect(() => {
-    // Get all teams in this league to see which players are already owned
-    const getOwnedPlayerIds = async () => {
-      try {
-        const { data: allTeams, error: teamsError } = await supabase
-          .from('teams')
-          .select('player_ids')
-          .eq('league_id', leagueId);
+  // Get owned player IDs for filtering marketplace
+  const getOwnedPlayerIds = async () => {
+    try {
+      const { data: allTeams, error: teamsError } = await supabase
+        .from('teams')
+        .select('player_ids')
+        .eq('league_id', leagueId);
 
-        if (teamsError) {
-          console.error('Error fetching teams:', teamsError);
-          return new Set<string>();
-        }
-
-        // Create set of owned player IDs in this league
-        const ownedPlayerIds = new Set<string>();
-        allTeams?.forEach(team => {
-          team.player_ids?.forEach((id: string) => ownedPlayerIds.add(id));
-        });
-
-        return ownedPlayerIds;
-      } catch (err) {
-        console.error('Error getting owned player IDs:', err);
+      if (teamsError) {
+        console.error('Error fetching teams:', teamsError);
         return new Set<string>();
       }
-    };
 
-    // Filter marketplace listings based on search term and ownership
-    const filterMarketplaceListings = async () => {
-      const ownedPlayerIds = await getOwnedPlayerIds();
-      
-      if (searchTerm.trim() === '') {
-        setMarketplaceListings(
-          allPlayers.filter((p: ChessPlayer) => !ownedPlayerIds.has(p.id))
-            .slice(0, showAllPlayers ? undefined : 30)
-        );
-      } else {
-        const filtered = allPlayers.filter((p: ChessPlayer) => 
-          !ownedPlayerIds.has(p.id) && p.name.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-        setMarketplaceListings(filtered.slice(0, showAllPlayers ? undefined : 30));
-      }
-    };
+      // Create set of owned player IDs in this league
+      const ownedPlayerIds = new Set<string>();
+      allTeams?.forEach(team => {
+        team.player_ids?.forEach((id: string) => ownedPlayerIds.add(id));
+      });
 
+      return ownedPlayerIds;
+    } catch (err) {
+      console.error('Error getting owned player IDs:', err);
+      return new Set<string>();
+    }
+  };
+
+  // Filter marketplace listings based on search term and ownership
+  const filterMarketplaceListings = async () => {
+    const ownedPlayerIds = await getOwnedPlayerIds();
+    
+    if (searchTerm.trim() === '') {
+      setMarketplaceListings(
+        allPlayers.filter((p: ChessPlayer) => !ownedPlayerIds.has(p.id))
+          .slice(0, showAllPlayers ? undefined : 30)
+      );
+    } else {
+      const filtered = allPlayers.filter((p: ChessPlayer) => 
+        !ownedPlayerIds.has(p.id) && p.name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setMarketplaceListings(filtered.slice(0, showAllPlayers ? undefined : 30));
+    }
+  };
+
+  // Update marketplace listings when search term or showAllPlayers changes
+  useEffect(() => {
     filterMarketplaceListings();
   }, [searchTerm, allPlayers, showAllPlayers, leagueId]);
 
@@ -301,6 +302,9 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
       // Reload data to get updated information
       await loadData();
       
+      // Refresh marketplace listings to update what shows in marketplace vs owned
+      await filterMarketplaceListings();
+      
       console.log('=== BUY PLAYER DEBUG END ===');
       setError(null);
     } catch (err) {
@@ -409,6 +413,9 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
 
       setSellingPlayer(null);
       await loadData();
+
+      // Refresh marketplace listings to update what shows in marketplace vs owned
+      await filterMarketplaceListings();
 
       console.log('=== SELL PLAYER DEBUG END ===');
       setError(null);
@@ -548,6 +555,9 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
       }
 
       await loadData();
+
+      // Refresh marketplace listings to update what shows in marketplace vs owned
+      await filterMarketplaceListings();
 
       // Debug: Check player after selling and reloading
       const playerAfter = allPlayers.find(p => p.id === sellingToMarketplace.player.id);
