@@ -774,7 +774,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
     <div className="bg-white rounded-lg shadow-lg p-6 border-2 border-blue-200">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-xl font-bold text-gray-900">Turn-Based Marketplace</h3>
-        <div className="text-lg font-semibold text-yellow-700 bg-yellow-100 px-4 py-2 rounded">
+                        <div className="text-lg font-semibold text-amber-700 bg-amber-100 px-4 py-2 rounded">
           Coins: {userCoinBalance !== null ? userCoinBalance : '...'} 🪙
         </div>
       </div>
@@ -957,7 +957,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
                     </div>
                   </div>
                   <div className="text-right ml-4">
-                    <div className="text-2xl font-bold text-yellow-600">{price} 🪙</div>
+                    <div className="text-2xl font-bold text-amber-600">{price} 🪙</div>
                     {isUserTurn && canBuy && (
                       <button
                         onClick={() => {

@@ -243,7 +243,7 @@ const StarPointsMarketplace: React.FC<StarPointsMarketplaceProps> = ({
         <h2 className="text-2xl font-bold text-gray-800">Star Points Marketplace</h2>
         <div className="text-right">
           <div className="text-sm text-gray-600">Your Star Points</div>
-          <div className="text-2xl font-bold text-yellow-600">{userStarPoints} ⭐</div>
+          <div className="text-2xl font-bold text-amber-600">{userStarPoints} ⭐</div>
         </div>
       </div>
 
@@ -321,7 +321,7 @@ const StarPointsMarketplace: React.FC<StarPointsMarketplaceProps> = ({
                   {listing.player_country}
                 </div>
                 <div className="flex justify-between items-center mb-3">
-                  <span className="text-lg font-bold text-yellow-600">{listing.price} ⭐</span>
+                  <span className="text-lg font-bold text-amber-600">{listing.price} ⭐</span>
                   <span className="text-xs text-gray-500">by {listing.seller_name}</span>
                 </div>
                 <button

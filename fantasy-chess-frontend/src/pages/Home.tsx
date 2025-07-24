@@ -64,7 +64,7 @@ const Home: React.FC = () => {
       </section>
 
       {/* Coin System Section */}
-      <section className="w-full py-12 flex justify-center bg-gradient-to-r from-gold to-yellow-400">
+      <section className="w-full py-12 flex justify-center bg-gradient-to-r from-amber-500 to-amber-400">
         <div className="max-w-4xl w-full text-white">
           <div className="text-center mb-8">
             <Coins className="w-16 h-16 mx-auto mb-4" />

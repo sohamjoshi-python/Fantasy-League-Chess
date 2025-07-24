@@ -646,15 +646,15 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
       </div>
 
       {/* Coin Balance Display */}
-      <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+      <div className="mb-6 bg-amber-50 border border-amber-200 rounded-lg p-4">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="font-semibold text-yellow-800">Your Coin Balance</h3>
-            <p className="text-yellow-700 text-sm">Use coins to buy players from other members</p>
+            <h3 className="font-semibold text-amber-800">Your Coin Balance</h3>
+            <p className="text-amber-700 text-sm">Use coins to buy players from other members</p>
           </div>
           <div className="text-right">
-            <div className="text-2xl font-bold text-yellow-600">{userCoinBalance}</div>
-            <div className="text-xs text-yellow-600">coins</div>
+            <div className="text-2xl font-bold text-amber-600">{userCoinBalance}</div>
+            <div className="text-xs text-amber-600">coins</div>
           </div>
         </div>
       </div>
@@ -789,7 +789,7 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
                         </div>
                       </div>
                       <div className="text-right ml-4">
-                        <div className="text-2xl font-bold text-yellow-600">{price} 🪙</div>
+                        <div className="text-2xl font-bold text-amber-600">{price} 🪙</div>
                         <button
                           onClick={() => setBuyingPlayer({ player: listing, price: price })}
                           disabled={userCoinBalance < price}
@@ -843,11 +843,11 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
                           <p className="text-xs text-gray-500">
                             Owned in this league
                           </p>
-                          <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded">
-                            <p className="text-sm font-medium text-yellow-800">
+                          <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded">
+                            <p className="text-sm font-medium text-amber-800">
                               💰 Original Price: {price} 🪙
                             </p>
-                            <p className="text-sm text-yellow-700">
+                            <p className="text-sm text-amber-700">
                               💸 Sell Price: {Math.floor(price * 0.8)} 🪙 (80%)
                             </p>
                           </div>
@@ -859,7 +859,7 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
                           onClick={async () => {
                             setSellingToMarketplace({ player, price: Math.floor(price * 0.8) });
                           }}
-                          className="px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 transition-colors"
+                          className="px-4 py-2 bg-amber-600 text-white rounded-md hover:bg-amber-700 transition-colors"
                         >
                           💸 Sell for {Math.floor(price * 0.8)} 🪙
                         </button>
@@ -1036,7 +1036,7 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
               </button>
               <button
                 onClick={confirmSellToMarketplace}
-                className="flex-1 px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700"
+                className="flex-1 px-4 py-2 bg-amber-600 text-white rounded-md hover:bg-amber-700"
               >
                 Confirm Sell
               </button>

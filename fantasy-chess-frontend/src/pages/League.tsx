@@ -1461,7 +1461,7 @@ const LeaguePage: React.FC = () => {
                       </div>
                     </div>
                   ) : (
-                    <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200 text-yellow-900 text-center">
+                    <div className="p-4 bg-amber-50 rounded-lg border border-amber-200 text-amber-900 text-center">
                       <p className="font-semibold">Lineup changes are only allowed on Monday and Tuesday (UTC).</p>
                       <button
                         type="button"

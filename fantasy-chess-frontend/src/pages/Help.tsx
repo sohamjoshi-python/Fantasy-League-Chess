@@ -50,7 +50,7 @@ const Help: React.FC = () => {
         </div>
 
         {/* Coin System Overview */}
-        <div className="bg-gradient-to-r from-gold to-yellow-400 rounded-xl shadow-lg p-6 mb-8 text-white">
+        <div className="bg-gradient-to-r from-amber-500 to-amber-400 rounded-xl shadow-lg p-6 mb-8 text-white">
           <h2 className="text-2xl font-bold mb-4 flex items-center">
             <Coins className="w-6 h-6 mr-2" />
             Coin System

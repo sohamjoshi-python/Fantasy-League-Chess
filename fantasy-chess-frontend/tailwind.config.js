@@ -13,7 +13,7 @@ export default {
         'neutral-100': '#F3F4F6', // Light neutral gray
         'neutral-500': '#6B7280', // Medium neutral gray
         'neutral-900': '#1F2937', // Dark neutral gray
-        gold: '#FFD700',
+        gold: '#D97706', // Muted amber/gold instead of bright yellow
         silver: '#C0C0C0',
         royalBlue: '#4F7FFB',
         purple: '#8B5CF6', // Pawn Royale purple

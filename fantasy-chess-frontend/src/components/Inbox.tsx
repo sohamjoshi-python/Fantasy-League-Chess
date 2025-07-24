@@ -73,7 +73,7 @@ const Inbox: React.FC<InboxProps> = ({ isOpen, onClose }) => {
       case 'league_start':
         return <Play className="w-5 h-5 text-green-600" />;
       case 'weekly_results':
-        return <Trophy className="w-5 h-5 text-yellow-600" />;
+        return <Trophy className="w-5 h-5 text-amber-600" />;
       case 'league_end':
         return <Award className="w-5 h-5 text-purple-600" />;
       case 'draft_start':
