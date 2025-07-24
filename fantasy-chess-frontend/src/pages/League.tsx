@@ -1411,7 +1411,7 @@ const LeaguePage: React.FC = () => {
                 {isEditingLineup ? (
                   isLineupChangeAllowed() ? (
                     <div className="space-y-4">
-                      <p className="text-xs lg:text-sm text-neutral-600">Select {Math.min(teamPlayers.length, 5)} players for your lineup:</p>
+                      <p className="text-xs lg:text-sm text-neutral-600">Select 1-5 players for your lineup:</p>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {teamPlayers.map((player) => (
                           <button
@@ -1420,7 +1420,7 @@ const LeaguePage: React.FC = () => {
                             onClick={() => {
                               if (selectedLineupPlayers.includes(player.id)) {
                                 setSelectedLineupPlayers(selectedLineupPlayers.filter(id => id !== player.id))
-                              } else if (selectedLineupPlayers.length < Math.min(teamPlayers.length, 5)) {
+                              } else if (selectedLineupPlayers.length < 5) {
                                 setSelectedLineupPlayers([...selectedLineupPlayers, player.id])
                               }
                             }}
@@ -1441,7 +1441,7 @@ const LeaguePage: React.FC = () => {
                         <button
                           type="button"
                           onClick={saveLineup}
-                          disabled={selectedLineupPlayers.length !== Math.min(teamPlayers.length, 5)}
+                          disabled={selectedLineupPlayers.length < 1 || selectedLineupPlayers.length > 5}
                           className="flex items-center space-x-1 bg-[#1e293b] hover:bg-royalBlue disabled:bg-neutral-400 text-white px-3 lg:px-4 py-2 rounded-lg text-sm lg:text-base shadow-lg transition-colors"
                         >
                           <Check className="h-4 w-4" />
