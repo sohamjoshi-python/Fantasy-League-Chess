@@ -19,13 +19,10 @@ serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    console.log('Starting standings bonus distribution...')
-
     // Call the function to award standings bonuses
     const { data, error } = await supabase.rpc('award_standings_bonus_points')
 
     if (error) {
-      console.error('Error awarding standings bonuses:', error)
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -38,9 +35,6 @@ serve(async (req) => {
         }
       )
     }
-
-    console.log('Standings bonus distribution completed successfully!')
-    console.log('Result:', JSON.stringify(data, null, 2))
 
     return new Response(
       JSON.stringify({ 
@@ -56,7 +50,6 @@ serve(async (req) => {
     )
 
   } catch (error) {
-    console.error('Unexpected error in standings bonus distribution:', error)
     return new Response(
       JSON.stringify({ 
         success: false, 

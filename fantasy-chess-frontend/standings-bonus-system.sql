@@ -136,8 +136,7 @@ BEGIN
         total_bonus_awarded := total_bonus_awarded + bonus_points;
         participants_count := participants_count + 1;
         
-        RAISE NOTICE 'Awarded % bonus points to user % (rank %)', 
-                    bonus_points, standings_record.user_email, standings_record.rank;
+
     END LOOP;
 
     -- Record the distribution
@@ -204,7 +203,7 @@ BEGIN
             total_participants := total_participants + (result->>'participants_count')::integer;
         END IF;
         
-        RAISE NOTICE 'Processed league: % (ID: %)', league_record.name, league_record.id;
+
     END LOOP;
 
     -- Build final result
@@ -244,12 +243,4 @@ ALTER TABLE coin_transactions DROP CONSTRAINT IF EXISTS coin_transactions_transa
 ALTER TABLE coin_transactions ADD CONSTRAINT coin_transactions_transaction_type_check 
     CHECK (transaction_type IN ('join_bonus', 'weekly_award', 'player_purchase', 'player_sale', 'trade', 'refund', 'standings_bonus'));
 
--- Test query to see completed leagues that need bonus
--- SELECT id, name, end_date, payout_processed 
--- FROM leagues 
--- WHERE end_date <= CURRENT_DATE 
--- AND payout_processed = true
--- AND NOT EXISTS (
---     SELECT 1 FROM standings_bonus_distributions sbd 
---     WHERE sbd.league_id = leagues.id
--- ); 
+ 

@@ -26,9 +26,6 @@ jobs:
         http_code=$(echo "$response" | tail -n1)
         response_body=$(echo "$response" | head -n -1)
         
-        echo "📊 Response Status: $http_code"
-        echo "📄 Response Body: $response_body"
-        
         # Check if the request was successful
         if [ "$http_code" -eq 200 ]; then
           echo "✅ Standings bonus distribution triggered successfully!"
@@ -47,15 +44,4 @@ jobs:
           echo "HTTP Status: $http_code"
           echo "Error Response: $response_body"
           exit 1
-        fi
-        
-    - name: Log Summary
-      run: |
-        echo "🎯 Standings Bonus Distribution Summary:"
-        echo "   - 1st Place: 50 bonus points"
-        echo "   - 2nd Place: 40 bonus points"
-        echo "   - 3rd Place: 30 bonus points"
-        echo "   - 4th Place: 20 bonus points"
-        echo "   - 5th+ Place: 10 bonus points"
-        echo "   - Only processes completed leagues with processed payouts"
-        echo "   - Prevents duplicate distributions" 
+        fi 
