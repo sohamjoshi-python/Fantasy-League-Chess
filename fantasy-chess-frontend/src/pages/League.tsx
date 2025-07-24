@@ -534,11 +534,11 @@ const LeaguePage: React.FC = () => {
   }
 
   const saveLineup = async () => {
-    if (!league || !user || selectedLineupPlayers.length !== 5) return
+    if (!league || !user || selectedLineupPlayers.length < 1 || selectedLineupPlayers.length > 5) return
 
     // Prevent duplicate player IDs in the lineup
     const uniquePlayerIds = Array.from(new Set(selectedLineupPlayers));
-    if (uniquePlayerIds.length !== 5) {
+    if (uniquePlayerIds.length !== selectedLineupPlayers.length) {
       setError('You cannot select the same player more than once in your lineup.');
       return;
     }
