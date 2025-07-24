@@ -621,6 +621,624 @@ export const welcomeTemplate = (data: EmailTemplateData & {
   return baseTemplate(content, 'Welcome to Pawn Royale!');
 };
 
+// 9. League Created Email
+export const leagueCreatedTemplate = (data: EmailTemplateData & {
+  buyIn: number;
+  startDate: string;
+  endDate: string;
+}) => {
+  const content = `
+    <h2>🎉 League Created Successfully!</h2>
+    <p>Hi ${data.userName},</p>
+    <p>Congratulations! You've successfully created <strong>${data.leagueName}</strong>!</p>
+    
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-value">${data.buyIn}</div>
+        <div class="stat-label">Buy-in (coins)</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">${data.startDate}</div>
+        <div class="stat-label">Start Date</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">${data.endDate}</div>
+        <div class="stat-label">End Date</div>
+      </div>
+    </div>
+
+    <div class="highlight success">
+      <strong>🚀 Your league is ready!</strong> Share the league code with friends and start building your fantasy chess empire.
+    </div>
+
+    <h3>📋 Next Steps</h3>
+    <ul>
+      <li>Share the league code with potential members</li>
+      <li>Set up your league rules and settings</li>
+      <li>Prepare for the draft when members join</li>
+      <li>Monitor league activity and engagement</li>
+    </ul>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="https://pawn-royale.vercel.app/league/${data.leagueId}" class="button">View League</a>
+      <a href="https://pawn-royale.vercel.app/dashboard" class="button">Go to Dashboard</a>
+    </div>
+  `;
+  
+  return baseTemplate(content, `League Created - ${data.leagueName}`);
+};
+
+// 10. League Joined Email
+export const leagueJoinedTemplate = (data: EmailTemplateData & {
+  memberCount: number;
+  buyIn: number;
+}) => {
+  const content = `
+    <h2>🎯 Welcome to the League!</h2>
+    <p>Hi ${data.userName},</p>
+    <p>You've successfully joined <strong>${data.leagueName}</strong>!</p>
+    
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-value">${data.memberCount}</div>
+        <div class="stat-label">Members</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">${data.buyIn}</div>
+        <div class="stat-label">Buy-in (coins)</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">🎯</div>
+        <div class="stat-label">Ready to Play</div>
+      </div>
+    </div>
+
+    <div class="highlight success">
+      <strong>🎉 You're in!</strong> Get ready to draft players and compete for glory in ${data.leagueName}.
+    </div>
+
+    <h3>📅 What's Next?</h3>
+    <ul>
+      <li>Wait for the league to fill up</li>
+      <li>Prepare for the snake draft</li>
+      <li>Research chess players and their ELO ratings</li>
+      <li>Set your weekly lineups when the league starts</li>
+    </ul>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="https://pawn-royale.vercel.app/league/${data.leagueId}" class="button">View League</a>
+      <a href="https://pawn-royale.vercel.app/help" class="button">How to Play</a>
+    </div>
+  `;
+  
+  return baseTemplate(content, `Welcome to ${data.leagueName}!`);
+};
+
+// 11. League Starting Soon Email
+export const leagueStartingSoonTemplate = (data: EmailTemplateData & {
+  daysUntilStart: number;
+  startDate: string;
+}) => {
+  const content = `
+    <h2>⏰ League Starting Soon!</h2>
+    <p>Hi ${data.userName},</p>
+    <p><strong>${data.leagueName}</strong> starts in <strong>${data.daysUntilStart} days</strong>!</p>
+    
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-value">${data.daysUntilStart}</div>
+        <div class="stat-label">Days Left</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">${data.startDate}</div>
+        <div class="stat-label">Start Date</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">🎯</div>
+        <div class="stat-label">Get Ready</div>
+      </div>
+    </div>
+
+    <div class="highlight warning">
+      <strong>⏰ Time to prepare!</strong> Make sure you're ready for the draft and have researched your potential players.
+    </div>
+
+    <h3>📋 Preparation Checklist</h3>
+    <ul>
+      <li>Review chess player ELO ratings and recent form</li>
+      <li>Plan your draft strategy</li>
+      <li>Set aside time for the draft</li>
+      <li>Familiarize yourself with the scoring system</li>
+    </ul>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="https://pawn-royale.vercel.app/league/${data.leagueId}" class="button">View League</a>
+      <a href="https://pawn-royale.vercel.app/help" class="button">Draft Guide</a>
+    </div>
+  `;
+  
+  return baseTemplate(content, `${data.leagueName} starts in ${data.daysUntilStart} days!`);
+};
+
+// 12. Draft Starting Soon Email
+export const draftStartingSoonTemplate = (data: EmailTemplateData & {
+  hoursUntilDraft: number;
+  draftTime: string;
+}) => {
+  const content = `
+    <h2>⚡ Draft Starting Soon!</h2>
+    <p>Hi ${data.userName},</p>
+    <p>The draft for <strong>${data.leagueName}</strong> starts in <strong>${data.hoursUntilDraft} hours</strong>!</p>
+    
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-value">${data.hoursUntilDraft}</div>
+        <div class="stat-label">Hours Left</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">${data.draftTime}</div>
+        <div class="stat-label">Draft Time</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">🎯</div>
+        <div class="stat-label">Be Ready</div>
+      </div>
+    </div>
+
+    <div class="highlight warning">
+      <strong>⚡ Don't miss your turn!</strong> The snake draft will start at ${data.draftTime}. Make sure you're online and ready to pick.
+    </div>
+
+    <h3>🎯 Draft Strategy Tips</h3>
+    <ul>
+      <li>Research player ELO ratings and recent performance</li>
+      <li>Consider players who compete frequently in tournaments</li>
+      <li>Balance high-rated players with consistent performers</li>
+      <li>Remember the snake draft format (alternating order)</li>
+    </ul>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="https://pawn-royale.vercel.app/league/${data.leagueId}" class="button">Join Draft</a>
+      <a href="https://pawn-royale.vercel.app/help" class="button">Draft Guide</a>
+    </div>
+  `;
+  
+  return baseTemplate(content, `Draft for ${data.leagueName} starts in ${data.hoursUntilDraft} hours!`);
+};
+
+// 13. Draft Turn Reminder Email
+export const draftTurnReminderTemplate = (data: EmailTemplateData & {
+  playerName: string;
+}) => {
+  const content = `
+    <h2>🎯 Your Turn to Draft!</h2>
+    <p>Hi ${data.userName},</p>
+    <p>It's your turn to pick in the draft for <strong>${data.leagueName}</strong>!</p>
+    
+    <div class="highlight warning">
+      <strong>⏰ Your turn is now!</strong> Don't keep other players waiting. Make your selection quickly.
+    </div>
+
+    <h3>🎯 Quick Pick Options</h3>
+    <p>Consider these high-value players:</p>
+    <ul>
+      <li>${data.playerName} - Strong recent form</li>
+      <li>Check ELO ratings and tournament frequency</li>
+      <li>Balance your team composition</li>
+    </ul>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="https://pawn-royale.vercel.app/league/${data.leagueId}" class="button">Make Your Pick</a>
+    </div>
+  `;
+  
+  return baseTemplate(content, `Your turn to draft in ${data.leagueName}!`);
+};
+
+// 14. Titled Tuesday Reminder Email
+export const titledTuesdayReminderTemplate = (data: EmailTemplateData & {
+  hoursUntilEvent: number;
+}) => {
+  const content = `
+    <h2>🏆 Titled Tuesday Reminder!</h2>
+    <p>Hi ${data.userName},</p>
+    <p>Titled Tuesday starts in <strong>${data.hoursUntilEvent} hours</strong> for <strong>${data.leagueName}</strong>!</p>
+    
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-value">${data.hoursUntilEvent}</div>
+        <div class="stat-label">Hours Left</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">🏆</div>
+        <div class="stat-label">Tournament</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">📊</div>
+        <div class="stat-label">Points Time</div>
+      </div>
+    </div>
+
+    <div class="highlight warning">
+      <strong>⏰ Make sure your lineup is set!</strong> Points will be calculated based on your selected players' performance.
+    </div>
+
+    <h3>📋 Pre-Tournament Checklist</h3>
+    <ul>
+      <li>Verify your weekly lineup is set</li>
+      <li>Check that your players are competing</li>
+      <li>Review your team's recent performance</li>
+      <li>Monitor the tournament for live updates</li>
+    </ul>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="https://pawn-royale.vercel.app/league/${data.leagueId}" class="button">Check Lineup</a>
+      <a href="https://pawn-royale.vercel.app/dashboard" class="button">View Dashboard</a>
+    </div>
+  `;
+  
+  return baseTemplate(content, `Titled Tuesday starts in ${data.hoursUntilEvent} hours!`);
+};
+
+// 15. Lineup Deadline Reminder Email
+export const lineupDeadlineReminderTemplate = (data: EmailTemplateData & {
+  hoursUntilDeadline: number;
+}) => {
+  const content = `
+    <h2>⏰ Lineup Deadline Approaching!</h2>
+    <p>Hi ${data.userName},</p>
+    <p>Your lineup deadline for <strong>${data.leagueName}</strong> is in <strong>${data.hoursUntilDeadline} hours</strong>!</p>
+    
+    <div class="highlight warning">
+      <strong>⚠️ Don't miss the deadline!</strong> If you don't set a lineup, you'll score 0 points this week.
+    </div>
+
+    <h3>📋 Quick Lineup Setup</h3>
+    <ul>
+      <li>Select your 5 best players for this week</li>
+      <li>Consider recent form and ELO ratings</li>
+      <li>Check if players are competing in tournaments</li>
+      <li>Save your lineup before the deadline</li>
+    </ul>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="https://pawn-royale.vercel.app/league/${data.leagueId}" class="button">Set Lineup Now</a>
+      <a href="https://pawn-royale.vercel.app/help" class="button">Lineup Guide</a>
+    </div>
+  `;
+  
+  return baseTemplate(content, `Lineup deadline in ${data.hoursUntilDeadline} hours!`);
+};
+
+// 16. Player Listed Email
+export const playerListedTemplate = (data: EmailTemplateData & {
+  playerName: string;
+  playerElo: number;
+  price: number;
+  sellerName: string;
+}) => {
+  const content = `
+    <h2>🛒 New Player Listed!</h2>
+    <p>Hi ${data.userName},</p>
+    <p>A new player has been listed in the marketplace for <strong>${data.leagueName}</strong>!</p>
+    
+    <div class="player-card" style="margin: 20px 0;">
+      <div class="player-avatar">${data.playerName.charAt(0)}</div>
+      <div class="player-info">
+        <div class="player-name">${data.playerName}</div>
+        <div class="player-stats">ELO: ${data.playerElo} • Price: ${data.price} coins</div>
+      </div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-value">${data.playerElo}</div>
+        <div class="stat-label">ELO Rating</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">${data.price}</div>
+        <div class="stat-label">Price (coins)</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">${data.sellerName}</div>
+        <div class="stat-label">Seller</div>
+      </div>
+    </div>
+
+    <div class="highlight warning">
+      <strong>⏰ Act fast!</strong> This player was listed by ${data.sellerName} and may not be available for long.
+    </div>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="https://pawn-royale.vercel.app/league/${data.leagueId}" class="button">View Marketplace</a>
+      <a href="https://pawn-royale.vercel.app/dashboard" class="button">Check Balance</a>
+    </div>
+  `;
+  
+  return baseTemplate(content, `New player listed: ${data.playerName}`);
+};
+
+// 17. Player Purchased Email
+export const playerPurchasedTemplate = (data: EmailTemplateData & {
+  playerName: string;
+  playerElo: number;
+  price: number;
+  sellerName: string;
+}) => {
+  const content = `
+    <h2>✅ Player Purchased!</h2>
+    <p>Hi ${data.userName},</p>
+    <p>Congratulations! You've successfully purchased <strong>${data.playerName}</strong> for <strong>${data.price} coins</strong>!</p>
+    
+    <div class="player-card" style="margin: 20px 0;">
+      <div class="player-avatar">${data.playerName.charAt(0)}</div>
+      <div class="player-info">
+        <div class="player-name">${data.playerName}</div>
+        <div class="player-stats">ELO: ${data.playerElo} • Purchased for ${data.price} coins</div>
+      </div>
+    </div>
+
+    <div class="highlight success">
+      <strong>🎉 Great acquisition!</strong> ${data.playerName} is now part of your team in ${data.leagueName}.
+    </div>
+
+    <h3>📋 Next Steps</h3>
+    <ul>
+      <li>Add ${data.playerName} to your weekly lineup</li>
+      <li>Monitor their upcoming tournament performance</li>
+      <li>Consider trading other players to optimize your team</li>
+      <li>Track your team's overall performance</li>
+    </ul>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="https://pawn-royale.vercel.app/league/${data.leagueId}" class="button">View Team</a>
+      <a href="https://pawn-royale.vercel.app/dashboard" class="button">Set Lineup</a>
+    </div>
+  `;
+  
+  return baseTemplate(content, `Player purchased: ${data.playerName}`);
+};
+
+// 18. Player Sold Email
+export const playerSoldTemplate = (data: EmailTemplateData & {
+  playerName: string;
+  playerElo: number;
+  price: number;
+  buyerName: string;
+}) => {
+  const content = `
+    <h2>💰 Player Sold!</h2>
+    <p>Hi ${data.userName},</p>
+    <p>Great news! You've sold <strong>${data.playerName}</strong> for <strong>${data.price} coins</strong>!</p>
+    
+    <div class="player-card" style="margin: 20px 0;">
+      <div class="player-avatar">${data.playerName.charAt(0)}</div>
+      <div class="player-info">
+        <div class="player-name">${data.playerName}</div>
+        <div class="player-stats">ELO: ${data.playerElo} • Sold for ${data.price} coins</div>
+      </div>
+    </div>
+
+    <div class="highlight success">
+      <strong>💰 Coins added to your balance!</strong> You can now use these coins to buy other players or join new leagues.
+    </div>
+
+    <h3>📊 Transaction Details</h3>
+    <ul>
+      <li><strong>Player:</strong> ${data.playerName}</li>
+      <li><strong>ELO Rating:</strong> ${data.playerElo}</li>
+      <li><strong>Sale Price:</strong> ${data.price} coins</li>
+      <li><strong>Buyer:</strong> ${data.buyerName}</li>
+    </ul>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="https://pawn-royale.vercel.app/league/${data.leagueId}" class="button">View Marketplace</a>
+      <a href="https://pawn-royale.vercel.app/dashboard" class="button">Check Balance</a>
+    </div>
+  `;
+  
+  return baseTemplate(content, `Player sold: ${data.playerName}`);
+};
+
+// 19. Weekly Performance Email
+export const weeklyPerformanceTemplate = (data: EmailTemplateData & {
+  week: string;
+  rank: number;
+  points: number;
+  totalPlayers: number;
+  bestPlayer: string;
+  worstPlayer: string;
+  improvement: number;
+}) => {
+  const content = `
+    <h2>📊 Weekly Performance Report</h2>
+    <p>Hi ${data.userName},</p>
+    <p>Here's your detailed performance report for <strong>Week ${data.week}</strong> in <strong>${data.leagueName}</strong>!</p>
+    
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-value">#${data.rank}</div>
+        <div class="stat-label">Your Rank</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">${data.points}</div>
+        <div class="stat-label">Points Earned</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">${data.totalPlayers}</div>
+        <div class="stat-label">Total Players</div>
+      </div>
+    </div>
+
+    <div class="highlight ${data.improvement > 0 ? 'success' : 'warning'}">
+      <strong>${data.improvement > 0 ? '📈' : '📉'} Performance ${data.improvement > 0 ? 'Improvement' : 'Change'}</strong>
+      ${data.improvement > 0 ? `You improved by ${data.improvement} points from last week!` : `You scored ${Math.abs(data.improvement)} points less than last week.`}
+    </div>
+
+    <h3>👥 Player Performance</h3>
+    <div class="player-card">
+      <div class="player-avatar">🏆</div>
+      <div class="player-info">
+        <div class="player-name">Best Performer: ${data.bestPlayer}</div>
+        <div class="player-stats">Your highest-scoring player this week</div>
+      </div>
+    </div>
+    <div class="player-card">
+      <div class="player-avatar">📉</div>
+      <div class="player-info">
+        <div class="player-name">Needs Improvement: ${data.worstPlayer}</div>
+        <div class="player-stats">Consider replacing in your lineup</div>
+      </div>
+    </div>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="https://pawn-royale.vercel.app/league/${data.leagueId}" class="button">View Full Results</a>
+      <a href="https://pawn-royale.vercel.app/marketplace" class="button">Trade Players</a>
+    </div>
+  `;
+  
+  return baseTemplate(content, `Week ${data.week} Performance - ${data.leagueName}`);
+};
+
+// 20. Achievement Unlocked Email
+export const achievementUnlockedTemplate = (data: EmailTemplateData & {
+  achievementName: string;
+  achievementDescription: string;
+  achievementIcon: string;
+  pointsEarned: number;
+}) => {
+  const content = `
+    <h2>🏆 Achievement Unlocked!</h2>
+    <p>Hi ${data.userName},</p>
+    <p>Congratulations! You've unlocked the <strong>${data.achievementName}</strong> achievement!</p>
+    
+    <div class="highlight success">
+      <div style="text-align: center; margin: 20px 0;">
+        <div style="font-size: 48px; margin-bottom: 10px;">${data.achievementIcon}</div>
+        <h3 style="margin: 0; color: white;">${data.achievementName}</h3>
+        <p style="margin: 10px 0 0; opacity: 0.9;">${data.achievementDescription}</p>
+      </div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-value">🏆</div>
+        <div class="stat-label">Achievement</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">+${data.pointsEarned}</div>
+        <div class="stat-label">Points Earned</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">🎉</div>
+        <div class="stat-label">Congratulations</div>
+      </div>
+    </div>
+
+    <h3>🎯 Keep Going!</h3>
+    <p>You're on a roll! Continue playing to unlock more achievements and climb the leaderboards.</p>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="https://pawn-royale.vercel.app/dashboard" class="button">View Achievements</a>
+      <a href="https://pawn-royale.vercel.app/leaderboard" class="button">Check Leaderboard</a>
+    </div>
+  `;
+  
+  return baseTemplate(content, `Achievement Unlocked: ${data.achievementName}!`);
+};
+
+// 21. Rivalry Alert Email
+export const rivalryAlertTemplate = (data: EmailTemplateData & {
+  rivalName: string;
+  rivalryType: string;
+  rivalryStats: any;
+}) => {
+  const content = `
+    <h2>⚔️ Rivalry Alert!</h2>
+    <p>Hi ${data.userName},</p>
+    <p>Your rival <strong>${data.rivalName}</strong> just made a move in <strong>${data.leagueName}</strong>!</p>
+    
+    <div class="highlight warning">
+      <strong>⚔️ The competition is heating up!</strong> ${data.rivalName} has ${data.rivalryType.toLowerCase()} and is gaining ground.
+    </div>
+
+    <h3>📊 Rivalry Stats</h3>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-value">${data.rivalryStats.yourRank}</div>
+        <div class="stat-label">Your Rank</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">${data.rivalryStats.rivalRank}</div>
+        <div class="stat-label">${data.rivalName}'s Rank</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">${data.rivalryStats.pointDifference}</div>
+        <div class="stat-label">Point Difference</div>
+      </div>
+    </div>
+
+    <h3>🎯 Time to Respond!</h3>
+    <ul>
+      <li>Check your lineup and make adjustments</li>
+      <li>Consider trading players to improve your team</li>
+      <li>Monitor ${data.rivalName}'s moves</li>
+      <li>Focus on your strategy to stay ahead</li>
+    </ul>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="https://pawn-royale.vercel.app/league/${data.leagueId}" class="button">View League</a>
+      <a href="https://pawn-royale.vercel.app/marketplace" class="button">Trade Players</a>
+    </div>
+  `;
+  
+  return baseTemplate(content, `Rivalry Alert: ${data.rivalName} in ${data.leagueName}`);
+};
+
+// 22. Standings Update Email
+export const standingsUpdateTemplate = (data: EmailTemplateData & {
+  oldRank: number;
+  newRank: number;
+  rankChange: number;
+  pointsChange: number;
+}) => {
+  const content = `
+    <h2>📈 Standings Update!</h2>
+    <p>Hi ${data.userName},</p>
+    <p>Your position in <strong>${data.leagueName}</strong> has changed!</p>
+    
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-value">#${data.oldRank}</div>
+        <div class="stat-label">Previous Rank</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">#${data.newRank}</div>
+        <div class="stat-label">New Rank</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">${data.rankChange > 0 ? '+' : ''}${data.rankChange}</div>
+        <div class="stat-label">Rank Change</div>
+      </div>
+    </div>
+
+    <div class="highlight ${data.rankChange < 0 ? 'success' : 'warning'}">
+      <strong>${data.rankChange < 0 ? '📈' : '📉'} ${data.rankChange < 0 ? 'You moved up!' : 'You moved down.'}</strong>
+      ${data.rankChange < 0 ? `Congratulations on climbing ${Math.abs(data.rankChange)} positions!` : `You dropped ${data.rankChange} positions. Time to bounce back!`}
+    </div>
+
+    <h3>📊 Point Changes</h3>
+    <p>Your total points changed by <strong>${data.pointsChange > 0 ? '+' : ''}${data.pointsChange}</strong> points.</p>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="https://pawn-royale.vercel.app/league/${data.leagueId}" class="button">View Standings</a>
+      <a href="https://pawn-royale.vercel.app/dashboard" class="button">Check Performance</a>
+    </div>
+  `;
+  
+  return baseTemplate(content, `Standings Update - ${data.leagueName}`);
+};
+
 // Export all templates
 export const emailTemplates = {
   weeklyResults: weeklyResultsTemplate,
@@ -631,4 +1249,18 @@ export const emailTemplates = {
   marketplaceAlert: marketplaceAlertTemplate,
   lineupReminder: lineupReminderTemplate,
   welcome: welcomeTemplate,
+  leagueCreated: leagueCreatedTemplate,
+  leagueJoined: leagueJoinedTemplate,
+  leagueStartingSoon: leagueStartingSoonTemplate,
+  draftStartingSoon: draftStartingSoonTemplate,
+  draftTurnReminder: draftTurnReminderTemplate,
+  titledTuesdayReminder: titledTuesdayReminderTemplate,
+  lineupDeadlineReminder: lineupDeadlineReminderTemplate,
+  playerListed: playerListedTemplate,
+  playerPurchased: playerPurchasedTemplate,
+  playerSold: playerSoldTemplate,
+  weeklyPerformance: weeklyPerformanceTemplate,
+  achievementUnlocked: achievementUnlockedTemplate,
+  rivalryAlert: rivalryAlertTemplate,
+  standingsUpdate: standingsUpdateTemplate,
 }; 
