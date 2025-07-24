@@ -17,7 +17,7 @@ jobs:
         
         # Call the Supabase Edge Function
         response=$(curl -s -w "\n%{http_code}" -X POST \
-          "${{ secrets.VITE_SUPABASE_URL }}/functions/v1/weekly-coin-distribution" \
+          "${{ secrets.SB_URL }}/functions/v1/weekly-coin-distribution" \
           -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
           -H "Content-Type: application/json")
         
