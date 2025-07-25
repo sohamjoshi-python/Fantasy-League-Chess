@@ -485,7 +485,7 @@ const LeaguePage: React.FC = () => {
 
       const standingsData = members.map(member => ({
         user_id: member.user_id,
-        display_name: usernameMap[member.user_id] || `User_${member.user_id.slice(0, 6)}`,
+        display_name: usernameMap[member.user_id] || 'Unknown User',
         total_points: userPoints.get(member.user_id) || 0,
         rank: 0,
         avatar_url: avatarMap[member.user_id] || pawnRoyaleLogo,
@@ -801,10 +801,8 @@ const LeaguePage: React.FC = () => {
       if (userData && !error && userData.length > 0) {
         const map: { [id: string]: string } = {};
         userData.forEach((user) => {
-          // Use username if available and not empty, otherwise use truncated ID
-          const username = user.username && user.username.trim() !== '' 
-            ? user.username 
-            : `User_${user.id.slice(0, 6)}`;
+          // Always use the username field from users table
+          const username = user.username || 'Unknown User';
           map[user.id] = username;
         });
         
