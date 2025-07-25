@@ -446,10 +446,18 @@ const LeaguePage: React.FC = () => {
       // Get all league members first
       const { data: members } = await supabase
         .from('league_members')
-        .select('user_id, display_name')
+        .select('user_id')
         .eq('league_id', leagueId)
 
       if (!members) return
+
+      // Get usernames from users table
+      const { data: userData } = await supabase
+        .from('users')
+        .select('id, username')
+        .in('id', members.map(m => m.user_id))
+
+      const usernameMap = userData ? Object.fromEntries(userData.map(u => [u.id, u.username])) : {}
 
       // Get lineups to calculate points
       const { data: lineups } = await supabase
@@ -477,7 +485,7 @@ const LeaguePage: React.FC = () => {
 
       const standingsData = members.map(member => ({
         user_id: member.user_id,
-        display_name: member.display_name || `User_${member.user_id.slice(0, 6)}`,
+        display_name: usernameMap[member.user_id] || `User_${member.user_id.slice(0, 6)}`,
         total_points: userPoints.get(member.user_id) || 0,
         rank: 0,
         avatar_url: avatarMap[member.user_id] || pawnRoyaleLogo,
@@ -784,20 +792,20 @@ const LeaguePage: React.FC = () => {
     if (!ids.length || !leagueId) return;
     
     try {
-      const { data: members, error } = await supabase
-        .from('league_members')
-        .select('user_id, display_name')
-        .eq('league_id', leagueId)
-        .in('user_id', ids);
+      // Get usernames from users table
+      const { data: userData, error } = await supabase
+        .from('users')
+        .select('id, username')
+        .in('id', ids);
       
-      if (members && !error && members.length > 0) {
+      if (userData && !error && userData.length > 0) {
         const map: { [id: string]: string } = {};
-        members.forEach((member) => {
-          // Use display_name if available and not empty, otherwise use truncated ID
-          const displayName = member.display_name && member.display_name.trim() !== '' 
-            ? member.display_name 
-            : `User_${member.user_id.slice(0, 6)}`;
-          map[member.user_id] = displayName;
+        userData.forEach((user) => {
+          // Use username if available and not empty, otherwise use truncated ID
+          const username = user.username && user.username.trim() !== '' 
+            ? user.username 
+            : `User_${user.id.slice(0, 6)}`;
+          map[user.id] = username;
         });
         
         setUserMap(map);
