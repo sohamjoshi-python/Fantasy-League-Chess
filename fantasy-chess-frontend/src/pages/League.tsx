@@ -1103,7 +1103,7 @@ const LeaguePage: React.FC = () => {
           </div>
 
           {/* Bot Management Section - Only visible to league owner and before draft starts */}
-          {isOwner && !league?.draft_started && (
+          {isOwner && !league?.draft_completed && (
             <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6 mb-6 lg:mb-8 border-2 border-royalBlue">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg lg:text-xl font-bold text-neutral-900 flex items-center">
@@ -1613,7 +1613,7 @@ const LeaguePage: React.FC = () => {
                   <div className="flex items-center justify-between mb-6">
                     <h2 className="text-xl font-bold text-neutral-900">
                       <ExpandableUsername 
-                        username={selectedUser.display_name || selectedUser.user_email}
+                        username={selectedUser.display_name || `User_${selectedUser.user_id.slice(0, 6)}`}
                         isCurrentUser={selectedUser.user_id === user?.id}
                         className="text-xl font-bold"
                       />
