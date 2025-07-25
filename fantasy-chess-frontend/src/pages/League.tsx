@@ -1596,16 +1596,7 @@ const LeaguePage: React.FC = () => {
             </div>
           </div>
 
-          {/* Debug info for marketplace visibility */}
-          {league && (
-            <div className="mt-4 p-2 bg-gray-100 rounded text-xs">
-              <p><strong>Marketplace Debug:</strong></p>
-              <p>draft_completed: {league.draft_completed ? 'true' : 'false'}</p>
-              <p>marketplace_order length: {league.marketplace_order?.length || 0}</p>
-              <p>marketplace_completed: {league.marketplace_completed ? 'true' : 'false'}</p>
-              <p>Should show marketplace: {(league.draft_completed || (league.marketplace_order && league.marketplace_order.length === 0)) ? 'YES' : 'NO'}</p>
-            </div>
-          )}
+
 
           {/* Coin Marketplace - Show after draft is completed */}
           {league && (league.draft_completed || (league.marketplace_order && league.marketplace_order.length === 0)) && (
