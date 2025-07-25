@@ -1102,8 +1102,8 @@ const LeaguePage: React.FC = () => {
             </div>
           </div>
 
-          {/* Bot Management Section - Only visible to league owner */}
-          {isOwner && (
+          {/* Bot Management Section - Only visible to league owner and before draft starts */}
+          {isOwner && !league?.draft_started && (
             <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6 mb-6 lg:mb-8 border-2 border-royalBlue">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg lg:text-xl font-bold text-neutral-900 flex items-center">
