@@ -319,3 +319,14 @@ s3_secret_key = "env(S3_SECRET_KEY)"
 # Edge function scheduling is configured in the Supabase Dashboard
 # Go to Edge Functions → weekly-coin-distribution → Add Schedule
 # Cron expression: 0 1 * * 1 (every Monday at 1:00 AM UTC)
+
+[functions.send-email]
+enabled = true
+verify_jwt = true
+import_map = "./functions/send-email/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/send-email/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/send-email/*.html" ]

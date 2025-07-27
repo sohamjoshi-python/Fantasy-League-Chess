@@ -519,17 +519,6 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
           <p className="text-gray-600 mb-4">
             The marketplace will be available once the draft has started.
           </p>
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-md mx-auto">
-            <p className="text-sm text-blue-700">
-              <strong>League Status:</strong> {league?.name || 'Loading...'}
-            </p>
-            <p className="text-sm text-blue-600">
-              Draft Started: {league?.marketplace_started ? 'Yes' : 'No'}
-            </p>
-            <p className="text-sm text-blue-600">
-              Draft Completed: {league?.draft_completed ? 'Yes' : 'No'}
-            </p>
-          </div>
         </div>
       </div>
     );
@@ -543,21 +532,18 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
         <p className="text-gray-600">
           Buy and sell players with other league members using coins. Available after draft starts.
         </p>
-        <div className="mt-2 text-sm text-green-600 bg-green-50 border border-green-200 rounded-lg p-2 inline-block">
-          ✅ Draft is active - Marketplace is open for trading
-        </div>
       </div>
 
       {/* Coin Balance Display */}
-      <div className="mb-6 bg-amber-50 border border-amber-200 rounded-lg p-4">
+      <div className="mb-6 bg-white border border-royalBlue rounded-lg p-4 shadow-lg">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="font-semibold text-amber-800">Your Coin Balance</h3>
-            <p className="text-amber-700 text-sm">Use coins to buy players from other members</p>
+            <h3 className="font-semibold text-neutral-900">Your Coin Balance</h3>
+            <p className="text-neutral-700 text-sm">Use coins to buy players from other members</p>
           </div>
           <div className="text-right">
-            <div className="text-2xl font-bold text-amber-600">{userCoinBalance}</div>
-            <div className="text-xs text-amber-600">coins</div>
+            <div className="text-2xl font-bold text-royalBlue">{userCoinBalance}</div>
+            <div className="text-xs text-royalBlue">coins</div>
           </div>
         </div>
       </div>
@@ -683,8 +669,8 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
                         <div className="space-y-1 text-sm text-gray-600">
                           <p>ELO: {listing.elo} • {getPlayerTier(listing.elo)}</p>
                           {details?.fide_id && <p>FIDE ID: {details.fide_id}</p>}
-                          {(details?.accuracy !== undefined && details?.accuracy !== null) ? (
-                            <p>Accuracy: {details.accuracy.toFixed(1)}% ({details.games} games)</p>
+                          {(details?.average_centipawn_loss !== undefined && details?.average_centipawn_loss !== null) ? (
+                            <p>ACL: {details.average_centipawn_loss.toFixed(1)} ({details.games} games)</p>
                           ) : null}
                           <p className="text-xs text-gray-500">
                             Listed by: {listing.league_owners && listing.league_owners[leagueId] ? 'User' : 'Bot'}
@@ -740,8 +726,8 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
                         <div className="space-y-1 text-sm text-gray-600">
                           <p>ELO: {player.elo} • {getPlayerTier(player.elo)}</p>
                           {details?.fide_id && <p>FIDE ID: {details.fide_id}</p>}
-                          {(details?.accuracy !== undefined && details?.accuracy !== null) ? (
-                            <p>Accuracy: {details.accuracy.toFixed(1)}% ({details.games} games)</p>
+                          {(details?.average_centipawn_loss !== undefined && details?.average_centipawn_loss !== null) ? (
+                            <p>ACL: {details.average_centipawn_loss.toFixed(1)} ({details.games} games)</p>
                           ) : null}
                           <p className="text-xs text-gray-500">
                             Owned in this league
@@ -824,8 +810,8 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
                 return (
                   <>
                     {details?.fide_id && <p className="text-sm text-gray-600">FIDE ID: {details.fide_id}</p>}
-                    {(details?.accuracy !== undefined && details?.accuracy !== null) ? (
-                      <p>Accuracy: {details.accuracy.toFixed(1)}% ({details.games} games)</p>
+                    {(details?.average_centipawn_loss !== undefined && details?.average_centipawn_loss !== null) ? (
+                      <p>ACL: {details.average_centipawn_loss.toFixed(1)}% ({details.games} games)</p>
                     ) : null}
                     {details?.country && <p className="text-sm text-gray-600">Country: {details.country}</p>}
                     <p className="text-sm text-gray-600 mt-2">
@@ -866,8 +852,8 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
                 return (
                   <>
                     {details?.fide_id && <p className="text-sm text-gray-600">FIDE ID: {details.fide_id}</p>}
-                    {(details?.accuracy !== undefined && details?.accuracy !== null) ? (
-                      <p>Accuracy: {details.accuracy.toFixed(1)}% ({details.games} games)</p>
+                    {(details?.average_centipawn_loss !== undefined && details?.average_centipawn_loss !== null) ? (
+                      <p>ACL: {details.average_centipawn_loss.toFixed(1)}% ({details.games} games)</p>
                     ) : null}
                     {details?.country && <p className="text-sm text-gray-600">Country: {details.country}</p>}
                     <p className="text-sm text-gray-600 mt-2 mb-4">
@@ -919,8 +905,8 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
                 return (
                   <>
                     {details?.fide_id && <p className="text-sm text-gray-600">FIDE ID: {details.fide_id}</p>}
-                    {(details?.accuracy !== undefined && details?.accuracy !== null) ? (
-                      <p>Accuracy: {details.accuracy.toFixed(1)}% ({details.games} games)</p>
+                    {(details?.average_centipawn_loss !== undefined && details?.average_centipawn_loss !== null) ? (
+                      <p>ACL: {details.average_centipawn_loss.toFixed(1)}% ({details.games} games)</p>
                     ) : null}
                     {details?.country && <p className="text-sm text-gray-600">Country: {details.country}</p>}
                     <p className="text-sm text-gray-600 mt-2 mb-4">

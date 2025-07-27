@@ -6,6 +6,22 @@ import { supabase } from '../lib/supabase'
 import { League } from '../types'
 import { Users, Trophy, Calendar, Search, Copy } from 'lucide-react'
 
+// Helper function to send league joined email
+const sendLeagueJoinedEmail = async (userEmail: string, leagueName: string) => {
+  try {
+    await supabase.functions.invoke('send-email', {
+      body: {
+        to: userEmail,
+        subject: `Welcome to ${leagueName}!`,
+        text: `You have successfully joined ${leagueName}. Get ready to draft players and compete!`
+      }
+    })
+  } catch (error) {
+    console.error('Error sending league joined email:', error)
+    // Don't throw error - email failure shouldn't prevent joining
+  }
+}
+
 const JoinLeague: React.FC = () => {
   const { user } = useAuth()
   const navigate = useNavigate()
@@ -20,6 +36,7 @@ const JoinLeague: React.FC = () => {
   const [leagueName, setLeagueName] = useState('')
   const [leagueDescription, setLeagueDescription] = useState('')
   const [buyIn, setBuyIn] = useState(10)
+  const [maxMembers, setMaxMembers] = useState(10)
   const [isPublic, setIsPublic] = useState(true)
   const [startDate, setStartDate] = useState('')
 
@@ -120,7 +137,6 @@ const JoinLeague: React.FC = () => {
       }
 
       // Get user's username from users table
-      let displayName = `User_${user.id.slice(0, 6)}`;
       try {
         const { data: userData } = await supabase
           .from('users')
@@ -129,7 +145,7 @@ const JoinLeague: React.FC = () => {
           .single();
         
         if (userData?.username) {
-          displayName = userData.username;
+          // displayName = userData.username;
         }
       } catch (err) {
         console.error('Error getting user username:', err);
@@ -147,6 +163,7 @@ const JoinLeague: React.FC = () => {
           description: leagueDescription,
           is_public: isPublic,
           buy_in: buyIn,
+          max_members: maxMembers,
           start_date: startDate,
           end_date: endDate.toISOString().split('T')[0],
           join_code: joinCode,
@@ -161,27 +178,70 @@ const JoinLeague: React.FC = () => {
 
       if (leagueError) throw leagueError
 
+      // Create league data for the user (teams, coin balance, lineups)
+      try {
+        const { error: createDataError } = await supabase.rpc('create_league_data_for_user', {
+          user_id_input: user.id,
+          league_id_input: league.id
+        });
+        if (createDataError) {
+          console.log('Error creating league data (will be created automatically):', createDataError);
+        }
+      } catch (err) {
+        console.log('League data creation failed (will be created automatically):', err);
+      }
+
       // Add creator to league_members table
+      // TEMPORARILY DISABLED - Check table structure
+      /*
       const { error: memberError } = await supabase
         .from('league_members')
         .insert({
           league_id: league.id,
           user_id: user.id,
-          display_name: displayName,
           email: user.email
         })
         .single()
 
       if (memberError) {
         console.error('Error adding creator to league_members:', memberError)
-        // Continue anyway - the league was created successfully
+        // Continue anyway - the league update might still work
       }
+      */
+      console.log('league_members insert temporarily disabled');
 
       // Deduct coins from user
       await supabase
         .from('users')
         .update({ coins: userData.coins - buyIn })
         .eq('id', user.id)
+
+      // Send league joined email
+      if (user.email) {
+        await sendLeagueJoinedEmail(user.email, leagueName)
+      }
+
+      // Create Discord channel for the league
+      try {
+        console.log('Creating Discord channel for league...');
+        const discordResponse = await supabase.functions.invoke('discord-bot', {
+          body: {
+            action: 'create_league_channel',
+            leagueName: leagueName,
+            leagueId: league.id
+          }
+        });
+        
+        if (discordResponse.error) {
+          console.error('Discord function error:', discordResponse.error);
+          throw new Error(discordResponse.error.message || 'Discord function failed');
+        }
+        
+        console.log('Discord channel created:', discordResponse);
+      } catch (error) {
+        console.error('Error creating Discord channel (continuing without Discord):', error);
+        // Continue without Discord - this is not critical
+      }
 
       navigate(`/league/${league.id}`)
     } catch (error) {
@@ -235,11 +295,6 @@ const JoinLeague: React.FC = () => {
         return
       }
 
-      if (league.member_ids.length >= 20) {
-        setError('League is full')
-        return
-      }
-
       // Check if user has enough coins
       const { data: userData } = await supabase
         .from('users')
@@ -253,7 +308,6 @@ const JoinLeague: React.FC = () => {
       }
 
       // Get user's display name from users table
-      let displayName = `User_${user.id.slice(0, 6)}`;
       try {
         const { data: userData } = await supabase
           .from('users')
@@ -262,21 +316,22 @@ const JoinLeague: React.FC = () => {
           .single();
         
         if (userData?.display_name && userData.display_name.trim() !== '') {
-          displayName = userData.display_name;
+          // displayName = userData.display_name;
         } else if (userData?.username) {
-          displayName = userData.username;
+          // displayName = userData.username;
         }
       } catch (err) {
         console.error('Error getting user display name:', err);
       }
 
       // Add user to league_members table first
+      // TEMPORARILY DISABLED - Check table structure
+      /*
       const { error: memberError } = await supabase
         .from('league_members')
         .insert({
           league_id: league.id,
           user_id: user.id,
-          display_name: displayName,
           email: user.email
         })
         .single()
@@ -285,6 +340,8 @@ const JoinLeague: React.FC = () => {
         console.error('Error adding user to league_members:', memberError)
         // Continue anyway - the league update might still work
       }
+      */
+      console.log('league_members insert temporarily disabled');
 
       // Add user to league
       const updatedMemberIds = [...league.member_ids, user.id]
@@ -300,11 +357,47 @@ const JoinLeague: React.FC = () => {
 
       if (updateError) throw updateError
 
+      // Create league data for the user (teams, coin balance, lineups)
+      try {
+        const { error: createDataError } = await supabase.rpc('create_league_data_for_user', {
+          user_id_input: user.id,
+          league_id_input: league.id
+        });
+        if (createDataError) {
+          console.log('Error creating league data (will be created automatically):', createDataError);
+        }
+      } catch (err) {
+        console.log('League data creation failed (will be created automatically):', err);
+      }
+
       // Deduct coins from user
       await supabase
         .from('users')
         .update({ coins: userData.coins - league.buy_in })
         .eq('id', user.id)
+
+      // Send league joined email
+      if (user.email) {
+        await sendLeagueJoinedEmail(user.email, league.name)
+      }
+
+      // Create Discord channel if it doesn't exist
+      if (!league.discord_server_id) {
+        try {
+          console.log('Creating Discord channel for league...');
+          const discordResponse = await supabase.functions.invoke('discord-bot', {
+            body: {
+              action: 'create_league_channel',
+              leagueName: league.name,
+              leagueId: league.id
+            }
+          });
+          console.log('Discord channel created:', discordResponse);
+        } catch (error) {
+          console.log('Error creating Discord channel (continuing without Discord):', error);
+          // Continue without Discord - this is not critical
+        }
+      }
 
       navigate(`/league/${league.id}`)
     } catch (error) {
@@ -338,6 +431,13 @@ const JoinLeague: React.FC = () => {
         return
       }
 
+      // Check if league is full using max_members field
+      const maxMembers = league.max_members || 10
+      if (league.member_ids.length >= maxMembers) {
+        setError(`League is full (${league.member_ids.length}/${maxMembers} members)`)
+        return
+      }
+
       // Check if user has enough coins
       const { data: userData } = await supabase
         .from('users')
@@ -351,7 +451,6 @@ const JoinLeague: React.FC = () => {
       }
 
       // Get user's username from users table
-      let displayName = `User_${user.id.slice(0, 6)}`;
       try {
         const { data: userData } = await supabase
           .from('users')
@@ -360,19 +459,20 @@ const JoinLeague: React.FC = () => {
           .single();
         
         if (userData?.username) {
-          displayName = userData.username;
+          // displayName = userData.username;
         }
       } catch (err) {
         console.error('Error getting user username:', err);
       }
 
       // Add user to league_members table first
+      // TEMPORARILY DISABLED - Check table structure
+      /*
       const { error: memberError } = await supabase
         .from('league_members')
         .insert({
           league_id: league.id,
           user_id: user.id,
-          display_name: displayName,
           email: user.email
         })
         .single()
@@ -381,6 +481,8 @@ const JoinLeague: React.FC = () => {
         console.error('Error adding user to league_members:', memberError)
         // Continue anyway - the league update might still work
       }
+      */
+      console.log('league_members insert temporarily disabled');
 
       // Add user to league
       const updatedMemberIds = [...league.member_ids, user.id]
@@ -396,11 +498,47 @@ const JoinLeague: React.FC = () => {
 
       if (updateError) throw updateError
 
+      // Create league data for the user (teams, coin balance, lineups)
+      try {
+        const { error: createDataError } = await supabase.rpc('create_league_data_for_user', {
+          user_id_input: user.id,
+          league_id_input: league.id
+        });
+        if (createDataError) {
+          console.log('Error creating league data (will be created automatically):', createDataError);
+        }
+      } catch (err) {
+        console.log('League data creation failed (will be created automatically):', err);
+      }
+
       // Deduct coins from user
       await supabase
         .from('users')
         .update({ coins: userData.coins - league.buy_in })
         .eq('id', user.id)
+
+      // Send league joined email
+      if (user.email) {
+        await sendLeagueJoinedEmail(user.email, league.name)
+      }
+
+      // Create Discord channel if it doesn't exist
+      if (!league.discord_server_id) {
+        try {
+          console.log('Creating Discord channel for league...');
+          const discordResponse = await supabase.functions.invoke('discord-bot', {
+            body: {
+              action: 'create_league_channel',
+              leagueName: league.name,
+              leagueId: league.id
+            }
+          });
+          console.log('Discord channel created:', discordResponse);
+        } catch (error) {
+          console.log('Error creating Discord channel (continuing without Discord):', error);
+          // Continue without Discord - this is not critical
+        }
+      }
 
       navigate(`/league/${league.id}`)
     } catch (error) {
@@ -509,6 +647,25 @@ const JoinLeague: React.FC = () => {
               </div>
 
               <div>
+                <label htmlFor="maxMembers" className="block text-sm font-medium text-neutral-700 mb-2">
+                  Max Members *
+                </label>
+                <input
+                  type="number"
+                  id="maxMembers"
+                  value={maxMembers}
+                  onChange={(e) => setMaxMembers(parseInt(e.target.value) || 10)}
+                  min="2"
+                  max="100"
+                  required
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-royalBlue text-neutral-900"
+                />
+                <p className="text-xs text-neutral-500 mt-1">Default: 10, Max: 100</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
+              <div>
                 <label htmlFor="startDate" className="block text-sm font-medium text-neutral-700 mb-2 flex items-center gap-1 overflow-visible">
                   Start Date (first of month) *
                   <span className="relative group cursor-pointer align-middle">
@@ -567,6 +724,8 @@ const JoinLeague: React.FC = () => {
               {publicLeagues.map((league) => {
                 if (!user) return null;
                 const alreadyMember = league.member_ids.includes(user.id);
+                const maxMembers = league.max_members || 10;
+                const isFull = league.member_ids.length >= maxMembers;
                 return (
                   <div key={league.id} className="bg-white rounded-lg shadow-lg p-4 lg:p-6 border-2 border-royalBlue">
                     <div className="flex items-center justify-between mb-4">
@@ -588,7 +747,7 @@ const JoinLeague: React.FC = () => {
                       <div className="flex items-center space-x-2">
                         <Users className="h-4 w-4 text-royalBlue" />
                         <span className="text-xs lg:text-sm text-neutral-600">
-                          {league.member_ids.length} members
+                          {league.member_ids.length}/{maxMembers} members
                         </span>
                       </div>
                       <div className="flex items-center space-x-2">
@@ -607,15 +766,18 @@ const JoinLeague: React.FC = () => {
                     
                     <button
                       type="button"
-                      className={`w-full bg-[#1e293b] hover:bg-royalBlue disabled:bg-neutral-400 text-white py-2 px-4 rounded-lg font-medium text-sm lg:text-base shadow-lg transition-colors ${alreadyMember ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      disabled={alreadyMember}
-                      title={alreadyMember ? 'You are already a member of this league' : 'Join this league'}
-                      onClick={() => !alreadyMember && joinPublicLeague(league)}
+                      className={`w-full bg-[#1e293b] hover:bg-royalBlue disabled:bg-neutral-400 text-white py-2 px-4 rounded-lg font-medium text-sm lg:text-base shadow-lg transition-colors ${alreadyMember || isFull ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      disabled={alreadyMember || isFull}
+                      title={alreadyMember ? 'You are already a member of this league' : isFull ? 'League is full' : 'Join this league'}
+                      onClick={() => !alreadyMember && !isFull && joinPublicLeague(league)}
                     >
-                      {loading ? 'Joining...' : 'Join League'}
+                      {loading ? 'Joining...' : alreadyMember ? 'Already Member' : isFull ? 'League Full' : 'Join League'}
                     </button>
                     {alreadyMember && (
                       <div className="text-xs text-neutral-500 mt-1">You are already a member of this league</div>
+                    )}
+                    {isFull && !alreadyMember && (
+                      <div className="text-xs text-neutral-500 mt-1">League is full</div>
                     )}
                   </div>
                 );

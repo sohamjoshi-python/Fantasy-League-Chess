@@ -20,6 +20,27 @@ export const useAuth = () => {
   return context
 }
 
+// Helper function to send welcome email
+const sendWelcomeEmail = async (email: string) => {
+  try {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.access_token) {
+      console.error('No access token available for email function')
+      return
+    }
+
+    await supabase.functions.invoke('send-email', {
+      body: {
+        to: email,
+        emailType: 'welcome'
+      }
+    })
+  } catch (error) {
+    console.error('Error sending welcome email:', error)
+    // Don't throw error - email failure shouldn't prevent signup
+  }
+}
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
@@ -56,6 +77,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     })
     if (error) throw error
+
+    // Send welcome email after successful signup
+    await sendWelcomeEmail(email)
   }
 
   const signOut = async () => {

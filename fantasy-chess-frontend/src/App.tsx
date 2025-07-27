@@ -8,6 +8,8 @@ import JoinLeague from './pages/JoinLeague'
 import LeaguePage from './pages/League'
 import Profile from './pages/Profile'
 import Help from './pages/Help'
+import Onboarding from './pages/Onboarding'
+import SignUp from './pages/SignUp'
 import Leaderboard from './pages/Leaderboard';
 import Tos from './pages/tos';
 import Privacy from './pages/privacy';
@@ -40,6 +42,8 @@ function App() {
               <Route path="/league/:leagueId" element={<LeaguePage />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/help" element={<Help />} />
+              <Route path="/onboarding" element={<Onboarding />} />
+              <Route path="/signup" element={<SignUp />} />
               <Route path="/leaderboard" element={<Leaderboard />} />
               <Route path="/avatar-shop" element={<AvatarShopPage />} />
               <Route path="/tos" element={<Tos />} />

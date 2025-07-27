@@ -20,7 +20,7 @@ export interface ChessPlayer {
   elo: number
   fide_id?: string
   country?: string
-  accuracy?: number
+  average_centipawn_loss?: number
   games?: number
   created_at: string
   updated_at?: string
@@ -46,6 +46,9 @@ export interface League {
   draft_start_time?: string
   payout_processed?: boolean
   bot_id?: string
+  max_members?: number
+  discord_server_id?: string
+  discord_invite_link?: string
   // New marketplace fields
   marketplace_started?: boolean
   marketplace_order?: string[]
@@ -111,18 +114,18 @@ export interface Game {
   white: string
   black: string
   result: string
-  white_accuracy: number | null
-  black_accuracy: number | null
+  white_average_centipawn_loss: number | null
+  black_average_centipawn_loss: number | null
   round: string
   white_points: number
   black_points: number
   created_at: string
 }
 
-export interface PlayerAccuracy {
+export interface PlayerACL {
   id: string
   player: string
-  accuracy: number | null
+  average_centipawn_loss: number | null
   games: number
   created_at: string
   updated_at: string

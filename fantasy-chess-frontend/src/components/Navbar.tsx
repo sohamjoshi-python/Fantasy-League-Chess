@@ -100,7 +100,7 @@ const Navbar: React.FC = () => {
                   Leaderboard
                 </Link>
                 <Link
-                  to="/help"
+                  to="/onboarding"
                   className="text-neutral-700 hover:text-royalBlue hover:underline hover:underline-offset-4 px-3 py-2 rounded-md text-sm font-medium flex items-center transition-colors"
                 >
                   <HelpCircle className="h-4 w-4 mr-1" />
@@ -150,16 +150,13 @@ const Navbar: React.FC = () => {
                   <LogIn className="h-4 w-4" />
                   <span>Sign In</span>
                 </button>
-                <button
-                  onClick={() => {
-                    setIsSignUp(true)
-                    setShowAuthModal(true)
-                  }}
+                <Link
+                  to="/onboarding"
                   className="flex items-center space-x-1 bg-white border-2 border-royalBlue text-royalBlue hover:bg-royalBlue hover:text-white px-4 py-2 rounded-md text-sm font-bold shadow-lg transition-colors"
                 >
                   <UserPlus className="h-4 w-4" />
                   <span>Sign Up</span>
-                </button>
+                </Link>
               </div>
             )}
           </div>

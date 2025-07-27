@@ -140,7 +140,7 @@ const Dashboard: React.FC = () => {
           const { data: players } = await supabase
             .from('chess_players')
             .select('*')
-            .in('id', teams.player_ids)
+            .in('name', teams.player_ids)
           if (players) {
             // setTeamPlayers(players) // This line was removed as per the edit hint
           }
@@ -157,7 +157,7 @@ const Dashboard: React.FC = () => {
             const { data: lineupPlayerData } = await supabase
               .from('chess_players')
               .select('*')
-              .in('id', lineups.player_ids)
+              .in('name', lineups.player_ids)
             if (lineupPlayerData) {
               setLineupPlayers(lineupPlayerData)
             }

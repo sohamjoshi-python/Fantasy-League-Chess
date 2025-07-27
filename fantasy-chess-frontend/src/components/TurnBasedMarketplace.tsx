@@ -180,54 +180,47 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
   };
 
   const loadUserTeam = async () => {
-    if (!user?.id) return;
     try {
-      const { data: team, error: teamError } = await supabase
+      const { data: teamData, error: teamError } = await supabase
         .from('teams')
-        .select('id, player_ids')
+        .select('player_ids')
+        .eq('user_id', user?.id)
         .eq('league_id', league.id)
-        .eq('user_id', user.id)
-        .single();
+        .limit(1)
+        .maybeSingle();
 
-      if (teamError && teamError.code === 'PGRST116') {
-        // No team row exists, so insert one
-        const { error: insertError } = await supabase
-          .from('teams')
-          .insert([
-            {
-              user_id: user.id,
-              league_id: league.id,
-              player_ids: [],
-              created_at: new Date().toISOString()
-            }
-          ])
-          .select('player_ids')
-          .single();
-        if (insertError) throw insertError;
+      if (teamError) {
+        console.log('Team query failed (using empty team):', teamError);
         setUserTeam([]);
         return;
       }
 
-      if (teamError) throw teamError;
-
-      if (team?.player_ids) {
-        // Fetch player details for the current league only
-        const { data: players, error: playersError } = await supabase
+      if (teamData && teamData.player_ids && teamData.player_ids.length > 0) {
+        const { data: teamPlayers, error: teamPlayersError } = await supabase
           .from('chess_players')
           .select('*')
-          .in('id', team.player_ids);
-        if (playersError) throw playersError;
-        setUserTeam(players || []);
+          .in('name', teamData.player_ids);
+
+        if (teamPlayersError) {
+          console.log('Team players query failed:', teamPlayersError);
+          setUserTeam([]);
+        } else {
+          setUserTeam(teamPlayers || []);
+        }
       } else {
         setUserTeam([]);
       }
-    } catch (err) {
+    } catch (error) {
+      console.log('Load user team failed:', error);
       setUserTeam([]);
     }
   };
 
   const loadUserCoinBalance = async () => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      setUserCoinBalance(50);
+      return;
+    }
     
     try {
       const { data, error } = await supabase
@@ -235,37 +228,48 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
         .select('coin_balance')
         .eq('user_id', user.id)
         .eq('league_id', league.id)
-        .single();
-
+        .limit(1)
+        .maybeSingle();
+      
       if (error) {
         if (error.code === 'PGRST116') {
           // No coin balance record exists, create it
-          const { error: insertError } = await supabase
-            .from('league_coin_balances')
-            .insert([
-              {
-                user_id: user.id,
-                league_id: league.id,
-                coin_balance: 50,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
+          try {
+            const { error: insertError } = await supabase
+              .from('league_coin_balances')
+              .insert([
+                {
+                  user_id: user.id,
+                  league_id: league.id,
+                  coin_balance: 50,
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString()
+                }
+              ]);
+            if (insertError) {
+              console.error('Failed to create coin balance:', insertError);
+              // If it's a duplicate key error (409), just set the balance to 50
+              if (insertError.code === '23505') {
+                setUserCoinBalance(50);
+              } else {
+                setUserCoinBalance(50); // Default to 50 coins
               }
-            ]);
-          if (insertError) {
-            console.error('Failed to create coin balance:', insertError);
-            setUserCoinBalance(50); // Default to 50 coins
-          } else {
-            setUserCoinBalance(50); // Default to 50 coins after creation
+            } else {
+              setUserCoinBalance(50); // Default to 50 coins after creation
+            }
+          } catch (insertErr) {
+            console.log('Coin balance insert failed (using default):', insertErr);
+            setUserCoinBalance(50);
           }
         } else {
-          console.error('Error loading coin balance:', error);
+          console.log('Coin balance query failed (using default):', error);
           setUserCoinBalance(50); // Default to 50 coins on error
         }
       } else {
         setUserCoinBalance(data?.coin_balance || 0);
       }
     } catch (err) {
-      console.error('Error loading coin balance:', err);
+      console.log('Coin balance load failed (using default):', err);
       setUserCoinBalance(50); // Default to 50 coins on error
     }
   };
@@ -283,7 +287,8 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
         .select('coin_balance')
         .eq('user_id', userId)
         .eq('league_id', league.id)
-        .single();
+        .limit(1)
+        .maybeSingle();
       
       if (coinError) {
         return;
@@ -623,44 +628,27 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
           The marketplace allows players to take turns buying chess players. Each player can have up to {league.max_players_per_team || 10} players on their team.
         </p>
         
-        {/* Debug information */}
-        <div className="mb-4 p-3 bg-gray-100 rounded text-sm">
-          <p><strong>Debug Info:</strong></p>
-          <p>User ID: {user?.id}</p>
-          <p>League Creator ID: {league?.creator_id}</p>
-          <p>Is Owner: {isOwner ? 'Yes' : 'No'}</p>
-          <p>Marketplace Started: {league?.marketplace_started ? 'Yes' : 'No'}</p>
-          <p><strong>Your Coin Balance:</strong> {userCoinBalance !== null ? userCoinBalance : 'Loading...'}</p>
-          <p>Current Turn: {league?.current_marketplace_turn || 0}</p>
-          <p>Marketplace Order Length: {league?.marketplace_order?.length || 0}</p>
-          <p>Marketplace Order: {league?.marketplace_order?.join(', ') || 'None'}</p>
-          <p><strong>League Members:</strong></p>
-          <p>Member IDs: {league?.member_ids?.join(', ') || 'None'}</p>
-          <p>Member Count: {league?.member_ids?.length || 0}</p>
-        </div>
-        
         {isOwner && (
-          <div className="space-y-2">
+          <div className="space-y-4">
             <button
               onClick={startMarketplace}
               disabled={loading}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold shadow-lg transition-colors disabled:opacity-50"
+              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
             >
-              {loading ? 'Starting...' : 'Start Marketplace'}
+              {loading ? 'Starting Marketplace...' : 'Start Turn-Based Marketplace'}
             </button>
-            {league.marketplace_started && (
-              <button
-                onClick={startMarketplace}
-                disabled={loading}
-                className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-lg font-semibold shadow-lg transition-colors disabled:opacity-50 ml-2"
-              >
-                {loading ? 'Restarting...' : 'Restart Marketplace'}
-              </button>
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+                {error}
+              </div>
             )}
           </div>
         )}
+        
         {!isOwner && (
-          <p className="text-gray-500 italic">Waiting for the league owner to start the marketplace...</p>
+          <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded">
+            Waiting for the league owner to start the marketplace...
+          </div>
         )}
       </div>
     );
@@ -734,34 +722,6 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
         <div className="mt-2 p-2 bg-orange-50 border border-orange-200 rounded text-xs">
           <p className="text-orange-700 font-semibold">💡 Auto-Skip Feature</p>
           <p className="text-orange-600">Users with 0 coins are automatically skipped and removed from the draft</p>
-        </div>
-
-        {/* Debug info */}
-        <div className="mt-4 p-2 bg-gray-100 rounded text-xs">
-          <p><strong>Debug:</strong></p>
-          <p>currentTurn: {currentTurn ? 'exists' : 'null'}</p>
-          <p>isUserTurn: {isUserTurn ? 'true' : 'false'}</p>
-          <p>user.id: {user?.id}</p>
-          <p>currentTurn?.current_user_id: {currentTurn?.current_user_id}</p>
-          <p>turn_number: {currentTurn?.turn_number}</p>
-          <p>total_turns: {currentTurn?.total_turns}</p>
-          <p>league.current_marketplace_turn: {league?.current_marketplace_turn}</p>
-          <p>marketplace_order length: {league?.marketplace_order?.length || 0}</p>
-          <p>marketplace_order: {(league?.marketplace_order?.length || 0) > 0 ? league?.marketplace_order?.slice(0, 10).join(', ') : 'None (All players removed)'}</p>
-          <p>Expected current user: {(league?.marketplace_order?.length || 0) > 0 ? (league?.marketplace_order?.[league?.current_marketplace_turn || 0] || 'None') : 'None (No players in draft)'}</p>
-          <p>Draft completed: {league?.draft_completed ? 'Yes' : 'No'}</p>
-          <p>All players expended coins: {(league?.marketplace_order?.length || 0) === 0 ? 'Yes' : 'No'}</p>
-          
-          {/* Restart button for owner */}
-          {isOwner && (
-            <button
-              onClick={startMarketplace}
-              disabled={loading}
-              className="mt-2 bg-orange-500 hover:bg-orange-600 text-white px-2 py-1 rounded text-xs"
-            >
-              {loading ? 'Restarting...' : 'Restart Marketplace'}
-            </button>
-          )}
         </div>
       </div>
 
@@ -864,8 +824,8 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
                     <div className="space-y-1 text-sm text-gray-600">
                       <p>ELO: {player.elo} • {getPlayerTier(player.elo)}</p>
                       {details?.fide_id && <p>FIDE ID: {details.fide_id}</p>}
-                      {(details?.accuracy !== undefined && details?.accuracy !== null) ? (
-                        <p>Accuracy: {details.accuracy.toFixed(1)}% ({details.games} games)</p>
+                      {(details?.average_centipawn_loss !== undefined && details?.average_centipawn_loss !== null) ? (
+                        <p>ACL: {details.average_centipawn_loss.toFixed(1)} ({details.games} games)</p>
                       ) : null}
                       <p>
                         <a 

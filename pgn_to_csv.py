@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 import os
 import math
 import time
-from fantasy_chess_scoring import fantasy_points
+from fantasy_chess_scoring import acl_focused_scoring_individual_baseline
 
 load_dotenv()
 url: str = os.getenv("SB_URL")
@@ -168,19 +168,19 @@ def convert(pgn_file):
                     white_elo_int = 2000
                     black_elo_int = 2000
                 
-                white_points = fantasy_points(
+                white_points = acl_focused_scoring_individual_baseline(
                     player_elo=white_elo_int,
                     opponent_elo=black_elo_int,
-                    result=1 if result == "1-0" else 0.5 if result == "1/2-1/2" else 0,
-                    player_acl=white_accuracy,
-                    avg_acl=white_avg_for_fantasy
+                    result=1.0 if result == "1-0" else 0.5 if result == "1/2-1/2" else 0.0,
+                    player_game_acl=white_accuracy,
+                    player_avg_acl=white_avg_for_fantasy
                 )
-                black_points = fantasy_points(
+                black_points = acl_focused_scoring_individual_baseline(
                     player_elo=black_elo_int,
                     opponent_elo=white_elo_int,
-                    result=1 if result == "0-1" else 0.5 if result == "1/2-1/2" else 0,
-                    player_acl=black_accuracy,
-                    avg_acl=black_avg_for_fantasy
+                    result=1.0 if result == "0-1" else 0.5 if result == "1/2-1/2" else 0.0,
+                    player_game_acl=black_accuracy,
+                    player_avg_acl=black_avg_for_fantasy
                 )
             else:
                 # If no accuracy available, calculate fantasy points without accuracy component
@@ -195,19 +195,19 @@ def convert(pgn_file):
                     white_elo_int = 2000
                     black_elo_int = 2000
                 
-                white_points = fantasy_points(
+                white_points = acl_focused_scoring_individual_baseline(
                     player_elo=white_elo_int,
                     opponent_elo=black_elo_int,
-                    result=1 if result == "1-0" else 0.5 if result == "1/2-1/2" else 0,
-                    player_acl=0,  # Use 0 to indicate no accuracy penalty/bonus
-                    avg_acl=0
+                    result=1.0 if result == "1-0" else 0.5 if result == "1/2-1/2" else 0.0,
+                    player_game_acl=0,  # Use 0 to indicate no accuracy penalty/bonus
+                    player_avg_acl=0
                 )
-                black_points = fantasy_points(
+                black_points = acl_focused_scoring_individual_baseline(
                     player_elo=black_elo_int,
                     opponent_elo=white_elo_int,
-                    result=1 if result == "0-1" else 0.5 if result == "1/2-1/2" else 0,
-                    player_acl=0,  # Use 0 to indicate no accuracy penalty/bonus
-                    avg_acl=0
+                    result=1.0 if result == "0-1" else 0.5 if result == "1/2-1/2" else 0.0,
+                    player_game_acl=0,  # Use 0 to indicate no accuracy penalty/bonus
+                    player_avg_acl=0
                 )
             
             # Final safety check to ensure no NaN values are stored
@@ -233,6 +233,25 @@ def convert(pgn_file):
             games_df = pd.concat([games_df, new_row_df], ignore_index=True)
             print("White accuracy:", white_accuracy if white_accuracy is not None else "None (no moves played)")
             print("Black accuracy:", black_accuracy if black_accuracy is not None else "None (no moves played)")
+            
+            # Print fantasy points for each player
+            print(f"🎯 FANTASY POINTS - Game {game_number}:")
+            print(f"  {white} (ELO {white_elo_int}): {white_points:.2f} points")
+            print(f"  {black} (ELO {black_elo_int}): {black_points:.2f} points")
+            
+            # Print detailed scoring breakdown if accuracy data is available
+            if (white_accuracy is not None and black_accuracy is not None and 
+                not math.isnan(white_accuracy) and not math.isnan(black_accuracy)):
+                white_avg_for_fantasy = white_avg_accuracy if white_avg_accuracy is not None else white_accuracy
+                black_avg_for_fantasy = black_avg_accuracy if black_avg_accuracy is not None else black_accuracy
+                
+                print(f"  📊 Scoring Details:")
+                print(f"    {white}: Game ACL {white_accuracy:.1f} vs Avg ACL {white_avg_for_fantasy:.1f} (Δ{white_avg_for_fantasy - white_accuracy:+.1f})")
+                print(f"    {black}: Game ACL {black_accuracy:.1f} vs Avg ACL {black_avg_for_fantasy:.1f} (Δ{black_avg_for_fantasy - black_accuracy:+.1f})")
+            else:
+                print(f"  📊 Scoring Details: No ACL data available")
+            
+            print("-" * 60)
             
             # Small delay to avoid overwhelming the database
             time.sleep(0.001)
@@ -276,8 +295,9 @@ def convert(pgn_file):
             print(games_df.head())
             return None
 
-#Completed: convert("Late-Titled-Tuesday-Blitz-July-08-2025_2025-07-08-13-00.pgn")  
+#Completed: 
+#convert("Late-Titled-Tuesday-Blitz-July-08-2025_2025-07-08-13-00.pgn")  
 #convert("Late-Titled-Tuesday-Blitz-July-15-2025_2025-07-15-13-00.pgn")
-#convert("Late-Titled-Tuesday-Blitz-July-22-2025_2025-07-22-13-00.pgn")
-#convert("Early-Titled-Tuesday-Blitz-July-22-2025_2025-07-22-08-00.pgn")
-convert("Late-Titled-Tuesday-Blitz-June-24-2025_2025-06-24-13-00 (2).pgn")
+convert("Late-Titled-Tuesday-Blitz-July-22-2025_2025-07-22-13-00.pgn")
+convert("Early-Titled-Tuesday-Blitz-July-22-2025_2025-07-22-08-00.pgn")
+#convert("Late-Titled-Tuesday-Blitz-June-24-2025_2025-06-24-13-00 (2).pgn")

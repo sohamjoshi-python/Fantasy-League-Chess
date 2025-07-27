@@ -50,26 +50,26 @@ const Help: React.FC = () => {
         </div>
 
         {/* Coin System Overview */}
-        <div className="bg-gradient-to-r from-amber-500 to-amber-400 rounded-xl shadow-lg p-6 mb-8 text-white">
-          <h2 className="text-2xl font-bold mb-4 flex items-center">
-            <Coins className="w-6 h-6 mr-2" />
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-8 border-2 border-royalBlue">
+          <h2 className="text-2xl font-bold mb-4 flex items-center text-neutral-900">
+            <Coins className="w-6 h-6 mr-2 text-royalBlue" />
             Coin System
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <h3 className="font-semibold mb-2">Weekly Rewards</h3>
-              <p className="text-sm mb-2">Every week, all active players receive <strong>50 coins</strong> automatically.</p>
-              <p className="text-sm">Coins are used to:</p>
-              <ul className="text-sm mt-2 space-y-1">
+              <h3 className="font-semibold mb-2 text-neutral-900">Weekly Rewards</h3>
+              <p className="text-sm mb-2 text-neutral-700">Every week, all active players receive <strong>50 coins</strong> automatically.</p>
+              <p className="text-sm text-neutral-700">Coins are used to:</p>
+              <ul className="text-sm mt-2 space-y-1 text-neutral-700">
                 <li>• Join leagues (buy-in costs)</li>
                 <li>• Buy players in the marketplace</li>
                 <li>• Purchase avatar customizations</li>
               </ul>
             </div>
             <div>
-              <h3 className="font-semibold mb-2">Standings Bonus</h3>
-              <p className="text-sm mb-2">At the end of each league, players receive bonus coins based on their final rank:</p>
-              <ul className="text-sm mt-2 space-y-1">
+              <h3 className="font-semibold mb-2 text-neutral-900">Standings Bonus</h3>
+              <p className="text-sm mb-2 text-neutral-700">At the end of each league, players receive bonus coins based on their final rank:</p>
+              <ul className="text-sm mt-2 space-y-1 text-neutral-700">
                 <li>• <strong>1st Place:</strong> 50 bonus coins</li>
                 <li>• <strong>2nd Place:</strong> 40 bonus coins</li>
                 <li>• <strong>3rd Place:</strong> 30 bonus coins</li>
@@ -308,9 +308,9 @@ const Help: React.FC = () => {
                 </div>
               </div>
               <div className="bg-neutral-50 p-4 rounded-lg border border-royalBlue mb-4">
-                <h4 className="font-semibold text-neutral-900 mb-1">What is Accuracy?</h4>
+                <h4 className="font-semibold text-neutral-900 mb-1">What is Average Centipawn Loss (ACL)?</h4>
                 <p className="text-sm text-neutral-700">
-                  <strong>Accuracy</strong> is a chess metric that measures how well a player performed compared to the best possible moves (as determined by a chess engine). Higher accuracy means more precise play. In Pawn Royale, we use accuracy to better reflect a player's consistency and skill.
+                  <strong>Average Centipawn Loss (ACL)</strong> is a chess metric that measures how well a player performed compared to the best possible moves (as determined by a chess engine). Lower ACL means more precise play. In Pawn Royale, we use ACL to better reflect a player's consistency and skill.
                 </p>
               </div>
               <div className="bg-neutral-50 p-4 rounded-lg border border-royalBlue">

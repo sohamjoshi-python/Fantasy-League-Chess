@@ -17,7 +17,7 @@ const Home: React.FC = () => {
             The ultimate fantasy sports experience for chess fans. Draft titled players, set your lineup, trade in the marketplace, and compete for glory every Titled Tuesday.</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to="/join-league" className="px-8 py-3 rounded-lg bg-[#1e293b] hover:bg-royalBlue text-white font-semibold text-lg shadow-lg transition-all duration-200">Join a League</Link>
-            <Link to="/help" className="px-8 py-3 rounded-lg bg-white border-2 border-royalBlue text-royalBlue font-semibold text-lg shadow-lg hover:bg-royalBlue hover:text-white transition-all duration-200 flex items-center">
+            <Link to="/onboarding" className="px-8 py-3 rounded-lg bg-white border-2 border-royalBlue text-royalBlue font-semibold text-lg shadow-lg hover:bg-royalBlue hover:text-white transition-all duration-200 flex items-center">
               <HelpCircle className="w-5 h-5 mr-2" />
               How to Play
             </Link>
@@ -64,27 +64,27 @@ const Home: React.FC = () => {
       </section>
 
       {/* Coin System Section */}
-      <section className="w-full py-12 flex justify-center bg-gradient-to-r from-amber-500 to-amber-400">
-        <div className="max-w-4xl w-full text-white">
+      <section className="w-full py-12 flex justify-center bg-white">
+        <div className="max-w-4xl w-full">
           <div className="text-center mb-8">
-            <Coins className="w-16 h-16 mx-auto mb-4" />
-            <h2 className="text-3xl font-bold mb-4">Coin System</h2>
-            <p className="text-lg mb-6">Earn coins weekly and through league performance!</p>
+            <Coins className="w-16 h-16 mx-auto mb-4 text-royalBlue" />
+            <h2 className="text-3xl font-bold mb-4 text-neutral-900">Coin System</h2>
+            <p className="text-lg mb-6 text-neutral-700">Earn coins weekly and through league performance!</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="bg-white bg-opacity-20 rounded-xl p-6 backdrop-blur-sm">
-              <h3 className="text-xl font-semibold mb-3">Weekly Rewards</h3>
-              <p className="mb-4">Every week, all active players receive <strong>50 coins</strong> automatically.</p>
-              <ul className="space-y-2">
+            <div className="bg-white rounded-xl p-6 shadow-lg border-2 border-royalBlue">
+              <h3 className="text-xl font-semibold mb-3 text-neutral-900">Weekly Rewards</h3>
+              <p className="mb-4 text-neutral-700">Every week, all active players receive <strong>50 coins</strong> automatically.</p>
+              <ul className="space-y-2 text-neutral-700">
                 <li>• Join leagues with buy-ins</li>
                 <li>• Buy players in marketplace</li>
                 <li>• Purchase avatar customizations</li>
               </ul>
             </div>
-            <div className="bg-white bg-opacity-20 rounded-xl p-6 backdrop-blur-sm">
-              <h3 className="text-xl font-semibold mb-3">Standings Bonus</h3>
-              <p className="mb-4">End-of-league bonus coins based on final rank:</p>
-              <ul className="space-y-1">
+            <div className="bg-white rounded-xl p-6 shadow-lg border-2 border-royalBlue">
+              <h3 className="text-xl font-semibold mb-3 text-neutral-900">Standings Bonus</h3>
+              <p className="mb-4 text-neutral-700">End-of-league bonus coins based on final rank:</p>
+              <ul className="space-y-1 text-neutral-700">
                 <li>• <strong>1st Place:</strong> 50 bonus coins</li>
                 <li>• <strong>2nd Place:</strong> 40 bonus coins</li>
                 <li>• <strong>3rd Place:</strong> 30 bonus coins</li>
@@ -152,9 +152,9 @@ const Home: React.FC = () => {
             <li><span className="font-semibold">Win:</span> 3.0 points</li>
             <li><span className="font-semibold">Draw:</span> 1.0 point</li>
             <li><span className="font-semibold">Loss:</span> 0.0 points</li>
-            <li><span className="font-semibold">Performance Bonus:</span> Based on accuracy</li>
+            <li><span className="font-semibold">Performance Bonus:</span> Based on average centipawn loss (ACL)</li>
           </ul>
-          <p className="text-neutral-700 text-center text-sm">Points are calculated using game results and player accuracy. See the rules for full details.</p>
+          <p className="text-neutral-700 text-center text-sm">Points are calculated using game results and player average centipawn loss (ACL). See the rules for full details.</p>
         </div>
       </section>
 
