@@ -459,7 +459,7 @@ export const expandedEmailAutomation = {
 
       const htmlContent = emailTemplates.achievementUnlocked({
         userName: user.display_name || 'Player',
-        leagueName: 'Pawn Royale', // Default league name for achievements
+        leagueName: 'Fantasy League Chess', // Default league name for achievements
         leagueId: 'general',
         achievementName: achievement.name,
         achievementDescription: achievement.description,
@@ -583,14 +583,14 @@ export const expandedEmailAutomation = {
 
       const htmlContent = emailTemplates.inactivityReminder({
         userName: user.display_name || 'Player',
-        leagueName: 'Pawn Royale',
+        leagueName: 'Fantasy League Chess',
         leagueId: 'general',
         daysInactive
       });
 
       await sendEnhancedEmail({
         to: user.email,
-        subject: `We miss you! Come back to Pawn Royale`,
+        subject: `We miss you! Come back to Fantasy League Chess`,
         htmlContent,
         templateId: 'inactivityReminder',
         userId
@@ -612,7 +612,7 @@ export const expandedEmailAutomation = {
 
       const htmlContent = emailTemplates.weeklyDigest({
         userName: user.display_name || 'Player',
-        leagueName: 'Pawn Royale',
+        leagueName: 'Fantasy League Chess',
         leagueId: 'general',
         week: digestData.week,
         summary: digestData.summary,
@@ -622,7 +622,7 @@ export const expandedEmailAutomation = {
 
       await sendEnhancedEmail({
         to: user.email,
-        subject: `Your Weekly Pawn Royale Digest - Week ${digestData.week}`,
+        subject: `Your Weekly Fantasy League Chess Digest - Week ${digestData.week}`,
         htmlContent,
         templateId: 'weeklyDigest',
         userId
@@ -645,7 +645,7 @@ export const expandedEmailAutomation = {
 
       const htmlContent = emailTemplates.specialEvent({
         userName: user.display_name || 'Player',
-        leagueName: 'Pawn Royale',
+        leagueName: 'Fantasy League Chess',
         leagueId: 'general',
         eventName: eventData.name,
         eventDescription: eventData.description,
@@ -677,7 +677,7 @@ export const expandedEmailAutomation = {
 
       const htmlContent = emailTemplates.promotion({
         userName: user.display_name || 'Player',
-        leagueName: 'Pawn Royale',
+        leagueName: 'Fantasy League Chess',
         leagueId: 'general',
         promotionTitle: promotionData.title,
         promotionDescription: promotionData.description,
@@ -710,7 +710,7 @@ export const expandedEmailAutomation = {
 
       const htmlContent = emailTemplates.maintenanceNotification({
         userName: user.display_name || 'Player',
-        leagueName: 'Pawn Royale',
+        leagueName: 'Fantasy League Chess',
         leagueId: 'general',
         maintenanceDate: maintenanceData.date,
         duration: maintenanceData.duration,
@@ -741,7 +741,7 @@ export const expandedEmailAutomation = {
 
       const htmlContent = emailTemplates.featureUpdate({
         userName: user.display_name || 'Player',
-        leagueName: 'Pawn Royale',
+        leagueName: 'Fantasy League Chess',
         leagueId: 'general',
         featureName: featureData.name,
         featureDescription: featureData.description,

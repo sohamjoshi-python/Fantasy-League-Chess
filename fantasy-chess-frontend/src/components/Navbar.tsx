@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { LogIn, UserPlus, HelpCircle, Bell } from 'lucide-react'
 import { getUnreadNotificationCount, supabase } from '../lib/supabase'
 import Inbox from './Inbox'
-import logo from '../assets/pawn-royale-logo.png'
+import logo from '../assets/fantasy-league-chess-logo.png'
 
 const Navbar: React.FC = () => {
   const { user, signOut } = useAuth()
@@ -78,9 +78,9 @@ const Navbar: React.FC = () => {
           <div className="flex items-center">
             <Link to="/" className="flex items-center space-x-2">
               <div className="h-14 w-14 bg-white rounded-full p-0 shadow-md border border-royalBlue">
-                <img src={logo} alt="Pawn Royale Logo" className="h-full w-full object-contain" />
+                <img src={logo} alt="Fantasy League Chess Logo" className="h-full w-full object-contain" />
               </div>
-              <span className="text-2xl font-extrabold text-royalBlue tracking-wide font-serif drop-shadow">PAWN ROYALE</span>
+              <span className="text-2xl font-extrabold text-royalBlue tracking-wide font-serif drop-shadow">FANTASY LEAGUE CHESS</span>
             </Link>
           </div>
 

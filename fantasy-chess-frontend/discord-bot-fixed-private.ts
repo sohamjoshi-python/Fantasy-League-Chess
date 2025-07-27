@@ -98,7 +98,7 @@ This is your dedicated Discord channel for the **${leagueName}** Fantasy Chess L
 🎮 **Ready to dominate the chessboard?** Let the games begin!
 
 ---
-*This channel was automatically created by the Pawn Royale Bot* 🤖`;
+*This channel was automatically created by the Fantasy League Chess Bot* 🤖`;
 
     try {
       await discordApiRequest(`/channels/${channelId}/messages`, {

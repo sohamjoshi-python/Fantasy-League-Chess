@@ -21,24 +21,24 @@ def test_supabase_email_function():
         {
             "name": "Welcome Email",
             "payload": {
-                "to": "sohampjoshi@outlook.com",
+                "to": "no-reply@fantasyleaguechess.com",
                 "emailType": "welcome"
             }
         },
         {
             "name": "Weekly Results Email",
             "payload": {
-                "to": "sohampjoshi@outlook.com",
+                "to": "no-reply@fantasyleaguechess.com",
                 "emailType": "weekly_results",
-                "userEmail": "sohampjoshi@outlook.com"
+                "userEmail": "no-reply@fantasyleaguechess.com"
             }
         },
         {
             "name": "Plain Text Email",
             "payload": {
-                "to": "sohampjoshi@outlook.com",
+                "to": "no-reply@fantasyleaguechess.com",
                 "subject": "Test Plain Text Email",
-                "text": "This is a test plain text email from Pawn Royale."
+                "text": "This is a test plain text email from Fantasy League Chess."
             }
         }
     ]
@@ -75,7 +75,7 @@ def test_supabase_email_function():
             print(f"❌ Error testing {test_case['name']}: {str(e)}")
     
     print(f"\n🎉 Email function testing completed!")
-    print("Check your email at sohampjoshi@outlook.com for all test emails.")
+    print("Check your email at no-reply@fantasyleaguechess.com for all test emails.")
 
 def create_env_template():
     """Create a template .env file if it doesn't exist"""
@@ -85,7 +85,7 @@ SUPABASE_ANON_KEY=your_supabase_anon_key
 
 # SendGrid Configuration (for the Edge Function)
 SENDGRID_API_KEY=your_sendgrid_api_key_here
-FROM_EMAIL=your_verified_sender_email@yourdomain.com
+FROM_EMAIL=no-reply@fantasyleaguechess.com
 
 # Instructions:
 # 1. Get your Supabase URL and anon key from your Supabase dashboard

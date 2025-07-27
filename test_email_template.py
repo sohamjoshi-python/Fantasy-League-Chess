@@ -19,7 +19,7 @@ def create_welcome_email_html():
     # Simple text-based logo
     logo_html = """
     <div style="font-size: 48px; font-weight: bold; color: white; margin-bottom: 15px;">
-        ♔ Pawn Royale ♔
+        ♔ Fantasy League Chess ♔
     </div>
     """
     
@@ -29,7 +29,7 @@ def create_welcome_email_html():
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Pawn Royale - Fantasy Chess</title>
+        <title>Fantasy League Chess - Fantasy Chess</title>
         <style>
             body {{
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -129,13 +129,13 @@ def create_welcome_email_html():
         <div class="email-container">
             <div class="header">
                 {logo_html}
-                <h1>Pawn Royale</h1>
+                <h1>Fantasy League Chess</h1>
                 <p>Fantasy Chess League</p>
             </div>
             
             <div class="content">
                 <div class="welcome-section">
-                    <h2>Welcome to Pawn Royale! 🎯</h2>
+                    <h2>Welcome to Fantasy League Chess! 🎯</h2>
                     <p>Your fantasy chess adventure begins now. Compete with the world's best players and prove your strategic mastery.</p>
                 </div>
                 
@@ -144,7 +144,7 @@ def create_welcome_email_html():
                     Start building your dream team and competing in weekly tournaments
                 </div>
                 
-                <h3 style="color: {primary_color}; margin-top: 30px;">🏆 What Makes Pawn Royale Special</h3>
+                <h3 style="color: {primary_color}; margin-top: 30px;">🏆 What Makes Fantasy League Chess Special</h3>
                 <ul class="feature-list">
                     <li><strong>Individual Baseline Scoring:</strong> Compete against your own historical performance</li>
                     <li><strong>Real Titled Tuesday Data:</strong> Use actual games from top players</li>
@@ -170,7 +170,7 @@ def create_welcome_email_html():
                     <a href="mailto:support@pawnroyale.com">Support</a>
                 </p>
                 <p style="margin-top: 15px; font-size: 12px; opacity: 0.8;">
-                    You received this email because you signed up for Pawn Royale.<br>
+                    You received this email because you signed up for Fantasy League Chess.<br>
                     <a href="#" style="color: {accent_color};">Unsubscribe</a>
                 </p>
             </div>
@@ -195,7 +195,7 @@ def create_weekly_points_email_html():
     # Simple text-based logo
     logo_html = """
     <div style="font-size: 48px; font-weight: bold; color: white; margin-bottom: 15px;">
-        ♔ Pawn Royale ♔
+        ♔ Fantasy League Chess ♔
     </div>
     """
     
@@ -205,7 +205,7 @@ def create_weekly_points_email_html():
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Pawn Royale - Weekly Results</title>
+        <title>Fantasy League Chess - Weekly Results</title>
         <style>
             body {{
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -347,7 +347,7 @@ def create_weekly_points_email_html():
         <div class="email-container">
             <div class="header">
                 {logo_html}
-                <h1>Pawn Royale</h1>
+                <h1>Fantasy League Chess</h1>
                 <p>Weekly Fantasy Chess Results</p>
             </div>
             
@@ -428,7 +428,7 @@ def create_weekly_points_email_html():
                     <a href="mailto:support@pawnroyale.com">Support</a>
                 </p>
                 <p style="margin-top: 15px; font-size: 12px; opacity: 0.8;">
-                    You received this email because you signed up for Pawn Royale.<br>
+                    You received this email because you signed up for Fantasy League Chess.<br>
                     <a href="#" style="color: {accent_color};">Unsubscribe</a>
                 </p>
             </div>
@@ -443,13 +443,13 @@ def send_test_email(email_type="welcome"):
     """Send a test email using the specified template"""
     
     # Email configuration
-    to_email = "sohampjoshi@outlook.com"
+    to_email = "no-reply@fantasyleaguechess.com"
     
     if email_type == "welcome":
-        subject = "🎯 Welcome to Pawn Royale - Your Fantasy Chess Adventure Begins!"
+        subject = "🎯 Welcome to Fantasy League Chess - Your Fantasy Chess Adventure Begins!"
         html_content = create_welcome_email_html()
     elif email_type == "weekly":
-        subject = "📊 Your Pawn Royale Weekly Results - Week 1"
+        subject = "📊 Your Fantasy League Chess Weekly Results - Week 1"
         html_content = create_weekly_points_email_html()
     else:
         print("❌ Invalid email type. Use 'welcome' or 'weekly'")
@@ -457,13 +457,10 @@ def send_test_email(email_type="welcome"):
     
     # Get environment variables
     sendgrid_api_key = os.getenv('SENDGRID_API_KEY')
-    from_email = os.getenv('FROM_EMAIL')
+    from_email = 'no-reply@fantasyleaguechess.com'
     
-    if not sendgrid_api_key or not from_email:
-        print("❌ Error: Missing SENDGRID_API_KEY or FROM_EMAIL environment variables")
-        print("Please set these in your .env file:")
-        print("SENDGRID_API_KEY=your_sendgrid_api_key")
-        print("FROM_EMAIL=your_verified_sender_email")
+    if not sendgrid_api_key:
+        print("❌ Error: Missing SENDGRID_API_KEY environment variable")
         return False
     
     # Prepare the email payload
@@ -474,7 +471,7 @@ def send_test_email(email_type="welcome"):
                 "subject": subject
             }
         ],
-        "from": {"email": from_email, "name": "Pawn Royale"},
+        "from": {"email": from_email, "name": "Fantasy League Chess"},
         "content": [
             {
                 "type": "text/html",
@@ -513,7 +510,7 @@ def create_env_template():
     """Create a template .env file if it doesn't exist"""
     env_content = """# SendGrid Configuration
 SENDGRID_API_KEY=your_sendgrid_api_key_here
-FROM_EMAIL=your_verified_sender_email@yourdomain.com
+FROM_EMAIL=no-reply@fantasyleaguechess.com
 
 # Instructions:
 # 1. Sign up for SendGrid at https://sendgrid.com
@@ -531,22 +528,17 @@ FROM_EMAIL=your_verified_sender_email@yourdomain.com
         print("📝 .env file already exists")
 
 if __name__ == "__main__":
-    print("🎯 Pawn Royale Email Template Test")
+    print("🎯 Fantasy League Chess Email Template Test")
     print("=" * 50)
     
     # Create .env template if needed
     create_env_template()
     
     # Check if environment variables are set
-    if not os.getenv('SENDGRID_API_KEY') or not os.getenv('FROM_EMAIL'):
-        print("\n❌ Environment variables not found!")
-        print("Please set up your .env file with SendGrid credentials.")
-        print("\n📋 Setup Instructions:")
-        print("1. Sign up for SendGrid (free tier available)")
-        print("2. Create an API key in your SendGrid dashboard")
-        print("3. Verify your sender email address")
-        print("4. Update the .env file with your credentials")
-        print("5. Run this script again")
+    if not os.getenv('SENDGRID_API_KEY'):
+        print("❌ Error: Missing SENDGRID_API_KEY environment variable")
+        print("Please set SENDGRID_API_KEY")
+        return
     else:
         print("\n🚀 Choose email type to send:")
         print("1. Welcome Email")
@@ -566,6 +558,6 @@ if __name__ == "__main__":
         
         if success:
             print("\n✅ Test completed successfully!")
-            print("Check your email at sohampjoshi@outlook.com")
+            print("Check your email at no-reply@fantasyleaguechess.com")
         else:
             print("\n❌ Test failed. Check the error messages above.") 

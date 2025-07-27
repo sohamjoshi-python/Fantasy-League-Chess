@@ -171,7 +171,7 @@ def create_weekly_results_email_html(user_email, league_data, lineup_results, te
     # Simple text-based logo
     logo_html = """
     <div style="font-size: 48px; font-weight: bold; color: white; margin-bottom: 15px;">
-        ♔ Pawn Royale ♔
+        ♔ Fantasy League Chess ♔
     </div>
     """
     
@@ -181,7 +181,7 @@ def create_weekly_results_email_html(user_email, league_data, lineup_results, te
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Pawn Royale - Weekly Results</title>
+        <title>Fantasy League Chess - Weekly Results</title>
         <style>
             body {{
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -323,7 +323,7 @@ def create_weekly_results_email_html(user_email, league_data, lineup_results, te
         <div class="email-container">
             <div class="header">
                 {logo_html}
-                <h1>Pawn Royale</h1>
+                <h1>Fantasy League Chess</h1>
                 <p>Weekly Fantasy Chess Results</p>
             </div>
             
@@ -396,7 +396,7 @@ def create_weekly_results_email_html(user_email, league_data, lineup_results, te
                     <a href="mailto:support@pawnroyale.com">Support</a>
                 </p>
                 <p style="margin-top: 15px; font-size: 12px; opacity: 0.8;">
-                    You received this email because you signed up for Pawn Royale.<br>
+                    You received this email because you signed up for Fantasy League Chess.<br>
                     <a href="#" style="color: {accent_color};">Unsubscribe</a>
                 </p>
             </div>
@@ -410,14 +410,14 @@ def create_weekly_results_email_html(user_email, league_data, lineup_results, te
 def send_weekly_results_email(user_email, html_content):
     """Send the weekly results email"""
     
-    subject = "📊 Your Pawn Royale Weekly Results"
+    subject = "📊 Your Fantasy League Chess Weekly Results"
     
     # Get environment variables
     sendgrid_api_key = os.getenv('SENDGRID_API_KEY')
-    from_email = os.getenv('FROM_EMAIL')
+    from_email = 'no-reply@fantasyleaguechess.com'
     
-    if not sendgrid_api_key or not from_email:
-        print("❌ Error: Missing SENDGRID_API_KEY or FROM_EMAIL environment variables")
+    if not sendgrid_api_key:
+        print("❌ Error: Missing SENDGRID_API_KEY environment variable")
         return False
     
     # Prepare the email payload
@@ -428,7 +428,7 @@ def send_weekly_results_email(user_email, html_content):
                 "subject": subject
             }
         ],
-        "from": {"email": from_email, "name": "Pawn Royale"},
+        "from": {"email": from_email, "name": "Fantasy League Chess"},
         "content": [
             {
                 "type": "text/html",
@@ -463,15 +463,16 @@ def send_weekly_results_email(user_email, html_content):
 def main():
     """Main function to send personalized weekly results emails"""
     
-    user_email = "sohampjoshi@outlook.com"
+    # Test with a specific user
+    user_email = "no-reply@fantasyleaguechess.com"
     
-    print("🎯 Pawn Royale Weekly Results Email Generator")
+    print("🎯 Fantasy League Chess Weekly Results Email Generator")
     print("=" * 50)
     
     # Check environment variables
-    if not os.getenv('SENDGRID_API_KEY') or not os.getenv('FROM_EMAIL'):
-        print("❌ Missing SendGrid credentials in .env file")
-        print("Please set SENDGRID_API_KEY and FROM_EMAIL")
+    if not os.getenv('SENDGRID_API_KEY'):
+        print("❌ Error: Missing SENDGRID_API_KEY environment variable")
+        print("Please set SENDGRID_API_KEY")
         return
     
     print(f"📧 Fetching data for: {user_email}")

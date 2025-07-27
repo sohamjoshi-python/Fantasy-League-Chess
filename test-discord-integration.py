@@ -7,7 +7,7 @@ load_dotenv()
 def test_discord_setup():
     """Test the Discord integration setup"""
     
-    print("🎯 Discord Integration Test")
+    print("🎯 Fantasy League Chess Discord Integration Test")
     print("=" * 50)
     
     # Check environment variables
@@ -32,7 +32,7 @@ def test_discord_setup():
         print("\n📋 Setup Instructions:")
         print("1. Create a Discord bot at https://discord.com/developers/applications")
         print("2. Get your bot token and client ID")
-        print("3. Create a main Discord server for Pawn Royale")
+        print("3. Create a main Discord server for Fantasy League Chess")
         print("4. Invite the bot to your server")
         print("5. Get the server ID and channel IDs")
         print("6. Add all variables to your .env file")
@@ -56,13 +56,13 @@ def test_discord_setup():
             },
             json={
                 "action": "send_main_announcement",
-                "message": "🧪 Test message from Pawn Royale Discord integration!",
+                "message": "🧪 Test message from Fantasy League Chess Discord integration!",
                 "embed": {
                     "title": "🎯 Discord Integration Test",
                     "description": "This is a test message to verify the Discord integration is working correctly.",
                     "color": 0x8B4513,
                     "footer": {
-                        "text": "Pawn Royale Discord Bot"
+                        "text": "Fantasy League Chess Discord Bot"
                     }
                 }
             }
@@ -145,7 +145,7 @@ DISCORD_GENERAL_CHANNEL_ID=your_general_channel_id_here
 # 1. Create a Discord bot at https://discord.com/developers/applications
 # 2. Get your bot token from the Bot section
 # 3. Get your client ID from the General Information section
-# 4. Create a main Discord server for Pawn Royale
+# 4. Create a main Discord server for Fantasy League Chess
 # 5. Invite the bot to your server with proper permissions
 # 6. Get server ID and channel IDs (right-click → Copy ID)
 # 7. Replace the values above with your actual credentials
@@ -162,7 +162,7 @@ DISCORD_GENERAL_CHANNEL_ID=your_general_channel_id_here
 def main():
     """Main function to run Discord integration tests"""
     
-    print("🎯 Pawn Royale Discord Integration Test")
+    print("🎯 Fantasy League Chess Discord Integration Test")
     print("=" * 60)
     
     # Create .env template if needed

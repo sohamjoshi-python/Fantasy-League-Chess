@@ -1,10 +1,11 @@
 import base64
 import os
 
+"""Convert the Fantasy League Chess logo to base64 for email embedding"""
+
 def convert_logo_to_base64():
-    """Convert the Pawn Royale logo to base64 for email embedding"""
     
-    logo_path = "fantasy-chess-frontend/public/avatars/pawn-royale-logo.png"
+    logo_path = "fantasy-chess-frontend/public/avatars/fantasy-league-chess-logo.png"
     
     if not os.path.exists(logo_path):
         print(f"❌ Logo file not found at: {logo_path}")
@@ -32,7 +33,7 @@ def convert_logo_to_base64():
         return None
 
 if __name__ == "__main__":
-    print("🎨 Converting Pawn Royale Logo to Base64")
+    print("🎨 Converting Fantasy League Chess Logo to Base64")
     print("=" * 50)
     
     base64_logo = convert_logo_to_base64()

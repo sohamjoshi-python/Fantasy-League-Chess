@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { ArrowRight, Trophy, Users, Target, BarChart3, HelpCircle, Play, Coins, Store } from 'lucide-react'
-import logo from '../assets/pawn-royale-logo.png'
+import logo from '../assets/fantasy-league-chess-logo.png'
 
 const Help: React.FC = () => {
   return (
@@ -9,20 +9,20 @@ const Help: React.FC = () => {
         {/* Header */}
         <div className="text-center mb-8">
           <div className="w-20 h-20 mx-auto mb-2 bg-white rounded-full p-0 shadow-lg border-2 border-royalBlue">
-            <img src={logo} alt="Pawn Royale Logo" className="w-full h-full object-contain" />
+            <img src={logo} alt="Fantasy League Chess Logo" className="w-full h-full object-contain" />
           </div>
-          <h1 className="text-3xl font-extrabold text-neutral-900 mb-4 font-serif drop-shadow">How to Play Pawn Royale</h1>
-          <p className="text-lg text-neutral-700">Your complete guide to mastering Pawn Royale</p>
+          <h1 className="text-3xl font-extrabold text-neutral-900 mb-4 font-serif drop-shadow">How to Play Fantasy League Chess</h1>
+          <p className="text-lg text-neutral-700">Your complete guide to mastering Fantasy League Chess</p>
         </div>
 
         {/* Quick Overview */}
         <div className="bg-white rounded-xl shadow-lg p-6 mb-8 border-2 border-royalBlue">
           <h2 className="text-2xl font-bold text-neutral-900 mb-4 flex items-center">
             <Trophy className="w-6 h-6 mr-2 text-royalBlue" />
-            What is Pawn Royale?
+            What is Fantasy League Chess?
           </h2>
           <p className="text-neutral-700 mb-4">
-            Pawn Royale is a competitive game where you draft real chess players and earn points based on their performance 
+            Fantasy League Chess is a competitive game where you draft real chess players and earn points based on their performance 
             in actual chess tournaments. Build your dream team, set weekly lineups, trade players in the marketplace, and compete against other players for prizes!
           </p>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
@@ -310,7 +310,7 @@ const Help: React.FC = () => {
               <div className="bg-neutral-50 p-4 rounded-lg border border-royalBlue mb-4">
                 <h4 className="font-semibold text-neutral-900 mb-1">What is Average Centipawn Loss (ACL)?</h4>
                 <p className="text-sm text-neutral-700">
-                  <strong>Average Centipawn Loss (ACL)</strong> is a chess metric that measures how well a player performed compared to the best possible moves (as determined by a chess engine). Lower ACL means more precise play. In Pawn Royale, we use ACL to better reflect a player's consistency and skill.
+                  <strong>Average Centipawn Loss (ACL)</strong> is a chess metric that measures how well a player performed compared to the best possible moves (as determined by a chess engine). Lower ACL means more precise play. In Fantasy League Chess, we use ACL to better reflect a player's consistency and skill.
                 </p>
               </div>
               <div className="bg-neutral-50 p-4 rounded-lg border border-royalBlue">

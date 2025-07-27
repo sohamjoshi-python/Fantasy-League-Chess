@@ -27,7 +27,7 @@ function createWelcomeEmailHTML() {
 
   const logoHTML = `
     <div style="font-size: 48px; font-weight: bold; color: white; margin-bottom: 15px;">
-      ♔ Pawn Royale ♔
+      ♔ Fantasy League Chess ♔
     </div>
   `;
 
@@ -37,7 +37,7 @@ function createWelcomeEmailHTML() {
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Pawn Royale - Fantasy Chess</title>
+      <title>Fantasy League Chess - Fantasy Chess</title>
       <style>
         body {
           font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -137,13 +137,13 @@ function createWelcomeEmailHTML() {
       <div class="email-container">
         <div class="header">
           ${logoHTML}
-          <h1>Pawn Royale</h1>
+          <h1>Fantasy League Chess</h1>
           <p>Fantasy Chess League</p>
         </div>
         
         <div class="content">
           <div class="welcome-section">
-            <h2>Welcome to Pawn Royale! 🎯</h2>
+            <h2>Welcome to Fantasy League Chess! 🎯</h2>
             <p>Your fantasy chess adventure begins now. Compete with the world's best players and prove your strategic mastery.</p>
           </div>
           
@@ -152,7 +152,7 @@ function createWelcomeEmailHTML() {
             Start building your dream team and competing in weekly tournaments
           </div>
           
-          <h3 style="color: ${primaryColor}; margin-top: 30px;">🏆 What Makes Pawn Royale Special</h3>
+          <h3 style="color: ${primaryColor}; margin-top: 30px;">🏆 What Makes Fantasy League Chess Special</h3>
           <ul class="feature-list">
             <li><strong>Individual Baseline Scoring:</strong> Compete against your own historical performance</li>
             <li><strong>Real Titled Tuesday Data:</strong> Use actual games from top players</li>
@@ -178,7 +178,7 @@ function createWelcomeEmailHTML() {
             <a href="mailto:support@pawnroyale.com">Support</a>
           </p>
           <p style="margin-top: 15px; font-size: 12px; opacity: 0.8;">
-            You received this email because you signed up for Pawn Royale.<br>
+            You received this email because you signed up for Fantasy League Chess.<br>
             <a href="#" style="color: ${accentColor};">Unsubscribe</a>
           </p>
         </div>
@@ -213,7 +213,7 @@ function createWeeklyResultsEmailHTML(userEmail: string, leagueData: any, lineup
 
   const logoHTML = `
     <div style="font-size: 48px; font-weight: bold; color: white; margin-bottom: 15px;">
-      ♔ Pawn Royale ♔
+      ♔ Fantasy League Chess ♔
     </div>
   `;
 
@@ -223,7 +223,7 @@ function createWeeklyResultsEmailHTML(userEmail: string, leagueData: any, lineup
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Pawn Royale - Weekly Results</title>
+      <title>Fantasy League Chess - Weekly Results</title>
       <style>
         body {
           font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -365,7 +365,7 @@ function createWeeklyResultsEmailHTML(userEmail: string, leagueData: any, lineup
       <div class="email-container">
         <div class="header">
           ${logoHTML}
-          <h1>Pawn Royale</h1>
+          <h1>Fantasy League Chess</h1>
           <p>Weekly Fantasy Chess Results</p>
         </div>
         
@@ -415,7 +415,7 @@ function createWeeklyResultsEmailHTML(userEmail: string, leagueData: any, lineup
             <a href="mailto:support@pawnroyale.com">Support</a>
           </p>
           <p style="margin-top: 15px; font-size: 12px; opacity: 0.8;">
-            You received this email because you signed up for Pawn Royale.<br>
+            You received this email because you signed up for Fantasy League Chess.<br>
             <a href="#" style="color: ${accentColor};">Unsubscribe</a>
           </p>
         </div>
@@ -519,10 +519,10 @@ async function sendWeeklyResultsEmail(userEmail: string) {
       if (htmlContent) {
         // Send the email
         const SENDGRID_API_KEY = Deno.env.get('SENDGRID_API_KEY');
-        const FROM_EMAIL = Deno.env.get('FROM_EMAIL');
+        const FROM_EMAIL = 'no-reply@fantasyleaguechess.com';
 
-        if (!SENDGRID_API_KEY || !FROM_EMAIL) {
-          throw new Error('Missing SendGrid credentials');
+        if (!SENDGRID_API_KEY) {
+          throw new Error('Missing SENDGRID_API_KEY');
         }
 
         const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
@@ -534,9 +534,9 @@ async function sendWeeklyResultsEmail(userEmail: string) {
           body: JSON.stringify({
             personalizations: [{
               to: [{ email: userEmail }],
-              subject: '📊 Your Pawn Royale Weekly Results'
+              subject: '📊 Your Fantasy League Chess Weekly Results'
             }],
-            from: { email: FROM_EMAIL, name: 'Pawn Royale' },
+            from: { email: FROM_EMAIL, name: 'Fantasy League Chess' },
             content: [{
               type: 'text/html',
               value: htmlContent
@@ -569,10 +569,10 @@ serve(async (req) => {
   try {
     const { to, subject, text, emailType, userEmail } = await req.json();
     const SENDGRID_API_KEY = Deno.env.get('SENDGRID_API_KEY');
-    const FROM_EMAIL = Deno.env.get('FROM_EMAIL');
+    const FROM_EMAIL = 'no-reply@fantasyleaguechess.com';
 
-    if (!SENDGRID_API_KEY || !FROM_EMAIL) {
-      return withCorsHeaders(new Response('Missing SENDGRID_API_KEY or FROM_EMAIL', { status: 500 }));
+    if (!SENDGRID_API_KEY) {
+      return withCorsHeaders(new Response('Missing SENDGRID_API_KEY', { status: 500 }));
     }
 
     let htmlContent = '';
@@ -581,7 +581,7 @@ serve(async (req) => {
     // Handle different email types
     if (emailType === 'welcome') {
       htmlContent = createWelcomeEmailHTML();
-      emailSubject = '🎯 Welcome to Pawn Royale - Your Fantasy Chess Adventure Begins!';
+      emailSubject = '🎯 Welcome to Fantasy League Chess - Your Fantasy Chess Adventure Begins!';
     } else if (emailType === 'weekly_results') {
       // Send weekly results email with real data
       const result = await sendWeeklyResultsEmail(userEmail || to);
@@ -603,7 +603,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         personalizations: [{ to: [{ email: to }] }],
-        from: { email: FROM_EMAIL, name: 'Pawn Royale' },
+        from: { email: FROM_EMAIL, name: 'Fantasy League Chess' },
         subject: emailSubject,
         content: [{ type: 'text/html', value: htmlContent }],
       }),

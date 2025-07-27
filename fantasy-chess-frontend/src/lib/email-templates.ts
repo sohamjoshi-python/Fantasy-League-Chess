@@ -1,4 +1,4 @@
-// Email Templates for Pawn Royale
+// Email Templates for Fantasy League Chess
 // Rich HTML emails with interactive elements and beautiful design
 
 export interface EmailTemplateData {
@@ -8,7 +8,7 @@ export interface EmailTemplateData {
   [key: string]: any;
 }
 
-// Base HTML template with Pawn Royale styling
+// Base HTML template with Fantasy League Chess styling
 const baseTemplate = (content: string, title: string) => `
 <!DOCTYPE html>
 <html>
@@ -168,14 +168,14 @@ const baseTemplate = (content: string, title: string) => `
   <div class="container">
     <div class="header">
       <div class="logo">♟️</div>
-      <h1 style="margin: 0; font-size: 28px;">Pawn Royale</h1>
+      <h1 style="margin: 0; font-size: 28px;">Fantasy League Chess</h1>
       <p style="margin: 10px 0 0; opacity: 0.9;">Fantasy Chess League</p>
     </div>
     <div class="content">
       ${content}
     </div>
     <div class="footer">
-      <p>© 2024 Pawn Royale. All rights reserved.</p>
+      <p>© 2024 Fantasy League Chess. All rights reserved.</p>
       <p>
         <a href="https://pawn-royale.vercel.app/unsubscribe" style="color: #6b7280;">Unsubscribe</a> | 
         <a href="https://pawn-royale.vercel.app/privacy" style="color: #6b7280;">Privacy Policy</a>
@@ -580,7 +580,7 @@ export const welcomeTemplate = (data: EmailTemplateData & {
   firstLeague?: string;
 }) => {
   const content = `
-    <h2>🎉 Welcome to Pawn Royale!</h2>
+    <h2>🎉 Welcome to Fantasy League Chess!</h2>
     <p>Hi ${data.userName},</p>
     <p>Welcome to the ultimate fantasy chess experience! You're now ready to draft players, compete in leagues, and prove your chess management skills.</p>
     
@@ -618,7 +618,7 @@ export const welcomeTemplate = (data: EmailTemplateData & {
     </div>
   `;
   
-  return baseTemplate(content, 'Welcome to Pawn Royale!');
+  return baseTemplate(content, 'Welcome to Fantasy League Chess!');
 };
 
 // 9. League Created Email
@@ -1246,7 +1246,7 @@ export const inactivityReminderTemplate = (data: EmailTemplateData & {
   const content = `
     <h2>👋 We Miss You!</h2>
     <p>Hi ${data.userName},</p>
-    <p>It's been <strong>${data.daysInactive} days</strong> since you last played Pawn Royale!</p>
+    <p>It's been <strong>${data.daysInactive} days</strong> since you last played Fantasy League Chess!</p>
     
     <div class="highlight warning">
       <strong>🎯 Your leagues are waiting!</strong> Don't let your opponents get ahead while you're away.
@@ -1274,7 +1274,7 @@ export const inactivityReminderTemplate = (data: EmailTemplateData & {
     </div>
   `;
   
-  return baseTemplate(content, `We miss you! Come back to Pawn Royale`);
+  return baseTemplate(content, `We miss you! Come back to Fantasy League Chess`);
 };
 
 // 24. Weekly Digest Email
@@ -1285,7 +1285,7 @@ export const weeklyDigestTemplate = (data: EmailTemplateData & {
   upcomingEvents: any[];
 }) => {
   const content = `
-    <h2>📊 Your Weekly Pawn Royale Digest</h2>
+    <h2>📊 Your Weekly Fantasy League Chess Digest</h2>
     <p>Hi ${data.userName},</p>
     <p>Here's your weekly summary for <strong>Week ${data.week}</strong>!</p>
     
@@ -1331,7 +1331,7 @@ export const specialEventTemplate = (data: EmailTemplateData & {
   const content = `
     <h2>🎉 Special Event: ${data.eventName}</h2>
     <p>Hi ${data.userName},</p>
-    <p>Get ready for an exciting special event in Pawn Royale!</p>
+    <p>Get ready for an exciting special event in Fantasy League Chess!</p>
     
     <div class="highlight success">
       <strong>🎯 ${data.eventName}</strong><br>
@@ -1443,7 +1443,7 @@ export const maintenanceNotificationTemplate = (data: EmailTemplateData & {
   const content = `
     <h2>🔧 Scheduled Maintenance</h2>
     <p>Hi ${data.userName},</p>
-    <p>We want to inform you about upcoming maintenance for Pawn Royale.</p>
+    <p>We want to inform you about upcoming maintenance for Fantasy League Chess.</p>
     
     <div class="highlight warning">
       <strong>🔧 Maintenance Scheduled</strong><br>
@@ -1502,7 +1502,7 @@ export const featureUpdateTemplate = (data: EmailTemplateData & {
   const content = `
     <h2>🚀 New Feature: ${data.featureName}</h2>
     <p>Hi ${data.userName},</p>
-    <p>We're excited to announce a new feature in Pawn Royale!</p>
+    <p>We're excited to announce a new feature in Fantasy League Chess!</p>
     
     <div class="highlight success">
       <strong>🚀 ${data.featureName}</strong><br>

@@ -16,8 +16,8 @@ export default {
         gold: '#D97706', // Muted amber/gold instead of bright yellow
         silver: '#C0C0C0',
         royalBlue: '#4F7FFB',
-        purple: '#8B5CF6', // Pawn Royale purple
-        slate: '#64748B', // Pawn Royale slate
+        purple: '#8B5CF6', // Fantasy League Chess purple
+        slate: '#64748B', // Fantasy League Chess slate
       },
     },
   },

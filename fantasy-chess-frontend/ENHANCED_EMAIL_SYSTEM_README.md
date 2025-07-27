@@ -1,8 +1,8 @@
-# Enhanced Email System for Pawn Royale
+# Enhanced Email System for Fantasy League Chess
 
 ## 🚀 **Overview**
 
-The Enhanced Email System transforms Pawn Royale's basic email functionality into a comprehensive, professional-grade email marketing platform with HTML templates, scheduling, analytics, and automation.
+The Enhanced Email System transforms Fantasy League Chess's basic email functionality into a comprehensive, professional-grade email marketing platform with HTML templates, scheduling, analytics, and automation.
 
 ## ✨ **Key Improvements Over Current System**
 
@@ -16,7 +16,7 @@ The Enhanced Email System transforms Pawn Royale's basic email functionality int
 - ❌ No email templates
 
 ### **Enhanced System (Professional)**
-- ✅ **Beautiful HTML emails** with Pawn Royale branding
+- ✅ **Beautiful HTML emails** with Fantasy League Chess branding
 - ✅ **Email scheduling** for timed delivery
 - ✅ **Comprehensive tracking** (opens, clicks, analytics)
 - ✅ **User email preferences** (opt-in/opt-out per type)
@@ -148,7 +148,7 @@ supabase functions deploy send-enhanced-email
 ```env
 # Add to your Supabase environment
 SENDGRID_API_KEY=your_sendgrid_api_key
-FROM_EMAIL=noreply@pawnroyale.com
+FROM_EMAIL=no-reply@fantasyleaguechess.com
 ```
 
 ### **4. Set Up Email Processing Cron Job**
@@ -246,7 +246,7 @@ jobs:
 - **Buttons**: Semibold, high contrast
 
 ### **Visual Elements**
-- **Pawn Royale Logo** in header
+- **Fantasy League Chess Logo** in header
 - **Player Cards** with avatars
 - **Progress Bars** for statistics
 - **Action Buttons** with hover states
@@ -297,4 +297,4 @@ jobs:
 
 ---
 
-This enhanced email system transforms Pawn Royale from basic notifications to a professional email marketing platform that drives user engagement and retention! 🎉 
+This enhanced email system transforms Fantasy League Chess from basic notifications to a professional email marketing platform that drives user engagement and retention! 🎉 

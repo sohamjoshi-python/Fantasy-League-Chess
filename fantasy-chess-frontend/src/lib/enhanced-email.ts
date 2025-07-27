@@ -129,7 +129,7 @@ export async function processScheduledEmails(): Promise<{ success: boolean, proc
         // Send the email
         const emailResult = await sendEnhancedEmail({
           to: user.email,
-          subject: scheduledEmail.data.subject || 'Pawn Royale Update',
+          subject: scheduledEmail.data.subject || 'Fantasy League Chess Update',
           htmlContent,
           templateId: scheduledEmail.template_id,
           userId: scheduledEmail.user_id,
@@ -326,7 +326,7 @@ export const emailAutomation = {
 
       const htmlContent = emailTemplates.coinDistribution({
         userName: user.display_name || 'Player',
-        leagueName: leagueName || 'Pawn Royale',
+        leagueName: leagueName || 'Fantasy League Chess',
         coinsReceived,
         newBalance: user.coin_balance,
         distributionType: distributionType as 'weekly' | 'standings_bonus' | 'league_win'

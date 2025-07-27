@@ -7,7 +7,7 @@ import { League, Lineup, ChessPlayer, Bot } from '../types'
 import { Crown, Trophy, Calendar, Edit, Check, X, RefreshCw, Bot as BotIcon, Plus, Trash2 } from 'lucide-react'
 import { createBot, removeBot, autoSetLineupForBot } from '../lib/supabase';
 import Confetti from 'react-confetti';
-import pawnRoyaleLogo from '../assets/pawn-royale-logo.png';
+import fantasyLeagueChessLogo from '../assets/fantasy-league-chess-logo.png';
 
 import Marketplace from '../components/Marketplace';
 import TurnBasedMarketplace from '../components/TurnBasedMarketplace';
@@ -510,7 +510,7 @@ const LeaguePage: React.FC = () => {
         display_name: usernameMap[member.user_id] || 'Unknown User',
         total_points: userPoints.get(member.user_id) || 0,
         rank: 0,
-        avatar_url: avatarMap[member.user_id] || pawnRoyaleLogo,
+        avatar_url: avatarMap[member.user_id] || fantasyLeagueChessLogo,
       }))
 
       // Add bot to standings if it exists
@@ -527,7 +527,7 @@ const LeaguePage: React.FC = () => {
           display_name: `${bot.name} 🤖`,
           total_points: botPoints,
           rank: 0,
-          avatar_url: pawnRoyaleLogo,
+          avatar_url: fantasyLeagueChessLogo,
         })
       }
 

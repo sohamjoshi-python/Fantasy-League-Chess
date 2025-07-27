@@ -16,14 +16,14 @@ serve(async (req) => {
     const { to, subject, htmlContent, textContent, templateId, userId, leagueId, metadata } = await req.json();
     
     const SENDGRID_API_KEY = Deno.env.get('SENDGRID_API_KEY');
-    const FROM_EMAIL = Deno.env.get('FROM_EMAIL');
+    const FROM_EMAIL = 'no-reply@fantasyleaguechess.com';
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
     const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-    if (!SENDGRID_API_KEY || !FROM_EMAIL) {
+    if (!SENDGRID_API_KEY) {
       return new Response(
-        JSON.stringify({ error: 'Missing SENDGRID_API_KEY or FROM_EMAIL' }), 
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Missing SENDGRID_API_KEY' }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
@@ -50,7 +50,7 @@ serve(async (req) => {
             template_id: templateId || ''
           }
         }],
-        from: { email: FROM_EMAIL, name: 'Pawn Royale' },
+        from: { email: FROM_EMAIL, name: 'Fantasy League Chess' },
         subject,
         content: [
           { type: 'text/html', value: htmlContent },
