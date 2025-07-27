@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, Trophy, Users, Target, BarChart3, HelpCircle, Play, Coins, Store, ArrowLeft } from 'lucide-react'
+import { ArrowRight, Trophy, Users, Target, Coins, Store, ArrowLeft } from 'lucide-react'
 import logo from '../assets/pawn-royale-logo.png'
 
 const Onboarding: React.FC = () => {
@@ -10,10 +10,6 @@ const Onboarding: React.FC = () => {
 
   const handleNext = () => {
     setCurrentStep('signup')
-  }
-
-  const handleBack = () => {
-    setCurrentStep('help')
   }
 
   const handleSkipToSignup = () => {

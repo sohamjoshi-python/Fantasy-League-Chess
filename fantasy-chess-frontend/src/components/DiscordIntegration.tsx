@@ -1,5 +1,3 @@
-import { useState } from 'react';
-import { supabase } from '../lib/supabase';
 import { League } from '../types';
 
 interface DiscordIntegrationProps {
@@ -7,7 +5,6 @@ interface DiscordIntegrationProps {
 }
 
 export default function DiscordIntegration({ league }: DiscordIntegrationProps) {
-  const [error, setError] = useState<string | null>(null);
 
   const hasDiscordChannel = league.discord_server_id && league.discord_invite_link;
 
@@ -40,11 +37,7 @@ export default function DiscordIntegration({ league }: DiscordIntegrationProps) 
         </div>
       </div>
       
-      {error && (
-        <div className="mt-3 p-2 bg-red-500 text-white rounded text-sm">
-          {error}
-        </div>
-      )}
+
     </div>
   );
 } 
