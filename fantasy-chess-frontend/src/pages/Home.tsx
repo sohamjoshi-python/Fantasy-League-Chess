@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, Trophy, Users, Target, Coins, Store, MessageCircle, HelpCircle, Star, Swords, Shield, Calendar } from 'lucide-react'
+import { Trophy, Users, Coins, Store, HelpCircle, Star, Swords, Shield, Calendar } from 'lucide-react'
 import logo from '../assets/fantasy-league-chess-logo.png'
 
 const Home: React.FC = () => {
