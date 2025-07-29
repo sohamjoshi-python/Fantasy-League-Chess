@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { Link } from 'react-router-dom'
-import { Users, Trophy, Calendar, Star, Swords, Shield, HelpCircle, Coins, Store } from 'lucide-react'
+import { ArrowRight, Trophy, Users, Target, Coins, Store, MessageCircle, HelpCircle, Star, Swords, Shield, Calendar } from 'lucide-react'
 import logo from '../assets/fantasy-league-chess-logo.png'
 
 const Home: React.FC = () => {
@@ -157,6 +157,41 @@ const Home: React.FC = () => {
           <p className="text-neutral-700 text-center text-sm">Points are calculated using game results and player average centipawn loss (ACL). See the rules for full details.</p>
         </div>
       </section>
+
+      {/* Contact & Feedback Section */}
+      <div className="w-full py-12 flex justify-center bg-white">
+        <div className="max-w-4xl w-full">
+          <div className="text-center mb-8">
+            <HelpCircle className="w-16 h-16 mx-auto mb-4 text-royalBlue" />
+            <h2 className="text-3xl font-bold mb-4 text-neutral-900">Get in Touch</h2>
+            <p className="text-lg mb-6 text-neutral-700">Share your feedback or need assistance.</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="bg-white rounded-xl shadow-lg p-6 border-2 border-royalBlue">
+              <h3 className="text-xl font-semibold mb-3 text-neutral-900">Share Your Feedback</h3>
+              <p className="mb-4 text-neutral-700">Help us improve Fantasy League Chess</p>
+              <a 
+                href="https://forms.gle/xDGEcbp5UPuVbJT16" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="inline-block bg-royalBlue text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Give Feedback
+              </a>
+            </div>
+            <div className="bg-white rounded-xl shadow-lg p-6 border-2 border-royalBlue">
+              <h3 className="text-xl font-semibold mb-3 text-neutral-900">Need Help?</h3>
+              <p className="mb-4 text-neutral-700">Contact our support team</p>
+              <a 
+                href="mailto:support@fantasyleaguechess.com"
+                className="inline-block bg-royalBlue text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Contact Support
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* ToS/Privacy links */}
       <div className="w-full py-4 bg-white text-center text-xs text-neutral-500 mt-8">

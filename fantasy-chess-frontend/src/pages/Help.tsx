@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { ArrowRight, Trophy, Users, Target, BarChart3, HelpCircle, Play, Coins, Store } from 'lucide-react'
+import { ArrowRight, Trophy, Users, Target, BarChart3, HelpCircle, Play, Coins, Store, MessageCircle } from 'lucide-react'
 import logo from '../assets/fantasy-league-chess-logo.png'
 
 const Help: React.FC = () => {
@@ -479,6 +479,40 @@ const Help: React.FC = () => {
               <p className="text-sm text-gold-900">
                 You can spend your coins to unlock and equip unique avatars for your profile! Visit your profile page and open the Avatar Shop to browse, purchase, and equip new looks. Show off your style in the standings and on the leaderboard!
               </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Contact & Feedback Section */}
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-8 border-2 border-royalBlue">
+          <h2 className="text-2xl font-bold text-neutral-900 mb-4 flex items-center">
+            <HelpCircle className="w-6 h-6 mr-2 text-royalBlue" />
+            Need Help or Have Feedback?
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="text-center p-4 bg-neutral-50 rounded-lg border border-royalBlue">
+              <MessageCircle className="w-8 h-8 mx-auto mb-2 text-royalBlue" />
+              <h3 className="font-semibold text-neutral-900 mb-2">Share Your Feedback</h3>
+              <p className="text-sm text-neutral-700 mb-3">Help us improve by sharing your thoughts and suggestions</p>
+              <a 
+                href="https://forms.gle/xDGEcbp5UPuVbJT16" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="inline-block bg-royalBlue text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Give Feedback
+              </a>
+            </div>
+            <div className="text-center p-4 bg-neutral-50 rounded-lg border border-royalBlue">
+              <HelpCircle className="w-8 h-8 mx-auto mb-2 text-royalBlue" />
+              <h3 className="font-semibold text-neutral-900 mb-2">Contact Support</h3>
+              <p className="text-sm text-neutral-700 mb-3">Get help with technical issues or account problems</p>
+              <a 
+                href="mailto:support@fantasyleaguechess.com"
+                className="inline-block bg-royalBlue text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Email Support
+              </a>
             </div>
           </div>
         </div>

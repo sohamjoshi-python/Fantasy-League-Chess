@@ -15,6 +15,7 @@ import Tos from './pages/tos';
 import Privacy from './pages/privacy';
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import React from 'react';
+import Footer from './components/Footer';
 
 function AvatarShopPage() {
   const { user } = useAuth();
@@ -50,6 +51,7 @@ function App() {
               <Route path="/privacy" element={<Privacy />} />
             </Routes>
           </main>
+          <Footer />
         </div>
         <Analytics />
       </Router>
