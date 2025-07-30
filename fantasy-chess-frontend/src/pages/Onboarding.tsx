@@ -30,7 +30,7 @@ const Onboarding: React.FC = () => {
         {/* Header */}
         <div className="text-center mb-8">
           <div className="w-20 h-20 mx-auto mb-2 bg-white rounded-full p-0 shadow-lg border-2 border-royalBlue">
-            <img src={logo} alt="Fantasy League Chess Logo" className="w-full h-full object-contain" />
+            <img src={logo} alt="FLC Logo" className="w-full h-full object-contain" />
           </div>
           <h1 className="text-3xl font-extrabold text-neutral-900 mb-4 font-serif drop-shadow">Welcome to {brandName}</h1>
           <p className="text-lg text-neutral-700">Your complete guide to mastering {brandName}</p>

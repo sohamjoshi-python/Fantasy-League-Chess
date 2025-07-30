@@ -9,7 +9,7 @@ export const getBrandName = (): string => {
 };
 
 export const getBrandNameFull = (): string => {
-  return isSmallScreen() ? 'Fantasy League Chess (FLC)' : 'Fantasy League Chess';
+  return isSmallScreen() ? 'FLC' : 'Fantasy League Chess';
 };
 
 export const useResponsiveBrandName = () => {
