@@ -3,10 +3,12 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowRight, Trophy, Users, Target, Coins, Store, ArrowLeft } from 'lucide-react'
 import logo from '../assets/fantasy-league-chess-logo-updated.png'
+import { useResponsiveBrandName } from '../utils/browserDetection';
 
 const Onboarding: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<'help' | 'signup'>('help')
   const navigate = useNavigate()
+  const { brandName, brandNameFull } = useResponsiveBrandName();
 
   const handleNext = () => {
     setCurrentStep('signup')
@@ -30,18 +32,18 @@ const Onboarding: React.FC = () => {
           <div className="w-20 h-20 mx-auto mb-2 bg-white rounded-full p-0 shadow-lg border-2 border-royalBlue">
             <img src={logo} alt="Fantasy League Chess Logo" className="w-full h-full object-contain" />
           </div>
-          <h1 className="text-3xl font-extrabold text-neutral-900 mb-4 font-serif drop-shadow">Welcome to Fantasy League Chess</h1>
-          <p className="text-lg text-neutral-700">Your complete guide to mastering Fantasy League Chess</p>
+          <h1 className="text-3xl font-extrabold text-neutral-900 mb-4 font-serif drop-shadow">Welcome to {brandName}</h1>
+          <p className="text-lg text-neutral-700">Your complete guide to mastering {brandName}</p>
         </div>
 
         {/* Quick Overview */}
         <div className="bg-white rounded-xl shadow-lg p-6 mb-8 border-2 border-royalBlue">
           <h2 className="text-2xl font-bold text-neutral-900 mb-4 flex items-center">
             <Trophy className="w-6 h-6 mr-2 text-royalBlue" />
-            What is Fantasy League Chess?
+            What is {brandName}?
           </h2>
           <p className="text-neutral-700 mb-4">
-            Fantasy League Chess is a competitive game where you draft real chess players and earn points based on their performance 
+            {brandNameFull} is a competitive game where you draft real chess players and earn points based on their performance 
             in actual chess tournaments. Build your dream team, set weekly lineups, trade players in the marketplace, and compete against other players for prizes!
           </p>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">

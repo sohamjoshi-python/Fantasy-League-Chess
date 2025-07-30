@@ -7,16 +7,18 @@ import { LogIn, UserPlus, HelpCircle, Bell } from 'lucide-react'
 import { getUnreadNotificationCount, supabase } from '../lib/supabase'
 import Inbox from './Inbox'
 import logo from '../assets/fantasy-league-chess-logo-updated.png'
+import { useResponsiveBrandName } from '../utils/browserDetection';
 
 const Navbar: React.FC = () => {
-  const { user, signOut } = useAuth()
+  const { user, signOut } = useAuth();
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [showInbox, setShowInbox] = useState(false);
+  const { brandName } = useResponsiveBrandName();
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [isSignUp, setIsSignUp] = useState(false)
-  const [showInbox, setShowInbox] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
   const [displayName, setDisplayName] = useState('')
   // Add state for dropdown
-  const [showDropdown, setShowDropdown] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -80,7 +82,7 @@ const Navbar: React.FC = () => {
               <div className="h-14 w-14 bg-white rounded-full p-0 shadow-md border border-royalBlue">
                 <img src={logo} alt="Fantasy League Chess Logo" className="h-full w-full object-contain" />
               </div>
-              <span className="text-2xl font-extrabold text-royalBlue tracking-wide font-serif drop-shadow">FANTASY LEAGUE CHESS</span>
+              <span className="text-2xl font-extrabold text-royalBlue tracking-wide font-serif drop-shadow">{brandName}</span>
             </Link>
           </div>
 

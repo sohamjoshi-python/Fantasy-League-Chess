@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { ArrowLeft, Eye, EyeOff, CheckCircle } from 'lucide-react'
 import logo from '../assets/fantasy-league-chess-logo-updated.png'
+import { getBrandName } from '../utils/browserDetection';
 
 const SignUp: React.FC = () => {
   const [email, setEmail] = useState('')
@@ -66,7 +67,7 @@ const SignUp: React.FC = () => {
             <CheckCircle className="w-16 h-16 mx-auto mb-4 text-green-500" />
             <h2 className="text-2xl font-bold text-neutral-900 mb-2">Account Created!</h2>
             <p className="text-neutral-700 mb-4">
-              Welcome to Fantasy League Chess! Please check your email to verify your account.
+              Welcome to {getBrandName()}! Please check your email to verify your account.
             </p>
             <p className="text-sm text-neutral-600">
               Redirecting to join a league...
@@ -86,7 +87,7 @@ const SignUp: React.FC = () => {
             <img src={logo} alt="Fantasy League Chess Logo" className="w-full h-full object-contain" />
           </div>
           <h1 className="text-3xl font-extrabold text-neutral-900 mb-2 font-serif drop-shadow">Create Account</h1>
-          <p className="text-neutral-700">Join Fantasy League Chess and start your fantasy chess journey!</p>
+          <p className="text-neutral-700">Join {getBrandName()} and start your fantasy chess journey!</p>
         </div>
 
         {/* Back Button */}

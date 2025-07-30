@@ -2,8 +2,11 @@ import * as React from 'react'
 import { Link } from 'react-router-dom'
 import { Trophy, Users, Coins, Store, HelpCircle, Star, Swords, Shield, Calendar } from 'lucide-react'
 import logo from '../assets/fantasy-league-chess-logo-updated.png'
+import { useResponsiveBrandName } from '../utils/browserDetection';
 
 const Home: React.FC = () => {
+  const { brandName, brandNameFull } = useResponsiveBrandName();
+  
   return (
     <div className="w-full min-h-screen bg-white flex flex-col items-center font-sans pt-20">
       {/* Hero Section */}
@@ -12,7 +15,7 @@ const Home: React.FC = () => {
           <div className="w-28 h-28 mb-4 bg-white rounded-full p-0 shadow-lg border-2 border-royalBlue">
             <img src={logo} alt="Fantasy League Chess Logo" className="w-full h-full object-contain" />
           </div>
-          <h1 className="text-5xl font-extrabold text-neutral-900 mb-4 tracking-tight font-serif drop-shadow">Fantasy League Chess</h1>
+          <h1 className="text-5xl font-extrabold text-neutral-900 mb-4 tracking-tight font-serif drop-shadow">{brandName}</h1>
           <p className="text-lg text-neutral-700 mb-10 max-w-xl">
             The ultimate fantasy sports experience for chess fans. Draft titled players, set your lineup, trade in the marketplace, and compete for glory every Titled Tuesday.</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -28,9 +31,9 @@ const Home: React.FC = () => {
       {/* About Section */}
       <section className="w-full py-12 flex justify-center bg-white mt-12">
         <div className="max-w-2xl w-full bg-white rounded-2xl shadow-lg p-8 flex flex-col items-center border-2 border-royalBlue">
-          <h2 className="text-2xl font-bold mb-2 text-neutral-900">About Fantasy League Chess</h2>
+          <h2 className="text-2xl font-bold mb-2 text-neutral-900">About {brandName}</h2>
           <p className="text-neutral-700 mb-6">
-            Fantasy League Chess brings the thrill of fantasy sports to the chess world. Join or create leagues, draft your favorite titled players, trade in the marketplace, and compete with friends or the global community.
+            {brandNameFull} brings the thrill of fantasy sports to the chess world. Join or create leagues, draft your favorite titled players, trade in the marketplace, and compete with friends or the global community.
           </p>
         </div>
       </section>
