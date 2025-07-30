@@ -5,7 +5,7 @@ import os
 
 def convert_logo_to_base64():
     
-    logo_path = "fantasy-chess-frontend/public/avatars/fantasy-league-chess-logo.png"
+    logo_path = "fantasy-chess-frontend/src/assets/fantasy-league-chess-logo-updated.png"
     
     if not os.path.exists(logo_path):
         print(f"❌ Logo file not found at: {logo_path}")

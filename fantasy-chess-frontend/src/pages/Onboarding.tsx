@@ -2,7 +2,7 @@ import * as React from 'react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowRight, Trophy, Users, Target, Coins, Store, ArrowLeft } from 'lucide-react'
-import logo from '../assets/fantasy-league-chess-logo.png'
+import logo from '../assets/fantasy-league-chess-logo-updated.png'
 
 const Onboarding: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<'help' | 'signup'>('help')

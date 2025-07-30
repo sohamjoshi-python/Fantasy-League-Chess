@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { ArrowRight, Trophy, Users, Target, BarChart3, HelpCircle, Play, Coins, Store, MessageCircle } from 'lucide-react'
-import logo from '../assets/fantasy-league-chess-logo.png'
+import logo from '../assets/fantasy-league-chess-logo-updated.png'
 
 const Help: React.FC = () => {
   return (

@@ -7,7 +7,7 @@ import { League, Lineup, ChessPlayer, Bot } from '../types'
 import { Crown, Trophy, Calendar, Edit, Check, X, RefreshCw, Bot as BotIcon, Plus, Trash2 } from 'lucide-react'
 import { createBot, removeBot, autoSetLineupForBot } from '../lib/supabase';
 import Confetti from 'react-confetti';
-import fantasyLeagueChessLogo from '../assets/fantasy-league-chess-logo.png';
+import fantasyLeagueChessLogo from '../assets/fantasy-league-chess-logo-updated.png';
 
 import Marketplace from '../components/Marketplace';
 import TurnBasedMarketplace from '../components/TurnBasedMarketplace';

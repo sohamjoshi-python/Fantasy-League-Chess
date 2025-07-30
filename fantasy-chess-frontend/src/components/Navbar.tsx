@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { LogIn, UserPlus, HelpCircle, Bell } from 'lucide-react'
 import { getUnreadNotificationCount, supabase } from '../lib/supabase'
 import Inbox from './Inbox'
-import logo from '../assets/fantasy-league-chess-logo.png'
+import logo from '../assets/fantasy-league-chess-logo-updated.png'
 
 const Navbar: React.FC = () => {
   const { user, signOut } = useAuth()

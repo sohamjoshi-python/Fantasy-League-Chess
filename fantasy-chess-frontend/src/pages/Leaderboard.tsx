@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import fantasyLeagueChessLogo from '../assets/fantasy-league-chess-logo.png';
+import fantasyLeagueChessLogo from '../assets/fantasy-league-chess-logo-updated.png';
 import { Trophy, Target, Clock, Calendar, Medal, Crown } from 'lucide-react';
 
 interface LeaderboardEntry {

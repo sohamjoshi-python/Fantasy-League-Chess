@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { ArrowLeft, Eye, EyeOff, CheckCircle } from 'lucide-react'
-import logo from '../assets/fantasy-league-chess-logo.png'
+import logo from '../assets/fantasy-league-chess-logo-updated.png'
 
 const SignUp: React.FC = () => {
   const [email, setEmail] = useState('')
