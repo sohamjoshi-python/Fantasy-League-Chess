@@ -1217,11 +1217,6 @@ const LeaguePage: React.FC = () => {
             </div>
           </div>
 
-          {/* Discord Integration */}
-          {league && (
-            <DiscordIntegration league={league} />
-          )}
-
           {/* Bot Management Section - Only visible to league owner and before draft starts */}
           {isOwner && !league?.draft_started && !league?.draft_completed && !league?.marketplace_started && (
             <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6 mb-6 lg:mb-8 border-2 border-royalBlue">
@@ -1716,7 +1711,15 @@ const LeaguePage: React.FC = () => {
             </div>
           </div>
 
-
+          {/* Discord Integration - Above Marketplace */}
+          {league && (
+            <div className="mt-8">
+              <DiscordIntegration 
+                discordInviteLink={league.discord_invite_link}
+                leagueName={league.name}
+              />
+            </div>
+          )}
 
           {/* Coin Marketplace - Show after draft is completed */}
           {league && (league.draft_completed || (league.marketplace_order && league.marketplace_order.length === 0)) && (

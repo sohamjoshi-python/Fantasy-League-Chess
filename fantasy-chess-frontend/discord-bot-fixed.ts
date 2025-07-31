@@ -54,29 +54,52 @@ async function discordApiRequest(endpoint: string, options: RequestInit) {
 
 // Create a Discord channel for a league
 async function createLeagueDiscordChannel(leagueName: string, leagueId: string) {
-  const DISCORD_MAIN_SERVER_ID = Deno.env.get('DISCORD_MAIN_SERVER_ID');
-  
-  if (!DISCORD_MAIN_SERVER_ID) {
-    throw new Error('Discord main server ID not configured - please set DISCORD_MAIN_SERVER_ID in Supabase environment variables');
-  }
-
-  console.log('Creating Discord channel with server ID:', DISCORD_MAIN_SERVER_ID);
-  
-  // Create channel data
-  const channelData = {
-    name: `🏆-${leagueName}`,
-    type: 0, // Text channel
-    topic: `Fantasy Chess League: ${leagueName}`,
-    parent_id: null
-  };
-  
-  console.log('Channel data being sent to Discord:', JSON.stringify(channelData, null, 2));
-  console.log('Discord API endpoint:', `/guilds/${DISCORD_MAIN_SERVER_ID}/channels`);
-  
   try {
+    console.log('Creating Discord channel for league:', leagueName);
+    
+    const DISCORD_MAIN_SERVER_ID = Deno.env.get('DISCORD_MAIN_SERVER_ID');
+    if (!DISCORD_MAIN_SERVER_ID) {
+      throw new Error('DISCORD_MAIN_SERVER_ID not set');
+    }
+
+    // Step 1: Create a role for this league
+    const roleData = await discordApiRequest(`/guilds/${DISCORD_MAIN_SERVER_ID}/roles`, {
+      method: 'POST',
+      body: JSON.stringify({
+        name: `League-${leagueId.slice(0, 8)}`,
+        color: 0x00ff00, // Green color
+        hoist: false, // Don't show separately in member list
+        mentionable: true,
+        permissions: "0" // No special permissions, just for access control
+      }),
+    });
+    
+    console.log('Successfully created role:', roleData);
+    const roleId = roleData.id;
+    console.log('Role created with ID:', roleId);
+    
+    // Step 2: Create a private channel with role-based permissions
     const channel = await discordApiRequest(`/guilds/${DISCORD_MAIN_SERVER_ID}/channels`, {
       method: 'POST',
-      body: JSON.stringify(channelData)
+      body: JSON.stringify({
+        name: `league-${leagueId.slice(0, 8)}`,
+        type: 0, // Text channel
+        parent_id: null,
+        permission_overwrites: [
+          {
+            id: DISCORD_MAIN_SERVER_ID, // @everyone role
+            type: 0,
+            allow: "0",
+            deny: "1024" // VIEW_CHANNEL permission - deny everyone
+          },
+          {
+            id: roleId, // League role
+            type: 0,
+            allow: "1024", // VIEW_CHANNEL permission - allow league members
+            deny: "0"
+          }
+        ]
+      }),
     });
     
     console.log('Successfully created channel:', channel);
@@ -94,9 +117,9 @@ This is your dedicated Discord channel for the **${leagueName}** Fantasy Chess L
 • Celebrate victories and analyze games
 • Coordinate with your league members
 • Get updates on league standings and events
-• **Just hang out and chat with fellow chess enthusiasts!** 💬
+• **Just hang out and chat with fellow chess enthusiasts!** 🎮
 
-📊 **League Info:**
+📋 **League Info:**
 • League Name: \`${leagueName}\`
 • Channel created: <t:${Math.floor(Date.now() / 1000)}:F>
 
@@ -119,19 +142,23 @@ This is your dedicated Discord channel for the **${leagueName}** Fantasy Chess L
       // Don't fail the entire operation if welcome message fails
     }
     
-    // Create an invite link for the channel
+    // Step 3: Create an invite link for the channel
     const inviteData = await discordApiRequest(`/channels/${channelId}/invites`, {
       method: 'POST',
       body: JSON.stringify({
         max_age: 0, // Never expires
         max_uses: 0, // Unlimited uses
         temporary: false,
-        unique: true,
+        unique: true
       }),
     });
 
+    if (!inviteData.code) {
+      throw new Error('Failed to create invite link: No code returned');
+    }
+
     const inviteUrl = `https://discord.gg/${inviteData.code}`;
-    console.log('Invite URL created:', inviteUrl);
+    console.log('Channel invite URL created:', inviteUrl);
 
     // Store the Discord channel info in the database
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -142,14 +169,15 @@ This is your dedicated Discord channel for the **${leagueName}** Fantasy Chess L
     await supabase
       .from('leagues')
       .update({
-        discord_server_id: channelId, // We'll use this field to store channel ID
+        discord_server_id: channelId, // Store channel ID
         discord_invite_link: inviteUrl,
+        discord_role_id: roleId // Store the role ID for future use
       })
       .eq('id', leagueId);
 
     console.log('Database updated with Discord info');
 
-    return { channelId, inviteUrl };
+    return { channelId, roleId, inviteUrl };
   } catch (error) {
     console.error('Error creating Discord channel:', error);
     throw error;
@@ -172,6 +200,65 @@ async function sendLeagueChannelMessage(channelId: string, message: string) {
   }
 }
 
+// Assign a user to a league role
+async function assignUserToLeagueRole(userId: string, roleId: string) {
+  try {
+    console.log(`Attempting to assign user ${userId} to role ${roleId}`);
+    
+    const DISCORD_MAIN_SERVER_ID = Deno.env.get('DISCORD_MAIN_SERVER_ID');
+    if (!DISCORD_MAIN_SERVER_ID) {
+      throw new Error('DISCORD_MAIN_SERVER_ID not set');
+    }
+
+    console.log(`Using server ID: ${DISCORD_MAIN_SERVER_ID}`);
+
+    const response = await discordApiRequest(`/guilds/${DISCORD_MAIN_SERVER_ID}/members/${userId}/roles/${roleId}`, {
+      method: 'PUT',
+      body: JSON.stringify({})
+    });
+    
+    console.log(`Successfully assigned user ${userId} to role ${roleId}`);
+    return { success: true, message: `User ${userId} assigned to role ${roleId}` };
+  } catch (error) {
+    console.error('Error assigning user to role:', error);
+    // Return a more detailed error response
+    return { 
+      success: false, 
+      error: error.message,
+      details: 'User might not be in the server or role might not exist'
+    };
+  }
+}
+
+// Remove a user from a league role
+async function removeUserFromLeagueRole(userId: string, roleId: string) {
+  try {
+    console.log(`Attempting to remove user ${userId} from role ${roleId}`);
+    
+    const DISCORD_MAIN_SERVER_ID = Deno.env.get('DISCORD_MAIN_SERVER_ID');
+    if (!DISCORD_MAIN_SERVER_ID) {
+      throw new Error('DISCORD_MAIN_SERVER_ID not set');
+    }
+
+    console.log(`Using server ID: ${DISCORD_MAIN_SERVER_ID}`);
+
+    const response = await discordApiRequest(`/guilds/${DISCORD_MAIN_SERVER_ID}/members/${userId}/roles/${roleId}`, {
+      method: 'DELETE'
+    });
+    
+    console.log(`Successfully removed user ${userId} from role ${roleId}`);
+    return { success: true, message: `User ${userId} removed from role ${roleId}` };
+  } catch (error) {
+    console.error('Error removing user from role:', error);
+    // Return a more detailed error response
+    return { 
+      success: false, 
+      error: error.message,
+      details: 'User might not be in the server or role might not exist'
+    };
+  }
+}
+
 // Generate an invite link for a Discord channel
 async function generateLeagueInviteLink(channelId: string) {
   try {
@@ -182,15 +269,19 @@ async function generateLeagueInviteLink(channelId: string) {
         max_uses: 0,
         temporary: false,
         unique: true,
+        // For channel-specific invites, we need to use the correct approach
+        target_type: 2, // Channel invite
+        target_user_id: null,
+        target_application_id: null
       }),
     });
 
     const inviteUrl = `https://discord.gg/${inviteData.code}`;
-    console.log('Invite URL generated:', inviteUrl);
+    console.log('Channel-specific invite URL generated:', inviteUrl);
     
     return { inviteUrl };
   } catch (error) {
-    console.error('Error generating invite link:', error);
+    console.error('Error generating invite:', error);
     throw error;
   }
 }
@@ -221,9 +312,19 @@ serve(async (req) => {
       );
     }
 
-    const { action, leagueName, leagueId, message, channelId } = parsedBody;
-    console.log('Discord bot function called with action:', action);
-    console.log('Extracted values:', { action, leagueName, leagueId, message, channelId });
+    const { action, leagueName, leagueId, channelId, message, userId, roleId } = parsedBody;
+    console.log('Action:', action);
+    console.log('League name:', leagueName);
+    console.log('League ID:', leagueId);
+
+    if (!action) {
+      return new Response(
+        JSON.stringify({ error: 'Missing action parameter' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    let result;
 
     switch (action) {
       case 'create_league_channel':
@@ -233,46 +334,38 @@ serve(async (req) => {
             { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
+        result = await createLeagueDiscordChannel(leagueName, leagueId);
+        break;
 
-        try {
-          const result = await createLeagueDiscordChannel(leagueName, leagueId);
+      case 'send_message':
+        if (!channelId || !message) {
           return new Response(
-            JSON.stringify({ success: true, ...result }),
-            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        } catch (error) {
-          console.error('Error in create_league_channel:', error);
-          return new Response(
-            JSON.stringify({ 
-              error: 'Failed to create Discord channel',
-              details: error.message,
-              suggestion: 'Please check Discord environment variables (DISCORD_BOT_TOKEN, DISCORD_MAIN_SERVER_ID) in Supabase project settings'
-            }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-
-      case 'send_league_message':
-        if (!message || !channelId) {
-          return new Response(
-            JSON.stringify({ error: 'Missing message or channelId' }),
+            JSON.stringify({ error: 'Missing channelId or message' }),
             { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
+        result = await sendLeagueChannelMessage(channelId, message);
+        break;
 
-        try {
-          const result = await sendLeagueChannelMessage(channelId, message);
+      case 'assign_user_to_role':
+        if (!userId || !roleId) {
           return new Response(
-            JSON.stringify({ success: true, message: 'Message sent successfully' }),
-            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        } catch (error) {
-          console.error('Error sending league message:', error);
-          return new Response(
-            JSON.stringify({ error: 'Failed to send message', details: error.message }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            JSON.stringify({ error: 'Missing userId or roleId' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
+        result = await assignUserToLeagueRole(userId, roleId);
+        break;
+
+      case 'remove_user_from_role':
+        if (!userId || !roleId) {
+          return new Response(
+            JSON.stringify({ error: 'Missing userId or roleId' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        result = await removeUserFromLeagueRole(userId, roleId);
+        break;
 
       case 'generate_invite':
         if (!channelId) {
@@ -281,27 +374,28 @@ serve(async (req) => {
             { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
-
-        try {
-          const result = await generateLeagueInviteLink(channelId);
-          return new Response(
-            JSON.stringify({ success: true, ...result }),
-            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        } catch (error) {
-          console.error('Error generating invite:', error);
-          return new Response(
-            JSON.stringify({ error: 'Failed to generate invite', details: error.message }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
+        result = await generateLeagueInviteLink(channelId);
+        break;
 
       default:
         return new Response(
-          JSON.stringify({ error: 'Invalid action' }),
+          JSON.stringify({ error: 'Unknown action' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
     }
+
+    if (result) {
+      return new Response(
+        JSON.stringify({ success: true, ...result }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    } else {
+      return new Response(
+        JSON.stringify({ success: true, message: 'Action completed' }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
   } catch (error) {
     console.error('Error in Discord bot function:', error);
     return new Response(
