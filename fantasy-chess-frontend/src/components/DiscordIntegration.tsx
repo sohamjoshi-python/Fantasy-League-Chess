@@ -58,18 +58,6 @@ const DiscordIntegration: React.FC<DiscordIntegrationProps> = ({
           </ol>
         </div>
 
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h4 className="font-medium text-blue-900 mb-2">
-            🚀 System Benefits
-          </h4>
-          <ul className="text-sm text-blue-800 space-y-1">
-            <li>✅ <strong>Secure Verification</strong> - Checks your league membership</li>
-            <li>✅ <strong>Automatic Setup</strong> - Creates private channel for you</li>
-            <li>✅ <strong>Easy Access</strong> - Direct channel permissions</li>
-            <li>✅ <strong>One-Time Setup</strong> - Bot remembers you after first verification</li>
-          </ul>
-        </div>
-
         <div className="flex justify-center">
           <a
             href={discordInviteLink}
@@ -82,12 +70,6 @@ const DiscordIntegration: React.FC<DiscordIntegrationProps> = ({
             </svg>
             Join Discord Server
           </a>
-        </div>
-
-        <div className="text-xs text-gray-500 text-center">
-          <p>💡 <strong>Tip:</strong> Make sure you're using the same email address you used to sign up for the league!</p>
-          <p>🔒 <strong>Security:</strong> The bot verifies your league membership before granting access.</p>
-          <p>🎯 <strong>Note:</strong> This link takes you to our Discord server, not directly to your league channel.</p>
         </div>
       </div>
     </div>
