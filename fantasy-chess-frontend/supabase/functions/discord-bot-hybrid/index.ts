@@ -42,7 +42,11 @@ async function discordApiRequest(endpoint: string, options: RequestInit) {
 // Create a league channel with direct user access
 async function createLeagueDiscordChannel(leagueName: string, leagueId: string) {
   try {
-    console.log('Creating Discord channel for league:', leagueName);
+    console.log('🔍 DEBUG: Creating Discord channel for league:');
+    console.log('   leagueName:', leagueName);
+    console.log('   leagueId:', leagueId);
+    console.log('   leagueName type:', typeof leagueName);
+    console.log('   leagueId type:', typeof leagueId);
     
     const DISCORD_MAIN_SERVER_ID = Deno.env.get('DISCORD_MAIN_SERVER_ID');
     if (!DISCORD_MAIN_SERVER_ID) {
@@ -50,10 +54,13 @@ async function createLeagueDiscordChannel(leagueName: string, leagueId: string) 
     }
 
     // Create a private channel with no role permissions initially
+    const channelName = `league-${leagueName.toLowerCase().replace(/[^a-z0-9]/g, '-')}`;
+    console.log('🔍 DEBUG: Channel name will be:', channelName);
+    
     const channel = await discordApiRequest(`/guilds/${DISCORD_MAIN_SERVER_ID}/channels`, {
       method: 'POST',
       body: JSON.stringify({
-        name: `league-${leagueName.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
+        name: channelName,
         type: 0, // Text channel
         parent_id: null,
         permission_overwrites: [

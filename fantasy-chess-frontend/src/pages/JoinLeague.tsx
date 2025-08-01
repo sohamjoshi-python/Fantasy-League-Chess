@@ -224,7 +224,7 @@ const JoinLeague: React.FC = () => {
       // Create Discord channel for the league
       try {
         console.log('Creating Discord channel for league...');
-        const discordResponse = await supabase.functions.invoke('discord-bot', {
+        const discordResponse = await supabase.functions.invoke('discord-bot-hybrid', {
           body: {
             action: 'create_league_channel',
             leagueName: leagueName,
@@ -385,7 +385,7 @@ const JoinLeague: React.FC = () => {
       if (!league.discord_server_id) {
         try {
           console.log('Creating Discord channel for league...');
-          const discordResponse = await supabase.functions.invoke('discord-bot', {
+          const discordResponse = await supabase.functions.invoke('discord-bot-hybrid', {
             body: {
               action: 'create_league_channel',
               leagueName: league.name,
@@ -526,7 +526,7 @@ const JoinLeague: React.FC = () => {
       if (!league.discord_server_id) {
         try {
           console.log('Creating Discord channel for league...');
-          const discordResponse = await supabase.functions.invoke('discord-bot', {
+          const discordResponse = await supabase.functions.invoke('discord-bot-hybrid', {
             body: {
               action: 'create_league_channel',
               leagueName: league.name,

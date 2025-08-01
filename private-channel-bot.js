@@ -202,7 +202,9 @@ client.on('messageCreate', async (message) => {
     } else if (userVerification.step === 'waiting_for_league_code') {
       const leagueCode = message.content.trim().toUpperCase();
       
-      console.log(`Verifying user ${message.author.id} for league ${leagueCode} with email ${userVerification.email}`);
+      console.log(`🔍 Processing league code: "${leagueCode}" for user ${message.author.id}`);
+      console.log(`📧 User email: ${userVerification.email}`);
+      console.log(`🎯 Current step: ${userVerification.step}`);
       
       // Call Supabase Edge Function for verification
       const { data, error } = await supabase.functions.invoke('discord-bot-hybrid', {
@@ -215,15 +217,16 @@ client.on('messageCreate', async (message) => {
       });
       
       if (error) {
-        console.error('Error calling Edge Function:', error);
+        console.error('❌ Error calling Edge Function:', error);
         await message.channel.send('❌ An error occurred. Please try again.');
-        return;
+        return; // Don't clear verification state on error
       }
       
-      console.log('Edge Function response:', data);
+      console.log('📡 Edge Function response:', JSON.stringify(data, null, 2));
       
-      if (data && data.data && data.data.success) {
+      if (data && data.success && data.data && data.data.success) {
         const responseMessage = data.data.message || '✅ Verification successful!';
+        console.log(`✅ Success! Sending message: ${responseMessage}`);
         await message.channel.send(responseMessage);
         
         // Delete the private channel after successful verification
@@ -236,13 +239,47 @@ client.on('messageCreate', async (message) => {
           }
         }, 5000); // Wait 5 seconds before deleting
         
+        // Clear verification state only on success
+        pendingVerifications.delete(message.author.id);
+        
       } else {
+        console.log(`❌ Response structure:`, {
+          hasData: !!data,
+          hasSuccess: !!(data && data.success),
+          hasDataData: !!(data && data.data),
+          success: data?.data?.success,
+          message: data?.data?.message
+        });
+        
+        // Check if the error message suggests the user actually got access
         const errorMessage = data?.data?.message || '❌ Verification failed. Please try again.';
-        await message.channel.send(errorMessage);
+        const isAccessGranted = errorMessage.includes('Failed to grant Discord access') && 
+                               !errorMessage.includes('not a member') && 
+                               !errorMessage.includes('not found');
+        
+        if (isAccessGranted) {
+          // User probably got access despite the error message
+          console.log(`⚠️ User likely got access despite error message, not deleting channel`);
+          await message.channel.send(`✅ Welcome! You should now have access to your league channel. This private channel will be deleted in 30 seconds.`);
+          
+          // Delete the private channel after a longer delay
+          setTimeout(async () => {
+            try {
+              await userVerification.channel.delete();
+              console.log(`✅ Deleted private channel for ${message.author.tag}`);
+            } catch (deleteError) {
+              console.error('Error deleting channel:', deleteError);
+            }
+          }, 30000); // Wait 30 seconds before deleting
+          
+          // Clear verification state
+          pendingVerifications.delete(message.author.id);
+        } else {
+          console.log(`❌ Verification failed: ${errorMessage}`);
+          await message.channel.send(errorMessage);
+          // Don't clear verification state on failure - let user try again
+        }
       }
-      
-      // Clear verification state
-      pendingVerifications.delete(message.author.id);
     }
     
   } catch (error) {
