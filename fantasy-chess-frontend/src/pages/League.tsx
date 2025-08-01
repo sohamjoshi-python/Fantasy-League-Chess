@@ -644,6 +644,7 @@ const LeaguePage: React.FC = () => {
         const allDraftParticipants = [...league.member_ids, newBot.id]
         const updatedDraftOrder = generateSnakeDraftOrder(allDraftParticipants, 10)
         
+        // Update the league with bot information
         await supabase
           .from('leagues')
           .update({ 
@@ -653,6 +654,16 @@ const LeaguePage: React.FC = () => {
             current_draft_turn: 0
           })
           .eq('id', league.id)
+        
+        // Add bot to league_members table
+        await supabase
+          .from('league_members')
+          .insert({
+            league_id: league.id,
+            user_id: newBot.id,
+            display_name: newBot.name,
+            email: `${newBot.name}@bot.local`
+          })
         
         // Reload league data to update draft order
         await loadLeagueData()
@@ -678,12 +689,10 @@ const LeaguePage: React.FC = () => {
         setBot(null)
         
         // Update league to remove bot_id, remove bot from member_ids, and regenerate draft order
-        const updatedMemberIds = (league.member_ids || []).reduce((acc: string[], id: string | undefined) => {
-          if (typeof id === 'string' && user?.id && id !== String(user.id)) acc.push(id);
-          return acc;
-        }, []);
+        const updatedMemberIds = (league.member_ids || []).filter((id: string) => id !== bot.id);
         const updatedDraftOrder = generateSnakeDraftOrder(updatedMemberIds, 10)
         
+        // Update the league to remove bot information
         await supabase
           .from('leagues')
           .update({ 
@@ -693,6 +702,13 @@ const LeaguePage: React.FC = () => {
             current_draft_turn: 0
           })
           .eq('id', league.id)
+        
+        // Remove bot from league_members table
+        await supabase
+          .from('league_members')
+          .delete()
+          .eq('league_id', league.id)
+          .eq('user_id', bot.id)
         
         // Reload league data to update draft order
         await loadLeagueData()
