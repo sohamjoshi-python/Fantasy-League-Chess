@@ -42,11 +42,7 @@ async function discordApiRequest(endpoint: string, options: RequestInit) {
 // Create a league channel with direct user access
 async function createLeagueDiscordChannel(leagueName: string, leagueId: string) {
   try {
-    console.log('🔍 DEBUG: Creating Discord channel for league:');
-    console.log('   leagueName:', leagueName);
-    console.log('   leagueId:', leagueId);
-    console.log('   leagueName type:', typeof leagueName);
-    console.log('   leagueId type:', typeof leagueId);
+    console.log('Creating Discord channel for league:', leagueName);
     
     const DISCORD_MAIN_SERVER_ID = Deno.env.get('DISCORD_MAIN_SERVER_ID');
     if (!DISCORD_MAIN_SERVER_ID) {
@@ -54,8 +50,7 @@ async function createLeagueDiscordChannel(leagueName: string, leagueId: string) 
     }
 
     // Create a private channel with no role permissions initially
-    const channelName = `league-${leagueName.toLowerCase().replace(/[^a-z0-9]/g, '-')}`;
-    console.log('🔍 DEBUG: Channel name will be:', channelName);
+    const channelName = `🏆-${leagueName.toLowerCase().replace(/[^a-z0-9]/g, '-')}`;
     
     const channel = await discordApiRequest(`/guilds/${DISCORD_MAIN_SERVER_ID}/channels`, {
       method: 'POST',
@@ -157,7 +152,7 @@ This is your dedicated Discord channel for the **${leagueName}** Fantasy Chess L
 // Verify user and grant direct channel access
 async function verifyUserAndGrantAccess(userId: string, leagueCode: string, email: string) {
   try {
-    console.log(`🔍 Starting verification for user ${userId} for league ${leagueCode} with email ${email}`);
+    console.log(`Verifying user ${userId} for league ${leagueCode} with email ${email}`);
     
     // Connect to Supabase
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -165,7 +160,6 @@ async function verifyUserAndGrantAccess(userId: string, leagueCode: string, emai
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
     
     // Step 1: Find the league by code
-    console.log(`📋 Step 1: Looking up league with code "${leagueCode}"`);
     const { data: league, error: leagueError } = await supabase
       .from('leagues')
       .select('id, name, discord_server_id, member_ids')
@@ -173,18 +167,13 @@ async function verifyUserAndGrantAccess(userId: string, leagueCode: string, emai
       .single();
     
     if (leagueError || !league) {
-      console.log(`❌ League not found: ${leagueError?.message || 'No league data'}`);
       return {
         success: false,
         message: '❌ League not found. Please check your league code.'
       };
     }
     
-    console.log(`✅ Found league: ${league.name} (ID: ${league.id})`);
-    console.log(`📊 League member_ids: ${JSON.stringify(league.member_ids)}`);
-    
     // Step 2: Find the user by Discord ID first, then by email
-    console.log(`👤 Step 2: Looking up user by Discord ID ${userId}`);
     let user = null;
     let userError = null;
     
@@ -197,9 +186,8 @@ async function verifyUserAndGrantAccess(userId: string, leagueCode: string, emai
     
     if (!discordError && userByDiscord) {
       user = userByDiscord;
-      console.log(`✅ Found user by Discord ID: ${user.id} with email: ${user.email}`);
+      console.log(`Found user by Discord ID: ${user.id} with email: ${user.email}`);
     } else {
-      console.log(`🔍 Discord ID lookup failed, trying email: ${email}`);
       // Fallback to email lookup
       const { data: userByEmail, error: emailError } = await supabase
         .from('users')
@@ -211,11 +199,10 @@ async function verifyUserAndGrantAccess(userId: string, leagueCode: string, emai
       userError = emailError;
       
       if (!userError && user) {
-        console.log(`✅ Found user by email: ${user.id} with email: ${user.email}`);
+        console.log(`Found user by email: ${user.id} with email: ${user.email}`);
         
         // Update Discord ID if not set
         if (!user.discord_user_id) {
-          console.log(`🔗 Associating Discord ID ${userId} with user ${user.id}`);
           await supabase
             .from('users')
             .update({ discord_user_id: userId })
@@ -226,34 +213,25 @@ async function verifyUserAndGrantAccess(userId: string, leagueCode: string, emai
     }
     
     if (userError || !user) {
-      console.log(`❌ User not found: ${userError?.message || 'No user data'}`);
       return {
         success: false,
         message: '❌ User not found. Please check your email or sign up first.'
       };
     }
     
-    console.log(`🎯 Step 3: Checking if user ${user.id} is member of league ${league.id}`);
-    console.log(`📋 League member_ids: ${JSON.stringify(league.member_ids)}`);
-    console.log(`🔍 User ID: ${user.id}`);
-    console.log(`✅ Is member: ${league.member_ids && Array.isArray(league.member_ids) && league.member_ids.includes(user.id)}`);
-    
     // Step 3: Check if user is a member of this league using member_ids array
     if (!league.member_ids || !Array.isArray(league.member_ids) || !league.member_ids.includes(user.id)) {
-      console.log(`❌ User ${user.id} is not a member of league ${league.id}`);
       return {
         success: false,
         message: '❌ You are not a member of this league. Please join the league first on the website.'
       };
     }
     
-    console.log(`✅ Confirmed user ${user.id} is member of league ${league.id}`);
+    console.log(`Confirmed user ${user.id} is member of league ${league.id}`);
     
     // Step 4: Check if user is in Discord server
-    console.log(`🎮 Step 4: Checking if user is in Discord server`);
     const DISCORD_MAIN_SERVER_ID = Deno.env.get('DISCORD_MAIN_SERVER_ID');
     if (!DISCORD_MAIN_SERVER_ID) {
-      console.log(`❌ DISCORD_MAIN_SERVER_ID not set`);
       throw new Error('DISCORD_MAIN_SERVER_ID not set');
     }
     
@@ -264,29 +242,20 @@ async function verifyUserAndGrantAccess(userId: string, leagueCode: string, emai
       }
     });
     
-    console.log(`📡 Discord member check response: ${memberResponse.status} ${memberResponse.statusText}`);
-    
     if (!memberResponse.ok) {
-      console.log(`❌ User ${userId} is not in Discord server`);
       return {
         success: false,
         message: '❌ You are not in the Discord server. Please join the server first using the invite link.'
       };
     }
     
-    console.log(`✅ User ${userId} is in Discord server`);
-    
     // Step 5: Grant direct channel access
-    console.log(`🔐 Step 5: Granting channel access`);
     if (!league.discord_server_id) {
-      console.log(`❌ League ${league.id} has no discord_server_id`);
       return {
         success: false,
         message: '❌ League Discord setup incomplete. Please contact support.'
       };
     }
-    
-    console.log(`🎯 Granting access to channel ${league.discord_server_id} for user ${userId}`);
     
     // Add user directly to channel permissions
     try {
