@@ -192,23 +192,24 @@ const JoinLeague: React.FC = () => {
       }
 
       // Add creator to league_members table
-      // TEMPORARILY DISABLED - Check table structure
-      /*
-      const { error: memberError } = await supabase
-        .from('league_members')
-        .insert({
-          league_id: league.id,
-          user_id: user.id,
-          email: user.email
-        })
-        .single()
+      try {
+        const { error: memberError } = await supabase
+          .from('league_members')
+          .insert({
+            league_id: league.id,
+            user_id: user.id,
+            display_name: user.user_metadata?.display_name || user.user_metadata?.username || `User_${user.id.slice(0, 6)}`,
+            email: user.email
+          })
 
-      if (memberError) {
-        console.error('Error adding creator to league_members:', memberError)
+        if (memberError) {
+          console.error('Error adding creator to league_members:', memberError)
+          // Continue anyway - the league update might still work
+        }
+      } catch (err) {
+        console.error('Error adding creator to league_members:', err)
         // Continue anyway - the league update might still work
       }
-      */
-      console.log('league_members insert temporarily disabled');
 
       // Deduct coins from user
       await supabase
@@ -370,6 +371,26 @@ const JoinLeague: React.FC = () => {
         console.log('League data creation failed (will be created automatically):', err);
       }
 
+      // Add user to league_members table
+      try {
+        const { error: memberError } = await supabase
+          .from('league_members')
+          .insert({
+            league_id: league.id,
+            user_id: user.id,
+            display_name: user.user_metadata?.display_name || user.user_metadata?.username || `User_${user.id.slice(0, 6)}`,
+            email: user.email
+          })
+
+        if (memberError) {
+          console.error('Error adding user to league_members:', memberError)
+          // Continue anyway - the league update might still work
+        }
+      } catch (err) {
+        console.error('Error adding user to league_members:', err)
+        // Continue anyway - the league update might still work
+      }
+
       // Deduct coins from user
       await supabase
         .from('users')
@@ -466,23 +487,24 @@ const JoinLeague: React.FC = () => {
       }
 
       // Add user to league_members table first
-      // TEMPORARILY DISABLED - Check table structure
-      /*
-      const { error: memberError } = await supabase
-        .from('league_members')
-        .insert({
-          league_id: league.id,
-          user_id: user.id,
-          email: user.email
-        })
-        .single()
+      try {
+        const { error: memberError } = await supabase
+          .from('league_members')
+          .insert({
+            league_id: league.id,
+            user_id: user.id,
+            display_name: user.user_metadata?.display_name || user.user_metadata?.username || `User_${user.id.slice(0, 6)}`,
+            email: user.email
+          })
 
-      if (memberError) {
-        console.error('Error adding user to league_members:', memberError)
+        if (memberError) {
+          console.error('Error adding user to league_members:', memberError)
+          // Continue anyway - the league update might still work
+        }
+      } catch (err) {
+        console.error('Error adding user to league_members:', err)
         // Continue anyway - the league update might still work
       }
-      */
-      console.log('league_members insert temporarily disabled');
 
       // Add user to league
       const updatedMemberIds = [...league.member_ids, user.id]
