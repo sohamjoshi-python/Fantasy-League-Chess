@@ -465,21 +465,13 @@ const LeaguePage: React.FC = () => {
 
   const loadStandings = async (leagueId: string) => {
     try {
-      // Get all league members first
+      // Get all league members with their display names
       const { data: members } = await supabase
         .from('league_members')
-        .select('user_id')
+        .select('user_id, display_name')
         .eq('league_id', leagueId)
 
       if (!members) return
-
-      // Get usernames from users table
-      const { data: userData } = await supabase
-        .from('users')
-        .select('id, username')
-        .in('id', members.map(m => m.user_id))
-
-      const usernameMap = userData ? Object.fromEntries(userData.map(u => [u.id, u.username])) : {}
 
       // Get lineups to calculate points
       const { data: lineups } = await supabase
@@ -507,7 +499,7 @@ const LeaguePage: React.FC = () => {
 
       const standingsData = members.map(member => ({
         user_id: member.user_id,
-        display_name: usernameMap[member.user_id] || 'Unknown User',
+        display_name: member.display_name || 'Unknown User',
         total_points: userPoints.get(member.user_id) || 0,
         rank: 0,
         avatar_url: avatarMap[member.user_id] || fantasyLeagueChessLogo,

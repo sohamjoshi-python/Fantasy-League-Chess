@@ -193,13 +193,25 @@ const JoinLeague: React.FC = () => {
 
       // Add creator to league_members table
       try {
+        // Get a proper display name from user metadata or create a fallback
+        let displayName = 'Unknown User';
+        if (user.user_metadata) {
+          displayName = user.user_metadata.display_name || 
+                       user.user_metadata.username || 
+                       user.user_metadata.full_name ||
+                       user.user_metadata.name ||
+                       `User_${user.id.slice(0, 6)}`;
+        } else {
+          displayName = `User_${user.id.slice(0, 6)}`;
+        }
+
         const { error: memberError } = await supabase
           .from('league_members')
           .insert({
             league_id: league.id,
             user_id: user.id,
-            display_name: user.user_metadata?.display_name || user.user_metadata?.username || `User_${user.id.slice(0, 6)}`,
-            email: user.email
+            display_name: displayName,
+            email: user.email || 'unknown@example.com'
           })
 
         if (memberError) {
@@ -325,24 +337,37 @@ const JoinLeague: React.FC = () => {
         console.error('Error getting user display name:', err);
       }
 
-      // Add user to league_members table first
-      // TEMPORARILY DISABLED - Check table structure
-      /*
-      const { error: memberError } = await supabase
-        .from('league_members')
-        .insert({
-          league_id: league.id,
-          user_id: user.id,
-          email: user.email
-        })
-        .single()
+      // Add user to league_members table
+      try {
+        // Get a proper display name from user metadata or create a fallback
+        let displayName = 'Unknown User';
+        if (user.user_metadata) {
+          displayName = user.user_metadata.display_name || 
+                       user.user_metadata.username || 
+                       user.user_metadata.full_name ||
+                       user.user_metadata.name ||
+                       `User_${user.id.slice(0, 6)}`;
+        } else {
+          displayName = `User_${user.id.slice(0, 6)}`;
+        }
 
-      if (memberError) {
-        console.error('Error adding user to league_members:', memberError)
+        const { error: memberError } = await supabase
+          .from('league_members')
+          .insert({
+            league_id: league.id,
+            user_id: user.id,
+            display_name: displayName,
+            email: user.email || 'unknown@example.com'
+          })
+
+        if (memberError) {
+          console.error('Error adding user to league_members:', memberError)
+          // Continue anyway - the league update might still work
+        }
+      } catch (err) {
+        console.error('Error adding user to league_members:', err)
         // Continue anyway - the league update might still work
       }
-      */
-      console.log('league_members insert temporarily disabled');
 
       // Add user to league
       const updatedMemberIds = [...league.member_ids, user.id]
@@ -488,13 +513,25 @@ const JoinLeague: React.FC = () => {
 
       // Add user to league_members table first
       try {
+        // Get a proper display name from user metadata or create a fallback
+        let displayName = 'Unknown User';
+        if (user.user_metadata) {
+          displayName = user.user_metadata.display_name || 
+                       user.user_metadata.username || 
+                       user.user_metadata.full_name ||
+                       user.user_metadata.name ||
+                       `User_${user.id.slice(0, 6)}`;
+        } else {
+          displayName = `User_${user.id.slice(0, 6)}`;
+        }
+
         const { error: memberError } = await supabase
           .from('league_members')
           .insert({
             league_id: league.id,
             user_id: user.id,
-            display_name: user.user_metadata?.display_name || user.user_metadata?.username || `User_${user.id.slice(0, 6)}`,
-            email: user.email
+            display_name: displayName,
+            email: user.email || 'unknown@example.com'
           })
 
         if (memberError) {
