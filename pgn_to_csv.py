@@ -298,6 +298,8 @@ def convert(pgn_file):
 #Completed: 
 #convert("Late-Titled-Tuesday-Blitz-July-08-2025_2025-07-08-13-00.pgn")  
 #convert("Late-Titled-Tuesday-Blitz-July-15-2025_2025-07-15-13-00.pgn")
-convert("Late-Titled-Tuesday-Blitz-July-22-2025_2025-07-22-13-00.pgn")
-convert("Early-Titled-Tuesday-Blitz-July-22-2025_2025-07-22-08-00.pgn")
+#convert("Late-Titled-Tuesday-Blitz-July-22-2025_2025-07-22-13-00.pgn")
+#convert("Early-Titled-Tuesday-Blitz-July-22-2025_2025-07-22-08-00.pgn")
 #convert("Late-Titled-Tuesday-Blitz-June-24-2025_2025-06-24-13-00 (2).pgn")
+convert("Early-Titled-Tuesday-Blitz-August-05-2025_2025-08-05-08-00.pgn")
+convert("Late-Titled-Tuesday-Blitz-August-05-2025_2025-08-05-13-00.pgn")

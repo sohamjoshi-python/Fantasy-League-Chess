@@ -289,6 +289,25 @@ export async function createBot(leagueId: string, botName: string): Promise<{ su
     return { success: false, error };
   }
   
+  // Create coin balance record for the bot
+  const { error: coinError } = await supabase
+    .from('league_coin_balances')
+    .insert({
+      bot_id: data.id, // Use bot's ID as bot_id
+      league_id: leagueId,
+      coin_balance: 50, // Start with 50 coins
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    });
+  
+  if (coinError) {
+    console.error('Failed to create bot coin balance:', coinError);
+    // Continue anyway - the bot was created successfully
+  }
+  
+  // Note: bot_id column doesn't exist in leagues table, so we skip updating it
+  // The bot will be found by league_id in the frontend
+  
   return { success: true, bot: data };
 }
 
@@ -298,16 +317,48 @@ export async function createBot(leagueId: string, botName: string): Promise<{ su
  * @returns {Promise<{ success: boolean, error?: any }>}
  */
 export async function removeBot(botId: string): Promise<{ success: boolean, error?: any }> {
-  const { error } = await supabase
-    .from('bots')
-    .delete()
-    .eq('id', botId);
-  
-  if (error) {
+  try {
+    // First get the bot to find its league_id
+    const { data: bot, error: botError } = await supabase
+      .from('bots')
+      .select('league_id')
+      .eq('id', botId)
+      .single();
+    
+    if (botError) {
+      return { success: false, error: botError };
+    }
+
+    // Remove bot from bots table
+    const { error } = await supabase
+      .from('bots')
+      .delete()
+      .eq('id', botId);
+    
+    if (error) {
+      return { success: false, error };
+    }
+    
+    // Remove bot's coin balance record
+    const { error: coinError } = await supabase
+      .from('league_coin_balances')
+      .delete()
+      .eq('bot_id', botId)
+      .eq('league_id', bot.league_id);
+    
+    if (coinError) {
+      console.error('Failed to remove bot coin balance:', coinError);
+      // Continue anyway - the bot was removed successfully
+    }
+    
+    // Note: bot_id column doesn't exist in leagues table, so we skip clearing it
+    // The bot will be found by league_id in the frontend
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error removing bot:', error);
     return { success: false, error };
   }
-  
-  return { success: true };
 }
 
 /**
@@ -595,6 +646,355 @@ export async function autoSetLineupForBot(botId: string, leagueId: string, weekS
   } catch (error: any) {
     console.error('❌ Auto-set lineup error:', error);
     return { success: false, error };
+  }
+}
+
+/**
+ * Auto-marketplace for a bot (buys highest ELO available player)
+ * @param botId string
+ * @param leagueId string
+ * @returns {Promise<{ success: boolean, error?: any }>}
+ */
+export async function autoMarketplaceForBot(botId: string, leagueId: string): Promise<{ success: boolean, error?: any }> {
+  const draftKey = `${botId}-${leagueId}`;
+  
+  // Prevent concurrent drafts for the same bot
+  if (ongoingBotDrafts.has(draftKey)) {
+    return { success: false, error: 'Bot is already processing a marketplace action' };
+  }
+  
+  ongoingBotDrafts.add(draftKey);
+  
+  // --- Calculate player price based on ELO ---
+  const calculatePlayerPrice = (elo: number): number => {
+    if (elo >= 3000) return 50;      // World Champion level
+    if (elo >= 2800) return 45;      // Super GM level
+    if (elo >= 2600) return 40;      // GM level
+    if (elo >= 2400) return 35;      // IM level
+    if (elo >= 2200) return 30;      // FM level
+    if (elo >= 2000) return 25;      // Expert level
+    if (elo >= 1800) return 20;      // Class A
+    if (elo >= 1600) return 15;      // Class B
+    if (elo >= 1400) return 10;      // Class C
+    return 5;                         // Beginner
+  };
+  
+  try {
+    // --- Get league info for marketplace order and turn logic ---
+    const { data: league, error: leagueError } = await supabase
+      .from('leagues')
+      .select('id, marketplace_order, current_marketplace_turn, marketplace_completed, member_ids')
+      .eq('id', leagueId)
+      .single();
+    if (leagueError || !league) {
+      console.error('Failed to fetch league:', leagueError);
+      return { success: false, error: leagueError || 'No league found' };
+    }
+
+    // Check if it's the bot's turn
+    const currentMarketplaceUserId = league.marketplace_order[league.current_marketplace_turn];
+    if (currentMarketplaceUserId !== botId) {
+      return { success: false, error: 'Not bot\'s turn' };
+    }
+
+    // --- Get bot's coin balance ---
+    const { data: botBalance, error: balanceError } = await supabase
+      .from('league_coin_balances')
+      .select('coin_balance')
+      .eq('bot_id', botId)
+      .eq('league_id', leagueId)
+      .maybeSingle();
+
+    if (balanceError || !botBalance) {
+      console.error('Failed to fetch bot balance:', balanceError);
+      return { success: false, error: 'Failed to fetch bot balance' };
+    }
+
+    const botCoins = botBalance.coin_balance || 0;
+
+    // --- Get or create bot team ---
+    let { data: team } = await supabase
+      .from('teams')
+      .select('id, player_ids')
+      .eq('bot_id', botId)
+      .eq('league_id', leagueId)
+      .maybeSingle();
+
+    if (!team) {
+      // Try to create a team for the bot
+      const { data: newTeam, error: createError } = await supabase
+        .from('teams')
+        .insert({ 
+          bot_id: botId, 
+          league_id: leagueId, 
+          player_ids: [],
+          created_at: new Date().toISOString()
+        })
+        .select('id, player_ids')
+        .single();
+      
+      if (createError) {
+        console.error('Failed to create bot team:', createError);
+        // If we can't create a team, just skip the turn
+        const newMarketplaceTurn = league.current_marketplace_turn + 1;
+        const isMarketplaceComplete = newMarketplaceTurn >= league.marketplace_order.length;
+        const { error: leagueUpdateError } = await supabase
+          .from('leagues')
+          .update({
+            current_marketplace_turn: newMarketplaceTurn,
+            marketplace_completed: isMarketplaceComplete
+          })
+          .eq('id', leagueId);
+        if (leagueUpdateError) {
+          return { success: false, error: leagueUpdateError };
+        }
+        return { success: true };
+      }
+      team = newTeam;
+    }
+
+    // --- Enforce max team size ---
+    if ((team.player_ids?.length || 0) >= 10) {
+      // Bot team is full, skip turn
+      const newMarketplaceTurn = league.current_marketplace_turn + 1;
+      const isMarketplaceComplete = newMarketplaceTurn >= league.marketplace_order.length;
+      const { error: leagueUpdateError } = await supabase
+        .from('leagues')
+        .update({
+          current_marketplace_turn: newMarketplaceTurn,
+          marketplace_completed: isMarketplaceComplete
+        })
+        .eq('id', leagueId);
+      if (leagueUpdateError) {
+        return { success: false, error: leagueUpdateError };
+      }
+      return { success: true };
+    }
+
+    // --- Get best available player the bot can afford ---
+    const getBestAffordablePlayer = async (leagueId: string, maxPrice: number): Promise<{ success: boolean, player?: any, error?: any }> => {
+      try {
+        console.log(`Searching for players with max price ${maxPrice} coins`);
+        
+        // Get all drafted players in this league
+        const { data: draftedPlayers, error: draftedError } = await supabase
+          .from('teams')
+          .select('player_ids')
+          .eq('league_id', leagueId);
+        
+        if (draftedError) {
+          console.error('Error fetching drafted players:', draftedError);
+          return { success: false, error: draftedError };
+        }
+        
+        // Flatten all drafted player IDs
+        const draftedPlayerIds = draftedPlayers?.flatMap(team => team.player_ids || []) || [];
+        console.log(`Found ${draftedPlayerIds.length} already drafted players`);
+        
+        // Get all players and filter by price and availability
+        const { data: allPlayers, error } = await supabase
+          .from('chess_players')
+          .select('*')
+          .order('elo', { ascending: false }); // Start with highest ELO (best players first)
+        
+        if (error) {
+          console.error('Error fetching all players:', error);
+          return { success: false, error };
+        }
+        
+        console.log(`Found ${allPlayers?.length || 0} total players`);
+        
+        // Find the best available player the bot can afford
+        for (const player of allPlayers || []) {
+          if (draftedPlayerIds.includes(player.id)) {
+            continue; // Skip already drafted players
+          }
+          
+          const playerPrice = calculatePlayerPrice(player.elo || 0);
+          console.log(`Player ${player.name} (ELO: ${player.elo}) costs ${playerPrice} coins`);
+          
+          if (playerPrice <= maxPrice) {
+            console.log(`Found affordable player: ${player.name} for ${playerPrice} coins`);
+            return { success: true, player };
+          }
+        }
+        
+        console.log('No affordable players found after checking all players');
+        return { success: false, error: 'No affordable players found' };
+      } catch (error) {
+        console.error('Error in getCheapestAvailablePlayer:', error);
+        return { success: false, error };
+      }
+    };
+
+    const { success, player, error: playerError } = await getBestAffordablePlayer(leagueId, botCoins);
+    if (!success || !player) {
+      console.log(`No players found that bot can afford with ${botCoins} coins`);
+      // Bot can't afford any players, check if marketplace should end
+      const remainingPlayerIds = league.marketplace_order.slice(league.current_marketplace_turn);
+      const { data: remainingBalances, error: balanceCheckError } = await supabase
+        .from('league_coin_balances')
+        .select('user_id, bot_id, coin_balance')
+        .or(`user_id.in.(${remainingPlayerIds.join(',')}),bot_id.in.(${remainingPlayerIds.join(',')})`)
+        .eq('league_id', leagueId);
+      
+      if (!balanceCheckError && remainingBalances) {
+        // Check if all remaining players have insufficient coins
+        const allPlayersHaveNoCoins = remainingPlayerIds.every((playerId: string) => {
+          const balance = remainingBalances.find(b => b.user_id === playerId || b.bot_id === playerId);
+          return !balance || balance.coin_balance < 5; // Minimum player price is 5 coins
+        });
+        
+        if (allPlayersHaveNoCoins) {
+          console.log('All remaining players have insufficient coins, ending marketplace');
+          // End the marketplace
+          const { error: leagueUpdateError } = await supabase
+            .from('leagues')
+            .update({
+              marketplace_completed: true
+            })
+            .eq('id', leagueId);
+          if (leagueUpdateError) {
+            return { success: false, error: leagueUpdateError };
+          }
+          return { success: true };
+        }
+      }
+      
+      // Just skip this bot's turn
+      const newMarketplaceTurn = league.current_marketplace_turn + 1;
+      const isMarketplaceComplete = newMarketplaceTurn >= league.marketplace_order.length;
+      const { error: leagueUpdateError } = await supabase
+        .from('leagues')
+        .update({
+          current_marketplace_turn: newMarketplaceTurn,
+          marketplace_completed: isMarketplaceComplete
+        })
+        .eq('id', leagueId);
+      if (leagueUpdateError) {
+        return { success: false, error: leagueUpdateError };
+      }
+      return { success: true };
+    }
+
+    // --- Check if bot has enough coins for this player ---
+    const playerPrice = calculatePlayerPrice(player.elo || 0);
+    console.log(`Bot has ${botCoins} coins, trying to buy player with ELO ${player.elo} for ${playerPrice} coins`);
+    
+    if (botCoins < playerPrice) {
+      console.log(`Bot has ${botCoins} coins but player costs ${playerPrice} coins, checking if marketplace should end`);
+      
+      // Check if all remaining players in the marketplace order have 0 coins
+      const remainingPlayerIds = league.marketplace_order.slice(league.current_marketplace_turn);
+      const { data: remainingBalances, error: balanceCheckError } = await supabase
+        .from('league_coin_balances')
+        .select('user_id, bot_id, coin_balance')
+        .or(`user_id.in.(${remainingPlayerIds.join(',')}),bot_id.in.(${remainingPlayerIds.join(',')})`)
+        .eq('league_id', leagueId);
+      
+      if (balanceCheckError) {
+        console.error('Failed to check remaining balances:', balanceCheckError);
+        // Fall back to just skipping turn
+        const newMarketplaceTurn = league.current_marketplace_turn + 1;
+        const isMarketplaceComplete = newMarketplaceTurn >= league.marketplace_order.length;
+        const { error: leagueUpdateError } = await supabase
+          .from('leagues')
+          .update({
+            current_marketplace_turn: newMarketplaceTurn,
+            marketplace_completed: isMarketplaceComplete
+          })
+          .eq('id', leagueId);
+        if (leagueUpdateError) {
+          return { success: false, error: leagueUpdateError };
+        }
+        return { success: true };
+      }
+      
+      // Check if all remaining players have 0 or insufficient coins
+      const allPlayersHaveNoCoins = remainingPlayerIds.every((playerId: string) => {
+        const balance = remainingBalances?.find(b => b.user_id === playerId || b.bot_id === playerId);
+        const hasEnoughCoins = balance && balance.coin_balance >= 5; // Minimum player price is 5 coins
+        console.log(`Player ${playerId} has ${balance?.coin_balance || 0} coins, can afford minimum player: ${hasEnoughCoins}`);
+        return !hasEnoughCoins;
+      });
+      
+      if (allPlayersHaveNoCoins) {
+        console.log('All remaining players have insufficient coins, ending marketplace');
+        // End the marketplace
+        const { error: leagueUpdateError } = await supabase
+          .from('leagues')
+          .update({
+            marketplace_completed: true
+          })
+          .eq('id', leagueId);
+        if (leagueUpdateError) {
+          console.error('Failed to update marketplace_completed:', leagueUpdateError);
+          return { success: false, error: leagueUpdateError };
+        }
+        console.log('Successfully set marketplace_completed = true');
+        return { success: true };
+      } else {
+        console.log('Some players still have coins, skipping bot turn');
+        // Just skip this bot's turn
+        const newMarketplaceTurn = league.current_marketplace_turn + 1;
+        const isMarketplaceComplete = newMarketplaceTurn >= league.marketplace_order.length;
+        const { error: leagueUpdateError } = await supabase
+          .from('leagues')
+          .update({
+            current_marketplace_turn: newMarketplaceTurn,
+            marketplace_completed: isMarketplaceComplete
+          })
+          .eq('id', leagueId);
+        if (leagueUpdateError) {
+          return { success: false, error: leagueUpdateError };
+        }
+        return { success: true };
+      }
+    }
+
+    // --- Add player to bot's team ---
+    const newPlayerIds = [...(team.player_ids || []), player.id];
+    const { error: teamUpdateError } = await supabase
+      .from('teams')
+      .update({ player_ids: newPlayerIds })
+      .eq('id', team.id);
+    if (teamUpdateError) {
+      return { success: false, error: teamUpdateError };
+    }
+
+    // --- Deduct coins from bot's balance ---
+    const { error: coinUpdateError } = await supabase
+      .from('league_coin_balances')
+      .update({ 
+        coin_balance: botCoins - playerPrice,
+        updated_at: new Date().toISOString()
+      })
+      .eq('bot_id', botId)
+      .eq('league_id', leagueId);
+    if (coinUpdateError) {
+      return { success: false, error: coinUpdateError };
+    }
+
+    // --- Advance marketplace turn and check for completion ---
+    const newMarketplaceTurn = league.current_marketplace_turn + 1;
+    const isMarketplaceComplete = newMarketplaceTurn >= league.marketplace_order.length;
+    const { error: leagueUpdateError } = await supabase
+      .from('leagues')
+      .update({
+        current_marketplace_turn: newMarketplaceTurn,
+        marketplace_completed: isMarketplaceComplete
+      })
+      .eq('id', leagueId);
+    if (leagueUpdateError) {
+      return { success: false, error: leagueUpdateError };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error in autoMarketplaceForBot:', error);
+    return { success: false, error };
+  } finally {
+    ongoingBotDrafts.delete(draftKey);
   }
 }
 

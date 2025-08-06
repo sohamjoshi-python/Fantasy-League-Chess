@@ -191,37 +191,8 @@ const JoinLeague: React.FC = () => {
         console.log('League data creation failed (will be created automatically):', err);
       }
 
-      // Add creator to league_members table
-      try {
-        // Get a proper display name from user metadata or create a fallback
-        let displayName = 'Unknown User';
-        if (user.user_metadata) {
-          displayName = user.user_metadata.display_name || 
-                       user.user_metadata.username || 
-                       user.user_metadata.full_name ||
-                       user.user_metadata.name ||
-                       `User_${user.id.slice(0, 6)}`;
-        } else {
-          displayName = `User_${user.id.slice(0, 6)}`;
-        }
-
-        const { error: memberError } = await supabase
-          .from('league_members')
-          .insert({
-            league_id: league.id,
-            user_id: user.id,
-            display_name: displayName,
-            email: user.email || 'unknown@example.com'
-          })
-
-        if (memberError) {
-          console.error('Error adding creator to league_members:', memberError)
-          // Continue anyway - the league update might still work
-        }
-      } catch (err) {
-        console.error('Error adding creator to league_members:', err)
-        // Continue anyway - the league update might still work
-      }
+      // Note: Creator is already added to member_ids array in the league creation above
+      // No need to insert into league_members table since it doesn't exist anymore
 
       // Deduct coins from user
       await supabase
@@ -337,38 +308,6 @@ const JoinLeague: React.FC = () => {
         console.error('Error getting user display name:', err);
       }
 
-      // Add user to league_members table
-      try {
-        // Get a proper display name from user metadata or create a fallback
-        let displayName = 'Unknown User';
-        if (user.user_metadata) {
-          displayName = user.user_metadata.display_name || 
-                       user.user_metadata.username || 
-                       user.user_metadata.full_name ||
-                       user.user_metadata.name ||
-                       `User_${user.id.slice(0, 6)}`;
-        } else {
-          displayName = `User_${user.id.slice(0, 6)}`;
-        }
-
-        const { error: memberError } = await supabase
-          .from('league_members')
-          .insert({
-            league_id: league.id,
-            user_id: user.id,
-            display_name: displayName,
-            email: user.email || 'unknown@example.com'
-          })
-
-        if (memberError) {
-          console.error('Error adding user to league_members:', memberError)
-          // Continue anyway - the league update might still work
-        }
-      } catch (err) {
-        console.error('Error adding user to league_members:', err)
-        // Continue anyway - the league update might still work
-      }
-
       // Add user to league
       const updatedMemberIds = [...league.member_ids, user.id]
       const updatedDraftOrder = [...league.draft_order, user.id]
@@ -396,25 +335,8 @@ const JoinLeague: React.FC = () => {
         console.log('League data creation failed (will be created automatically):', err);
       }
 
-      // Add user to league_members table
-      try {
-        const { error: memberError } = await supabase
-          .from('league_members')
-          .insert({
-            league_id: league.id,
-            user_id: user.id,
-            display_name: user.user_metadata?.display_name || user.user_metadata?.username || `User_${user.id.slice(0, 6)}`,
-            email: user.email
-          })
-
-        if (memberError) {
-          console.error('Error adding user to league_members:', memberError)
-          // Continue anyway - the league update might still work
-        }
-      } catch (err) {
-        console.error('Error adding user to league_members:', err)
-        // Continue anyway - the league update might still work
-      }
+      // Note: User is already added to member_ids array in the league update above
+      // No need to insert into league_members table since it doesn't exist anymore
 
       // Deduct coins from user
       await supabase
@@ -511,37 +433,8 @@ const JoinLeague: React.FC = () => {
         console.error('Error getting user username:', err);
       }
 
-      // Add user to league_members table first
-      try {
-        // Get a proper display name from user metadata or create a fallback
-        let displayName = 'Unknown User';
-        if (user.user_metadata) {
-          displayName = user.user_metadata.display_name || 
-                       user.user_metadata.username || 
-                       user.user_metadata.full_name ||
-                       user.user_metadata.name ||
-                       `User_${user.id.slice(0, 6)}`;
-        } else {
-          displayName = `User_${user.id.slice(0, 6)}`;
-        }
-
-        const { error: memberError } = await supabase
-          .from('league_members')
-          .insert({
-            league_id: league.id,
-            user_id: user.id,
-            display_name: displayName,
-            email: user.email || 'unknown@example.com'
-          })
-
-        if (memberError) {
-          console.error('Error adding user to league_members:', memberError)
-          // Continue anyway - the league update might still work
-        }
-      } catch (err) {
-        console.error('Error adding user to league_members:', err)
-        // Continue anyway - the league update might still work
-      }
+      // Note: User will be added to member_ids array in the league update below
+      // No need to insert into league_members table since it doesn't exist anymore
 
       // Add user to league
       const updatedMemberIds = [...league.member_ids, user.id]

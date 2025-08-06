@@ -264,10 +264,9 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
         .insert({
           user_id: user?.id,
           league_id: leagueId,
-          transaction_type: 'purchase',
+          transaction_type: 'player_purchase',
           amount: -price,
-          description: `Purchased ${allPlayers.find(p => p.id === playerId)?.name || 'player'}`,
-          created_at: new Date().toISOString()
+          description: `Purchased ${allPlayers.find(p => p.id === playerId)?.name || 'player'}`
         });
 
       if (transactionError) {
@@ -337,6 +336,33 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
         throw updateTeamError;
       }
 
+      // Update lineup to remove the sold player
+      const currentWeek = getCurrentWeekStart();
+      const { data: currentLineup, error: lineupError } = await supabase
+        .from('lineups')
+        .select('player_ids')
+        .eq('user_id', user?.id)
+        .eq('league_id', leagueId)
+        .eq('week_start_date', currentWeek)
+        .maybeSingle();
+
+      if (!lineupError && currentLineup && currentLineup.player_ids) {
+        // Remove the sold player from the lineup
+        const updatedLineupPlayerIds = currentLineup.player_ids.filter((id: string) => id !== sellingPlayer.player.id);
+        
+        const { error: updateLineupError } = await supabase
+          .from('lineups')
+          .update({ player_ids: updatedLineupPlayerIds })
+          .eq('user_id', user?.id)
+          .eq('league_id', leagueId)
+          .eq('week_start_date', currentWeek);
+
+        if (updateLineupError) {
+          console.error('Failed to update lineup:', updateLineupError);
+          // Don't throw error here as the main operation succeeded
+        }
+      }
+
       const refund = Math.floor(sellingPlayer.price * 0.8);
 
       // Add coins to user's balance
@@ -390,18 +416,7 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
     setLoading(true);
     setError(null);
     try {
-      // Remove league ownership for this player
-      const { error: updateError } = await supabase.rpc('remove_league_owner_for_player', {
-        p_player_id: sellingToMarketplace.player.id,
-        p_league_id: leagueId
-      });
-      
-      if (updateError) {
-        console.error('remove_league_owner_for_player error:', updateError);
-        throw updateError;
-      }
-
-      // Remove player from user's team
+      // Remove player from user's team (ownership is tracked via teams table)
       const { data: userTeam, error: teamError } = await supabase
         .from('teams')
         .select('player_ids')
@@ -435,6 +450,33 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
         throw updateTeamError;
       }
 
+      // Update lineup to remove the sold player
+      const currentWeek = getCurrentWeekStart();
+      const { data: currentLineup, error: lineupError } = await supabase
+        .from('lineups')
+        .select('player_ids')
+        .eq('user_id', user?.id)
+        .eq('league_id', leagueId)
+        .eq('week_start_date', currentWeek)
+        .maybeSingle();
+
+      if (!lineupError && currentLineup && currentLineup.player_ids) {
+        // Remove the sold player from the lineup
+        const updatedLineupPlayerIds = currentLineup.player_ids.filter((id: string) => id !== sellingToMarketplace.player.id);
+        
+        const { error: updateLineupError } = await supabase
+          .from('lineups')
+          .update({ player_ids: updatedLineupPlayerIds })
+          .eq('user_id', user?.id)
+          .eq('league_id', leagueId)
+          .eq('week_start_date', currentWeek);
+
+        if (updateLineupError) {
+          console.error('Failed to update lineup:', updateLineupError);
+          // Don't throw error here as the main operation succeeded
+        }
+      }
+
       // Add the full sale price as refund (price is already the 80% value)
       const refund = sellingToMarketplace.price;
 
@@ -457,7 +499,6 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
           league_id: leagueId,
           transaction_type: 'player_sale',
           amount: refund,
-          balance_after: (userCoinBalance + refund),
           description: `Sold ${sellingToMarketplace.player.name} to marketplace`
         });
 
@@ -500,6 +541,19 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
   const getPlayerDetails = (username: string) => {
     return allPlayers.find(p => p.name === username);
   };
+
+  const getCurrentWeekStart = () => {
+    const now = new Date()
+    const dayOfWeek = now.getDay()
+    const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1
+    const monday = new Date(now)
+    monday.setDate(now.getDate() - daysToSubtract)
+    // Ensure we get a clean date string without timezone issues
+    const year = monday.getFullYear()
+    const month = String(monday.getMonth() + 1).padStart(2, '0')
+    const day = String(monday.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
 
   if (loading) {
     return (
@@ -566,11 +620,8 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
           }`}
         >
           Marketplace ({allPlayers.filter(p => {
-            let owners = p.league_owners;
-            if (typeof owners === 'string') {
-              try { owners = JSON.parse(owners); } catch { owners = {}; }
-            }
-            return !owners || !owners[leagueId];
+            // Ownership is tracked via teams table, not league_owners column
+            return true; // Show all players in marketplace
           }).length})
         </button>
         <button
@@ -613,19 +664,13 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
             <div className="flex items-center space-x-2">
               <span className="text-sm text-gray-600">
                 Showing {marketplaceListings.length} of {allPlayers.filter(p => {
-                  let owners = p.league_owners;
-                  if (typeof owners === 'string') {
-                    try { owners = JSON.parse(owners); } catch { owners = {}; }
-                  }
-                  return !owners || !owners[leagueId];
+                  // Ownership is tracked via teams table, not league_owners column
+                  return true;
                 }).length} players
               </span>
               {!showAllPlayers && allPlayers.filter(p => {
-                let owners = p.league_owners;
-                if (typeof owners === 'string') {
-                  try { owners = JSON.parse(owners); } catch { owners = {}; }
-                }
-                return !owners || !owners[leagueId];
+                // Ownership is tracked via teams table, not league_owners column
+                return true;
               }).length > 30 && (
                 <button
                   onClick={() => setShowAllPlayers(true)}
@@ -673,7 +718,7 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
                             <p>ACL: {details.average_centipawn_loss.toFixed(1)} ({details.games} games)</p>
                           ) : null}
                           <p className="text-xs text-gray-500">
-                            Listed by: {listing.league_owners && listing.league_owners[leagueId] ? 'User' : 'Bot'}
+                            Available in marketplace
                           </p>
                         </div>
                       </div>
@@ -927,7 +972,7 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
                 onClick={confirmSellToMarketplace}
                 className="flex-1 px-4 py-2 bg-amber-600 text-white rounded-md hover:bg-amber-700"
               >
-                Confirm Sell
+                Confirm Sale
               </button>
             </div>
           </div>

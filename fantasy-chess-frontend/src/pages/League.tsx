@@ -361,12 +361,12 @@ const LeaguePage: React.FC = () => {
       // Get user's team
       let teamData = null;
       try {
-        const { data: teamResult } = await supabase
+        const { data: teamResult, error: teamError } = await supabase
           .from('teams')
           .select('*')
           .eq('user_id', user.id)
           .eq('league_id', leagueId)
-          .single();
+          .maybeSingle(); // Use maybeSingle instead of single to handle no results
         teamData = teamResult;
       } catch (error) {
         console.log('Teams query failed (continuing without team data):', error);
@@ -379,7 +379,7 @@ const LeaguePage: React.FC = () => {
           const { data: players } = await supabase
             .from('chess_players')
             .select('*')
-            .in('name', teamData.player_ids)
+            .in('id', teamData.player_ids)
 
           if (players) {
             setTeamPlayers(players)
@@ -416,44 +416,48 @@ const LeaguePage: React.FC = () => {
 
       // Get current lineup
       const currentWeek = getCurrentWeekStart()
-      const { data: lineupData } = await supabase
+      const { data: lineupData, error: lineupError } = await supabase
         .from('lineups')
         .select('*')
         .eq('user_id', user.id)
         .eq('league_id', leagueId)
         .eq('week_start_date', currentWeek)
-        .single()
+        .maybeSingle() // Use maybeSingle instead of single to handle no results
 
-      if (lineupData) {
+      if (lineupData && !lineupError) {
         setCurrentLineup(lineupData)
         setSelectedLineupPlayers(lineupData.player_ids)
 
         // Get lineup players
-        const { data: lineupPlayerData } = await supabase
+        const { data: lineupPlayers } = await supabase
           .from('chess_players')
           .select('*')
-          .in('name', lineupData.player_ids)
+          .in('id', lineupData.player_ids)
 
-        if (lineupPlayerData) {
-          setLineupPlayers(lineupPlayerData)
+        if (lineupPlayers) {
+          setLineupPlayers(lineupPlayers)
         }
+      } else {
+        // No lineup exists for this week, that's okay
+        setCurrentLineup(null)
+        setSelectedLineupPlayers([])
+        setLineupPlayers([])
       }
-
-      // Load standings
-      await loadStandings(leagueId)
 
       // Load bot data if league has a bot
-      if (leagueData.bot_id) {
-        const { data: botData, error: botError } = await supabase
-          .from('bots')
-          .select('*')
-          .eq('id', leagueData.bot_id)
-          .single()
-        
-        if (!botError && botData) {
-          setBot(botData)
-        }
+      // Note: bot_id column doesn't exist, so we'll check for bots by league_id
+      const { data: botData, error: botError } = await supabase
+        .from('bots')
+        .select('*')
+        .eq('league_id', leagueId)
+        .maybeSingle() // Use maybeSingle instead of single to handle no results
+      
+      if (!botError && botData) {
+        setBot(botData)
       }
+
+      // Load standings (after bot is loaded)
+      await loadStandings(leagueId, botData) // Pass botData directly
 
     } catch (error) {
       console.error('Error loading league data:', error)
@@ -463,15 +467,36 @@ const LeaguePage: React.FC = () => {
     }
   }
 
-  const loadStandings = async (leagueId: string) => {
+  const loadStandings = async (leagueId: string, botData?: Bot) => {
     try {
-      // Get all league members with their display names
-      const { data: members } = await supabase
-        .from('league_members')
-        .select('user_id, display_name')
-        .eq('league_id', leagueId)
+      // Get league data with member_ids and creator_id
+      const { data: leagueData } = await supabase
+        .from('leagues')
+        .select('member_ids, creator_id')
+        .eq('id', leagueId)
+        .single()
 
-      if (!members) return
+      if (!leagueData) return
+
+      // Get all unique user IDs (creator + members)
+      const allUserIds = new Set([
+        leagueData.creator_id,
+        ...(leagueData.member_ids || [])
+      ])
+
+      // Get user details from users table
+      const { data: userDetails } = await supabase
+        .from('users')
+        .select('id, username, selected_avatar_url')
+        .in('id', Array.from(allUserIds))
+
+      // Create a map of user details
+      const userMap = userDetails ? Object.fromEntries(
+        userDetails.map(u => [u.id, {
+          username: u.username || `User_${u.id.slice(0, 6)}`,
+          avatar_url: u.selected_avatar_url || fantasyLeagueChessLogo
+        }])
+      ) : {}
 
       // Get lineups to calculate points
       const { data: lineups } = await supabase
@@ -485,38 +510,47 @@ const LeaguePage: React.FC = () => {
         lineups.forEach(lineup => {
           if (lineup.user_id) {
             const current = userPoints.get(lineup.user_id) || 0
-            userPoints.set(lineup.user_id, current + lineup.total_points)
+            userPoints.set(lineup.user_id, current + (lineup.total_points || 0))
           }
         })
       }
 
-      // Create standings data for all members
-      const { data: userAvatars } = await supabase
-        .from('users')
-        .select('id, selected_avatar_url')
-        .in('id', members.map(m => m.user_id));
-      const avatarMap = userAvatars ? Object.fromEntries(userAvatars.map(u => [u.id, u.selected_avatar_url])) : {};
-
-      const standingsData = members.map(member => ({
-        user_id: member.user_id,
-        display_name: member.display_name || 'Unknown User',
-        total_points: userPoints.get(member.user_id) || 0,
-        rank: 0,
-        avatar_url: avatarMap[member.user_id] || fantasyLeagueChessLogo,
-      }))
+      // Create standings data for all members (excluding bots)
+      const standingsData = Array.from(allUserIds)
+        .filter(userId => {
+          // Filter out bots - they will be added separately
+          // Check if this user ID matches the bot ID
+          return !botData || userId !== botData.id
+        })
+        .map(userId => {
+          // Double-check this isn't a bot
+          if (botData && userId === botData.id) {
+            console.log('Bot ID found in regular users, skipping:', userId)
+            return null
+          }
+          return {
+            user_id: userId,
+            display_name: userMap[userId]?.username || 'Unknown User',
+            total_points: userPoints.get(userId) || 0,
+            rank: 0,
+            avatar_url: userMap[userId]?.avatar_url || fantasyLeagueChessLogo,
+          }
+        })
+        .filter((item): item is NonNullable<typeof item> => item !== null) // Type-safe filter
 
       // Add bot to standings if it exists
-      if (bot) {
+      if (botData) {
+        console.log('Adding bot to standings:', botData)
         // Sum up all lineups for this bot by bot_id
         let botPoints = 0
         if (lineups) {
           botPoints = lineups
-            .filter(lineup => lineup.bot_id === bot.id)
+            .filter(lineup => lineup.bot_id === botData.id)
             .reduce((sum, lineup) => sum + (lineup.total_points || 0), 0)
         }
         standingsData.push({
-          user_id: bot.id,
-          display_name: `${bot.name} 🤖`,
+          user_id: botData.id,
+          display_name: `${botData.name} 🤖`, // Use bot.name from the bots table
           total_points: botPoints,
           rank: 0,
           avatar_url: fantasyLeagueChessLogo,
@@ -640,22 +674,13 @@ const LeaguePage: React.FC = () => {
         await supabase
           .from('leagues')
           .update({ 
-            bot_id: newBot.id,
             member_ids: allDraftParticipants, // Add bot to member_ids
             draft_order: updatedDraftOrder,
             current_draft_turn: 0
           })
           .eq('id', league.id)
         
-        // Add bot to league_members table
-        await supabase
-          .from('league_members')
-          .insert({
-            league_id: league.id,
-            user_id: newBot.id,
-            display_name: newBot.name,
-            email: `${newBot.name}@bot.local`
-          })
+
         
         // Reload league data to update draft order
         await loadLeagueData()
@@ -680,7 +705,7 @@ const LeaguePage: React.FC = () => {
       if (success) {
         setBot(null)
         
-        // Update league to remove bot_id, remove bot from member_ids, and regenerate draft order
+        // Update league to remove bot from member_ids, and regenerate draft order
         const updatedMemberIds = (league.member_ids || []).filter((id: string) => id !== bot.id);
         const updatedDraftOrder = generateSnakeDraftOrder(updatedMemberIds, 10)
         
@@ -688,19 +713,11 @@ const LeaguePage: React.FC = () => {
         await supabase
           .from('leagues')
           .update({ 
-            bot_id: null,
             member_ids: updatedMemberIds, // Remove bot from member_ids
             draft_order: updatedDraftOrder,
             current_draft_turn: 0
           })
           .eq('id', league.id)
-        
-        // Remove bot from league_members table
-        await supabase
-          .from('league_members')
-          .delete()
-          .eq('league_id', league.id)
-          .eq('user_id', bot.id)
         
         // Reload league data to update draft order
         await loadLeagueData()
@@ -744,16 +761,19 @@ const LeaguePage: React.FC = () => {
       setSelectedUser(userData)
       setShowUserPopup(true)
 
+      // Check if this is a bot by checking if userData.user_id matches bot.id
+      const isBot = bot && userData.user_id === bot.id;
+
       // Get user's team
       let teamData = null;
-      if (bot && userData.user_id === bot.id) {
+      if (isBot) {
         // Fetch bot's team by bot_id
         const { data } = await supabase
           .from('teams')
           .select('*')
           .eq('bot_id', bot.id)
           .eq('league_id', leagueId!)
-          .single();
+          .maybeSingle(); // Use maybeSingle instead of single
         teamData = data;
       } else {
         // Fetch user's team by user_id
@@ -762,7 +782,7 @@ const LeaguePage: React.FC = () => {
           .select('*')
           .eq('user_id', userData.user_id)
           .eq('league_id', leagueId!)
-          .single();
+          .maybeSingle(); // Use maybeSingle instead of single
         teamData = data;
       }
 
@@ -781,14 +801,14 @@ const LeaguePage: React.FC = () => {
       const currentWeek = getCurrentWeekStart()
       let lineupData = null;
       try {
-        if (bot && userData.user_id === bot.id) {
+        if (isBot) {
           const { data } = await supabase
             .from('lineups')
             .select('*')
             .eq('bot_id', bot.id)
             .eq('league_id', leagueId!)
             .eq('week_start_date', currentWeek)
-            .single();
+            .maybeSingle(); // Use maybeSingle instead of single
           lineupData = data;
         } else {
           const { data } = await supabase
@@ -797,7 +817,7 @@ const LeaguePage: React.FC = () => {
             .eq('user_id', userData.user_id)
             .eq('league_id', leagueId!)
             .eq('week_start_date', currentWeek)
-            .single();
+            .maybeSingle(); // Use maybeSingle instead of single
           lineupData = data;
         }
       } catch (error) {
@@ -810,7 +830,7 @@ const LeaguePage: React.FC = () => {
           const { data: lineupPlayers } = await supabase
             .from('chess_players')
             .select('*')
-            .in('name', lineupData.player_ids)
+            .in('id', lineupData.player_ids)
 
           setSelectedUserLineup(lineupPlayers || [])
         } catch (error) {
@@ -880,7 +900,7 @@ const LeaguePage: React.FC = () => {
           .from('payouts')
           .select('user_id, amount, processed_at')
           .eq('league_id', league?.id)
-          .single();
+          .maybeSingle(); // Use maybeSingle instead of single
         setPayout(payoutData);
         if (payoutData) {
           // Try to get display name from userMap or fallback to user_id
@@ -888,14 +908,13 @@ const LeaguePage: React.FC = () => {
           if (userMap[payoutData.user_id]) {
             displayName = userMap[payoutData.user_id];
           } else {
-            // Fetch from league_members
-            const { data: member } = await supabase
-              .from('league_members')
-              .select('display_name')
-              .eq('league_id', league?.id)
-              .eq('user_id', payoutData.user_id)
-              .single();
-            displayName = member?.display_name || payoutData.user_id;
+            // Fetch from users table
+            const { data: user } = await supabase
+              .from('users')
+              .select('username')
+              .eq('id', payoutData.user_id)
+              .maybeSingle(); // Use maybeSingle instead of single
+            displayName = user?.username || payoutData.user_id;
           }
           setWinnerName(displayName);
         }
@@ -1476,12 +1495,13 @@ const LeaguePage: React.FC = () => {
                 {teamPlayers.length === 0 ? (
                   <div className="text-neutral-500 text-sm">You haven't drafted any players yet.</div>
                 ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {teamPlayers.map((player) => (
-                      <div key={player.id} className="bg-neutral-50 rounded-lg p-3 text-center border border-gold">
+                      <div key={player.id} className="bg-neutral-50 rounded-lg p-4 text-center border border-gold min-h-[80px] flex flex-col justify-center">
                         <ExpandablePlayerName 
                           playerName={player.name}
                           href={`https://www.chess.com/member/${player.name}/`}
+                          className="text-sm font-medium mb-1"
                         />
                         <div className="text-xs text-neutral-600">ELO: {player.elo}</div>
                         {(player.average_centipawn_loss !== undefined && player.average_centipawn_loss !== null) ? (
@@ -1520,7 +1540,7 @@ const LeaguePage: React.FC = () => {
                   isLineupChangeAllowed() ? (
                     <div className="space-y-4">
                       <p className="text-xs lg:text-sm text-neutral-600">Select 1-5 players for your lineup:</p>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                         {teamPlayers.map((player) => (
                           <button
                             type="button"
@@ -1532,13 +1552,13 @@ const LeaguePage: React.FC = () => {
                                 setSelectedLineupPlayers([...selectedLineupPlayers, player.id])
                               }
                             }}
-                            className={`p-3 rounded-lg border-2 text-left transition-colors ${
+                            className={`p-4 rounded-lg border-2 text-left transition-colors min-h-[80px] flex flex-col justify-center ${
                               selectedLineupPlayers.includes(player.id)
                                 ? 'border-royalBlue bg-royalBlue bg-opacity-10'
                                 : 'border-neutral-200 hover:border-royalBlue'
                             }`}
                           >
-                            <div className="font-medium text-sm lg:text-base text-neutral-900">
+                            <div className="font-medium text-sm lg:text-base text-neutral-900 mb-1">
                               <ExpandablePlayerName playerName={player.name} />
                             </div>
                             <div className="text-xs lg:text-sm text-neutral-600">ELO: {player.elo}</div>
@@ -1585,14 +1605,18 @@ const LeaguePage: React.FC = () => {
                     </div>
                   )
                 ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {lineupPlayers.map((player) => (
-                      <div key={player.id} className="bg-neutral-50 rounded-lg p-3 text-center border border-gold">
+                      <div key={player.id} className="bg-neutral-50 rounded-lg p-4 text-center border border-gold min-h-[80px] flex flex-col justify-center">
                         <ExpandablePlayerName 
                           playerName={player.name}
                           href={`https://www.chess.com/member/${player.name}/`}
+                          className="text-sm font-medium mb-1"
                         />
                         <div className="text-xs text-neutral-600">ELO: {player.elo}</div>
+                        {(player.average_centipawn_loss !== undefined && player.average_centipawn_loss !== null) ? (
+                          <div className="text-xs text-neutral-500">ACL: {player.average_centipawn_loss.toFixed(2)}</div>
+                        ) : null}
                       </div>
                     ))}
                   </div>
@@ -1711,7 +1735,7 @@ const LeaguePage: React.FC = () => {
               </div>
 
               {/* Turn-Based Marketplace Section */}
-              {!league.draft_completed && (
+              {!league.draft_completed && !league.marketplace_completed && (
                 <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6 border-2 border-gold">
                   <TurnBasedMarketplace league={league} onUpdate={loadLeagueData} />
                 </div>
@@ -1730,7 +1754,7 @@ const LeaguePage: React.FC = () => {
           )}
 
           {/* Coin Marketplace - Show after draft is completed */}
-          {league && (league.draft_completed || (league.marketplace_order && league.marketplace_order.length === 0)) && (
+          {league && (league.draft_completed || league.marketplace_completed || (league.marketplace_order && league.marketplace_order.length === 0)) && (
             <div className="mt-8 w-full">
               <Marketplace leagueId={leagueId!} />
             </div>
