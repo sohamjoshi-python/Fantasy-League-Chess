@@ -172,7 +172,7 @@ export async function fetchLineupPlayerBreakdownByRounds(userId: string, leagueI
     const mondayD = String(mondayUtc.getUTCDate()).padStart(2, '0');
     const lineupWeekStart = `${mondayY}-${mondayM}-${mondayD}`;
     
-    console.log('Date conversion:', { weekDate, formattedDate, lineupWeekStart, dow });
+    // Removed debug log
     
     // Get user's lineup for this week (using Monday week_start_date)
     const { data: lineup, error: lineupError } = await supabase
@@ -184,7 +184,6 @@ export async function fetchLineupPlayerBreakdownByRounds(userId: string, leagueI
       .maybeSingle();
     
     if (lineupError || !lineup || !lineup.player_ids || lineup.player_ids.length === 0) {
-      console.error('No lineup found for user:', userId, 'week:', weekDate, 'error:', lineupError);
       return { early: [], late: [] };
     }
     
