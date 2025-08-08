@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { League, Lineup, ChessPlayer, Bot } from '../types'
 import { Crown, Trophy, Calendar, Edit, Check, X, RefreshCw, Bot as BotIcon, Plus, Trash2 } from 'lucide-react'
-import { createBot, removeBot, autoSetLineupForBot } from '../lib/supabase';
+import { createBot, removeBot, autoSetLineupForBot, fetchLineupPlayerBreakdownByRounds } from '../lib/supabase';
 import Confetti from 'react-confetti';
 import fantasyLeagueChessLogo from '../assets/fantasy-league-chess-logo-updated.png';
 
@@ -250,37 +250,48 @@ const LeaguePage: React.FC = () => {
   useEffect(() => {
     async function fetchAvailableWeeks() {
       if (!league || !user) return;
-      // TEMPORARILY DISABLED - Fix lineups table structure
-      /*
-      // Fetch all weeks from lineups table where user has a lineup with points > 0
-      const { data, error } = await supabase
-        .from('lineups')
-        .select('week_start_date')
-        .eq('user_id', user.id)
-        .eq('league_id', league?.id)
-        .gt('total_points', 0)
-        .order('week_start_date', { ascending: true });
-      if (error) {
+      try {
+        // Prefer game dates (Tuesdays, dot format). These are the display weeks.
+        const leagueStartDot = String(league.start_date || '').replace(/-/g, '.');
+        const { data: gameDates } = await supabase
+          .from('games')
+          .select('date')
+          .order('date', { ascending: true });
+
+        let displayWeeks: string[] = [];
+        if (gameDates && gameDates.length > 0) {
+          const unique = Array.from(new Set((gameDates as any[]).map(g => String(g.date))));
+          displayWeeks = leagueStartDot ? unique.filter(d => d >= leagueStartDot) : unique;
+        }
+
+        // If no games found, fall back to lineup Mondays and convert to Tuesday display (add +1 day)
+        if (displayWeeks.length === 0) {
+          const { data: lineupWeeks } = await supabase
+            .from('lineups')
+            .select('week_start_date')
+            .eq('user_id', user.id)
+            .eq('league_id', league.id)
+            .order('week_start_date', { ascending: true });
+
+          const uniqueMondays = Array.from(new Set((lineupWeeks || []).map((l: any) => String(l.week_start_date))));
+          // Convert Monday (YYYY-MM-DD) to Tuesday dot format (YYYY.MM.DD)
+          displayWeeks = uniqueMondays.map((mondayStr: string) => {
+            const [y, m, d] = mondayStr.split('-').map(Number);
+            const dt = new Date(Date.UTC(y, m - 1, d));
+            dt.setUTCDate(dt.getUTCDate() + 1); // Monday -> Tuesday
+            const yy = dt.getUTCFullYear();
+            const mm = String(dt.getUTCMonth() + 1).padStart(2, '0');
+            const dd = String(dt.getUTCDate()).padStart(2, '0');
+            return `${yy}.${mm}.${dd}`;
+          });
+        }
+
+        setAvailableWeeks(displayWeeks);
+        setSelectedWeek(displayWeeks.length > 0 ? displayWeeks[displayWeeks.length - 1] : null);
+      } catch (e) {
         setAvailableWeeks([]);
         setSelectedWeek(null);
-        
-        return;
       }
-      // Get unique dates
-      const uniqueDates = Array.from(new Set((data || []).map(l => l.week_start_date.replace(/-/g, '.'))));
-      
-      setAvailableWeeks(uniqueDates);
-      if (uniqueDates.length > 0) {
-        setSelectedWeek(uniqueDates[uniqueDates.length - 1]);
-        
-      } else {
-        setSelectedWeek(null);
-        
-      }
-      */
-      // Temporary fix - set default week
-      setAvailableWeeks(['2025.07.21']);
-      setSelectedWeek('2025.07.21');
     }
     fetchAvailableWeeks();
   }, [league, user]);
@@ -291,12 +302,10 @@ const LeaguePage: React.FC = () => {
       setBreakdownLoading(true);
       setBreakdownError('');
       try {
-        // TEMPORARILY DISABLED - Fix function later
-        /*
+        console.log('Loading breakdown for:', { userId: user.id, leagueId: league?.id, weekDate: selectedWeek.replace(/\./g, '-') });
         const data = await fetchLineupPlayerBreakdownByRounds(user.id, league?.id, selectedWeek.replace(/\./g, '-'));
+        console.log('Breakdown data:', data);
         setPlayerBreakdown(data);
-        */
-        setPlayerBreakdown({ early: [], late: [] }); // Empty object with correct structure
       } catch (e: any) {
         setBreakdownError('Could not load point breakdown');
       } finally {

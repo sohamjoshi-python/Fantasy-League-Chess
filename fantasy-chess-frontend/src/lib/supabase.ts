@@ -135,110 +135,113 @@ export async function fetchLineupPlayerBreakdownByRounds(userId: string, leagueI
   early: Array<{ player_id: string, player_name: string, player_points: number, wins?: number, total_games?: number }>, 
   late: Array<{ player_id: string, player_name: string, player_points: number, wins?: number, total_games?: number }> 
 }> {
-  const { data, error } = await supabase.rpc('get_lineup_player_breakdown', {
-    user_id_input: userId,
-    league_id_input: leagueId,
-    week_date_input: weekDate
-  });
-  if (error) {
-    console.error('Error fetching player breakdown:', error);
+  try {
+    // Convert date format from YYYY-MM-DD to YYYY.MM.DD for games table (games are stored by Tuesday date)
+    const formattedDate = weekDate.replace(/-/g, '.');
+
+    // Compute the Monday week_start_date used by lineups from the passed weekDate (which may be Tuesday)
+    const [yStr, mStr, dStr] = weekDate.split('-');
+    const baseDate = new Date(Date.UTC(Number(yStr), Number(mStr) - 1, Number(dStr)));
+    const dow = baseDate.getUTCDay(); // 0 Sunday .. 6 Saturday
+    
+    // If it's Tuesday (2), go back 1 day to Monday. If it's any other day, find the previous Monday
+    let daysToMonday: number;
+    if (dow === 2) { // Tuesday
+      daysToMonday = 1;
+    } else {
+      daysToMonday = dow === 0 ? 6 : dow - 1; // distance back to Monday for other days
+    }
+    
+    const mondayUtc = new Date(baseDate);
+    mondayUtc.setUTCDate(baseDate.getUTCDate() - daysToMonday);
+    const mondayY = mondayUtc.getUTCFullYear();
+    const mondayM = String(mondayUtc.getUTCMonth() + 1).padStart(2, '0');
+    const mondayD = String(mondayUtc.getUTCDate()).padStart(2, '0');
+    const lineupWeekStart = `${mondayY}-${mondayM}-${mondayD}`;
+    
+    console.log('Date conversion:', { weekDate, formattedDate, lineupWeekStart, dow });
+    
+    // Get user's lineup for this week (using Monday week_start_date)
+    const { data: lineup, error: lineupError } = await supabase
+      .from('lineups')
+      .select('player_ids')
+      .eq('user_id', userId)
+      .eq('league_id', leagueId)
+      .eq('week_start_date', lineupWeekStart)
+      .maybeSingle();
+    
+    if (lineupError || !lineup || !lineup.player_ids || lineup.player_ids.length === 0) {
+      console.error('No lineup found for user:', userId, 'week:', weekDate, 'error:', lineupError);
+      return { early: [], late: [] };
+    }
+    
+    // Get player details
+    const { data: players, error: playersError } = await supabase
+      .from('chess_players')
+      .select('id, name')
+      .in('id', lineup.player_ids);
+    
+    if (playersError || !players) {
+      console.error('Error fetching players:', playersError);
+      return { early: [], late: [] };
+    }
+    
+    // Get all games for this week
+    const { data: games, error: gamesError } = await supabase
+      .from('games')
+      .select('*')
+      .eq('date', formattedDate);
+    
+    if (gamesError) {
+      console.error('Error fetching games:', gamesError);
+      return { early: [], late: [] };
+    }
+    
+    // Process each player
+    const early: Array<{ player_id: string, player_name: string, player_points: number, wins?: number, total_games?: number }> = [];
+    const late: Array<{ player_id: string, player_name: string, player_points: number, wins?: number, total_games?: number }> = [];
+    
+    for (const player of players) {
+      // Filter games for this player
+      const playerGames = games?.filter(game => 
+        game.white === player.name || game.black === player.name
+      ) || [];
+      
+      // Split games by round
+      const earlyGames = playerGames.filter(game => game.early_late === 'early');
+      const lateGames = playerGames.filter(game => game.early_late === 'late');
+      
+      // Calculate stats for each round
+      const earlyStats = calculateRoundStats(earlyGames, player.name);
+      const lateStats = calculateRoundStats(lateGames, player.name);
+      
+      // Add to results if there are games or points
+      if (earlyStats.points > 0 || earlyStats.total_games > 0) {
+        early.push({
+          player_id: player.id,
+          player_name: player.name,
+          player_points: earlyStats.points,
+          wins: earlyStats.wins,
+          total_games: earlyStats.total_games
+        });
+      }
+      
+      if (lateStats.points > 0 || lateStats.total_games > 0) {
+        late.push({
+          player_id: player.id,
+          player_name: player.name,
+          player_points: lateStats.points,
+          wins: lateStats.wins,
+          total_games: lateStats.total_games
+        });
+      }
+    }
+    
+    return { early, late };
+  } catch (error) {
+    console.error('Error in fetchLineupPlayerBreakdownByRounds:', error);
     return { early: [], late: [] };
   }
-
-  // Convert date format from YYYY-MM-DD to YYYY.MM.DD for games table
-  const formattedDate = weekDate.replace(/-/g, '.');
-
-  // Enhance the data with round-specific breakdowns
-  const enhancedData = await Promise.all(
-    data.map(async (player: { player_id: string, player_name: string, player_points: number }) => {
-      try {
-        
-        // Get player's games for this week by round
-        const { data: earlyGames, error: earlyError } = await supabase
-          .from('games')
-          .select('*')
-          .eq('date', formattedDate)
-          .eq('early_late', 'early')
-          .or(`white.eq.${player.player_name},black.eq.${player.player_name}`);
-        
-        const { data: lateGames, error: lateError } = await supabase
-          .from('games')
-          .select('*')
-          .eq('date', formattedDate)
-          .eq('early_late', 'late')
-          .or(`white.eq.${player.player_name},black.eq.${player.player_name}`);
-
-        if (earlyError || lateError) {
-          // Fallback: get all games and filter
-          const { data: allGames, error: allError } = await supabase
-            .from('games')
-            .select('*')
-            .eq('date', formattedDate);
-          
-          if (allError) {
-            console.error('Error fetching all games for player:', player.player_name, allError);
-            return {
-              player,
-              early: { wins: 0, total_games: 0, points: 0 },
-              late: { wins: 0, total_games: 0, points: 0 }
-            };
-          }
-          
-          // Filter games by round
-          const early = allGames?.filter(game => 
-            game.early_late === 'early' && (game.white === player.player_name || game.black === player.player_name)
-          ) || [];
-          const late = allGames?.filter(game => 
-            game.early_late === 'late' && (game.white === player.player_name || game.black === player.player_name)
-          ) || [];
-          
-          return {
-            player,
-            early: calculateRoundStats(early, player.player_name),
-            late: calculateRoundStats(late, player.player_name)
-          };
-        }
-
-        return {
-          player,
-          early: calculateRoundStats(earlyGames || [], player.player_name),
-          late: calculateRoundStats(lateGames || [], player.player_name)
-        };
-      } catch (error) {
-        console.error('Error enhancing player data:', error);
-        return {
-          player,
-          early: { wins: 0, total_games: 0, points: 0 },
-          late: { wins: 0, total_games: 0, points: 0 }
-        };
-      }
-    })
-  );
-
-  // Split into early and late arrays
-  const early: Array<{ player_id: string, player_name: string, player_points: number, wins?: number, total_games?: number }> = [];
-  const late: Array<{ player_id: string, player_name: string, player_points: number, wins?: number, total_games?: number }> = [];
-
-  enhancedData.forEach(({ player, early: earlyStats, late: lateStats }) => {
-    if (earlyStats.points > 0 || earlyStats.total_games > 0) {
-      early.push({
-        ...player,
-        player_points: earlyStats.points,
-        wins: earlyStats.wins,
-        total_games: earlyStats.total_games
-      });
-    }
-    if (lateStats.points > 0 || lateStats.total_games > 0) {
-      late.push({
-        ...player,
-        player_points: lateStats.points,
-        wins: lateStats.wins,
-        total_games: lateStats.total_games
-      });
-    }
-  });
-
-  return { early, late };
 }
 
 /**
