@@ -27,7 +27,7 @@ const Dashboard: React.FC = () => {
   const [lineupPlayers, setLineupPlayers] = useState<ChessPlayer[]>([])
   const [pastLeagues, setPastLeagues] = useState<any[]>([])
   const [futureLeagues, setFutureLeagues] = useState<League[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [playerBreakdown, setPlayerBreakdown] = useState<{ 
     early: Array<{ player_id: string, player_name: string, player_points: number, wins?: number, total_games?: number }>, 
     late: Array<{ player_id: string, player_name: string, player_points: number, wins?: number, total_games?: number }> 
@@ -41,6 +41,8 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     if (user) {
       loadDashboardData()
+    } else {
+      setLoading(false)
     }
   }, [user])
 
@@ -205,7 +207,13 @@ const Dashboard: React.FC = () => {
     return nextTuesday
   }
 
-  if (loading) {
+  if (
+    loading &&
+    !currentLeague &&
+    activeLeagues.length === 0 &&
+    futureLeagues.length === 0 &&
+    pastLeagues.length === 0
+  ) {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="text-xl text-neutral-900">Loading...</div>

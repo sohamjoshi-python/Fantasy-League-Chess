@@ -13,7 +13,7 @@ import SignUp from './pages/SignUp'
 import Leaderboard from './pages/Leaderboard';
 import Tos from './pages/tos';
 import Privacy from './pages/privacy';
-import { AuthProvider, useAuth } from './contexts/AuthContext'
+import { useAuth } from './contexts/AuthContext'
 import React from 'react';
 import Footer from './components/Footer';
 
@@ -30,32 +30,30 @@ function AvatarShopPage() {
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <NewUserRedirect />
-        <div className="min-h-screen flex flex-col w-full">
-          <Navbar />
-          <main className="flex-1 w-full px-0 py-0">
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/join-league" element={<JoinLeague />} />
-              <Route path="/league/:leagueId" element={<LeaguePage />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/help" element={<Help />} />
-              <Route path="/onboarding" element={<Onboarding />} />
-              <Route path="/signup" element={<SignUp />} />
-              <Route path="/leaderboard" element={<Leaderboard />} />
-              <Route path="/avatar-shop" element={<AvatarShopPage />} />
-              <Route path="/tos" element={<Tos />} />
-              <Route path="/privacy" element={<Privacy />} />
-            </Routes>
-          </main>
-          <Footer />
-        </div>
-        <Analytics />
-      </Router>
-    </AuthProvider>
+    <Router>
+      <NewUserRedirect />
+      <div className="min-h-screen flex flex-col w-full">
+        <Navbar />
+        <main className="flex-1 w-full px-0 py-0">
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/join-league" element={<JoinLeague />} />
+            <Route path="/league/:leagueId" element={<LeaguePage />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/help" element={<Help />} />
+            <Route path="/onboarding" element={<Onboarding />} />
+            <Route path="/signup" element={<SignUp />} />
+            <Route path="/leaderboard" element={<Leaderboard />} />
+            <Route path="/avatar-shop" element={<AvatarShopPage />} />
+            <Route path="/tos" element={<Tos />} />
+            <Route path="/privacy" element={<Privacy />} />
+          </Routes>
+        </main>
+        <Footer />
+      </div>
+      <Analytics />
+    </Router>
   )
 }
 

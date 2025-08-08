@@ -62,7 +62,7 @@ const StarPointsMarketplace: React.FC<StarPointsMarketplaceProps> = ({
   const [userPlayers, setUserPlayers] = useState<UserPlayer[]>([])
 
   const [transactions, setTransactions] = useState<StarPointTransaction[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [activeTab, setActiveTab] = useState<'marketplace' | 'my-players' | 'transactions'>('marketplace')
   const [sellPlayer, setSellPlayer] = useState<{ player: UserPlayer; price: number } | null>(null)
   const [buyPlayer, setBuyPlayer] = useState<MarketplaceListing | null>(null)

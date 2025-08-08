@@ -1,14 +1,27 @@
-﻿import { createClient } from '@supabase/supabase-js'
+﻿import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import { Bot } from '../types'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
 
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables')
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+// Ensure a single Supabase client instance in the browser to avoid multiple auth subscriptions
+declare global {
+  interface Window { __supabaseClient?: SupabaseClient }
+}
+
+export const supabase: SupabaseClient = ((): SupabaseClient => {
+  if (typeof window === 'undefined') {
+    return createClient(supabaseUrl, supabaseAnonKey)
+  }
+  if (!window.__supabaseClient) {
+    window.__supabaseClient = createClient(supabaseUrl, supabaseAnonKey)
+  }
+  return window.__supabaseClient
+})()
 
 /**
  * Call the process_weekly_results_enhanced RPC to calculate and update all lineup points for a given week.

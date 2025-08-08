@@ -25,7 +25,7 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
   const [ownedPlayers, setOwnedPlayers] = useState<ChessPlayer[]>([]);
   const [transactions, setTransactions] = useState<CoinTransaction[]>([]);
   const [userCoinBalance, setUserCoinBalance] = useState<number>(0);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sellingPlayer, setSellingPlayer] = useState<{ player: ChessPlayer; price: number } | null>(null);
   const [buyingPlayer, setBuyingPlayer] = useState<{ player: ChessPlayer; price: number } | null>(null);
@@ -36,8 +36,10 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
   useEffect(() => {
     if (user && leagueId) {
       loadData();
+    } else {
+      setLoading(false);
     }
-  }, [user, leagueId]);
+  }, [user?.id, leagueId]);
 
   // Get owned player IDs for filtering marketplace
   const getOwnedPlayerIds = async () => {
@@ -555,7 +557,7 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
     return `${year}-${month}-${day}`
   }
 
-  if (loading) {
+  if (loading && !league) {
     return (
       <div className="flex justify-center items-center p-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>

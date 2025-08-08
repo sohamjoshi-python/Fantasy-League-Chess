@@ -40,7 +40,7 @@ const Leaderboard: React.FC = () => {
   const [pointsData, setPointsData] = useState<LeaderboardEntry[]>([]);
   const [recentWinners, setRecentWinners] = useState<RecentWinner[]>([]);
   const [weeklyPerformers, setWeeklyPerformers] = useState<WeeklyPerformer[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [selectedWeek, setSelectedWeek] = useState<string>('');
 
   useEffect(() => {

@@ -16,7 +16,7 @@ const Profile: React.FC<ProfileProps> = ({ showOnlyShop = false, onCloseShop }) 
   const { user } = useAuth()
   const [profile, setProfile] = useState<User | null>(null)
   const [username, setUsername] = useState('')
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
 
@@ -24,6 +24,8 @@ const Profile: React.FC<ProfileProps> = ({ showOnlyShop = false, onCloseShop }) 
   useEffect(() => {
     if (user) {
       loadProfile()
+    } else {
+      setLoading(false)
     }
   }, [user])
 

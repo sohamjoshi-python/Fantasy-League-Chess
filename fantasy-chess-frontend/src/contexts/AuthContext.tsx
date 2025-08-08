@@ -43,21 +43,24 @@ const sendWelcomeEmail = async (email: string) => {
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     // Get initial session
+    setLoading(true)
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null)
-      setLoading(false)
-    })
+    }).finally(() => setLoading(false))
 
     // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
-      setLoading(false)
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      // Ignore token refresh and other non-auth transitions to avoid refetch on tab focus
+      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED') {
+        setUser(session?.user ?? null)
+        setLoading(false)
+      }
     })
 
     return () => subscription.unsubscribe()

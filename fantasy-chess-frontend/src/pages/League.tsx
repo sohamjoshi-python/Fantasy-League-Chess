@@ -212,7 +212,7 @@ const LeaguePage: React.FC = () => {
   const [currentLineup, setCurrentLineup] = useState<Lineup | null>(null)
   const [lineupPlayers, setLineupPlayers] = useState<ChessPlayer[]>([])
   const [standings, setStandings] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
   // Lineup editing state
@@ -1129,7 +1129,7 @@ const LeaguePage: React.FC = () => {
     // return day !== 2; // Disallow Tuesday (2)
   }
 
-  if (loading) {
+  if (loading && !league) {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="text-xl">Loading...</div>
