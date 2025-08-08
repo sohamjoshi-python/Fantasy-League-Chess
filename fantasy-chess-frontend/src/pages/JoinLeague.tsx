@@ -185,10 +185,10 @@ const JoinLeague: React.FC = () => {
           league_id_input: league.id
         });
         if (createDataError) {
-          console.log('Error creating league data (will be created automatically):', createDataError);
+          // Error creating league data (will be created automatically)
         }
       } catch (err) {
-        console.log('League data creation failed (will be created automatically):', err);
+        // League data creation failed (will be created automatically)
       }
 
       // Note: Creator is already added to member_ids array in the league creation above
@@ -207,7 +207,6 @@ const JoinLeague: React.FC = () => {
 
       // Create Discord channel for the league
       try {
-        console.log('Creating Discord channel for league...');
         const discordResponse = await supabase.functions.invoke('discord-bot-hybrid', {
           body: {
             action: 'create_league_channel',
@@ -220,8 +219,6 @@ const JoinLeague: React.FC = () => {
           console.error('Discord function error:', discordResponse.error);
           throw new Error(discordResponse.error.message || 'Discord function failed');
         }
-        
-        console.log('Discord channel created:', discordResponse);
       } catch (error) {
         console.error('Error creating Discord channel (continuing without Discord):', error);
         // Continue without Discord - this is not critical
@@ -329,10 +326,10 @@ const JoinLeague: React.FC = () => {
           league_id_input: league.id
         });
         if (createDataError) {
-          console.log('Error creating league data (will be created automatically):', createDataError);
+          // Error creating league data (will be created automatically)
         }
       } catch (err) {
-        console.log('League data creation failed (will be created automatically):', err);
+        // League data creation failed (will be created automatically)
       }
 
       // Note: User is already added to member_ids array in the league update above
@@ -352,7 +349,6 @@ const JoinLeague: React.FC = () => {
       // Create Discord channel if it doesn't exist
       if (!league.discord_server_id) {
         try {
-          console.log('Creating Discord channel for league...');
           const discordResponse = await supabase.functions.invoke('discord-bot-hybrid', {
             body: {
               action: 'create_league_channel',
@@ -360,9 +356,9 @@ const JoinLeague: React.FC = () => {
               leagueId: league.id
             }
           });
-          console.log('Discord channel created:', discordResponse);
+          // Discord channel created
         } catch (error) {
-          console.log('Error creating Discord channel (continuing without Discord):', error);
+          
           // Continue without Discord - this is not critical
         }
       }
@@ -457,10 +453,10 @@ const JoinLeague: React.FC = () => {
           league_id_input: league.id
         });
         if (createDataError) {
-          console.log('Error creating league data (will be created automatically):', createDataError);
+          // Error creating league data (will be created automatically)
         }
       } catch (err) {
-        console.log('League data creation failed (will be created automatically):', err);
+        // League data creation failed (will be created automatically)
       }
 
       // Deduct coins from user
@@ -477,7 +473,6 @@ const JoinLeague: React.FC = () => {
       // Create Discord channel if it doesn't exist
       if (!league.discord_server_id) {
         try {
-          console.log('Creating Discord channel for league...');
           const discordResponse = await supabase.functions.invoke('discord-bot-hybrid', {
             body: {
               action: 'create_league_channel',
@@ -485,9 +480,9 @@ const JoinLeague: React.FC = () => {
               leagueId: league.id
             }
           });
-          console.log('Discord channel created:', discordResponse);
+          // Discord channel created
         } catch (error) {
-          console.log('Error creating Discord channel (continuing without Discord):', error);
+          
           // Continue without Discord - this is not critical
         }
       }

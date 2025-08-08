@@ -644,7 +644,7 @@ export async function autoSetLineupForBot(botId: string, leagueId: string, weekS
     
     return { success: true };
   } catch (error: any) {
-    console.error('❌ Auto-set lineup error:', error);
+    console.error('? Auto-set lineup error:', error);
     return { success: false, error };
   }
 }
@@ -774,7 +774,7 @@ export async function autoMarketplaceForBot(botId: string, leagueId: string): Pr
     // --- Get best available player the bot can afford ---
     const getBestAffordablePlayer = async (leagueId: string, maxPrice: number): Promise<{ success: boolean, player?: any, error?: any }> => {
       try {
-        console.log(`Searching for players with max price ${maxPrice} coins`);
+        // Searching for players with max price ${maxPrice} coins
         
         // Get all drafted players in this league
         const { data: draftedPlayers, error: draftedError } = await supabase
@@ -789,7 +789,6 @@ export async function autoMarketplaceForBot(botId: string, leagueId: string): Pr
         
         // Flatten all drafted player IDs
         const draftedPlayerIds = draftedPlayers?.flatMap(team => team.player_ids || []) || [];
-        console.log(`Found ${draftedPlayerIds.length} already drafted players`);
         
         // Get all players and filter by price and availability
         const { data: allPlayers, error } = await supabase
@@ -802,8 +801,6 @@ export async function autoMarketplaceForBot(botId: string, leagueId: string): Pr
           return { success: false, error };
         }
         
-        console.log(`Found ${allPlayers?.length || 0} total players`);
-        
         // Find the best available player the bot can afford
         for (const player of allPlayers || []) {
           if (draftedPlayerIds.includes(player.id)) {
@@ -811,15 +808,15 @@ export async function autoMarketplaceForBot(botId: string, leagueId: string): Pr
           }
           
           const playerPrice = calculatePlayerPrice(player.elo || 0);
-          console.log(`Player ${player.name} (ELO: ${player.elo}) costs ${playerPrice} coins`);
+          
           
           if (playerPrice <= maxPrice) {
-            console.log(`Found affordable player: ${player.name} for ${playerPrice} coins`);
+            
             return { success: true, player };
           }
         }
         
-        console.log('No affordable players found after checking all players');
+        
         return { success: false, error: 'No affordable players found' };
       } catch (error) {
         console.error('Error in getCheapestAvailablePlayer:', error);
@@ -829,7 +826,7 @@ export async function autoMarketplaceForBot(botId: string, leagueId: string): Pr
 
     const { success, player, error: playerError } = await getBestAffordablePlayer(leagueId, botCoins);
     if (!success || !player) {
-      console.log(`No players found that bot can afford with ${botCoins} coins`);
+      
       // Bot can't afford any players, check if marketplace should end
       const remainingPlayerIds = league.marketplace_order.slice(league.current_marketplace_turn);
       const { data: remainingBalances, error: balanceCheckError } = await supabase
@@ -846,7 +843,7 @@ export async function autoMarketplaceForBot(botId: string, leagueId: string): Pr
         });
         
         if (allPlayersHaveNoCoins) {
-          console.log('All remaining players have insufficient coins, ending marketplace');
+          
           // End the marketplace
           const { error: leagueUpdateError } = await supabase
             .from('leagues')
@@ -879,10 +876,10 @@ export async function autoMarketplaceForBot(botId: string, leagueId: string): Pr
 
     // --- Check if bot has enough coins for this player ---
     const playerPrice = calculatePlayerPrice(player.elo || 0);
-    console.log(`Bot has ${botCoins} coins, trying to buy player with ELO ${player.elo} for ${playerPrice} coins`);
+    
     
     if (botCoins < playerPrice) {
-      console.log(`Bot has ${botCoins} coins but player costs ${playerPrice} coins, checking if marketplace should end`);
+      
       
       // Check if all remaining players in the marketplace order have 0 coins
       const remainingPlayerIds = league.marketplace_order.slice(league.current_marketplace_turn);
@@ -914,12 +911,12 @@ export async function autoMarketplaceForBot(botId: string, leagueId: string): Pr
       const allPlayersHaveNoCoins = remainingPlayerIds.every((playerId: string) => {
         const balance = remainingBalances?.find(b => b.user_id === playerId || b.bot_id === playerId);
         const hasEnoughCoins = balance && balance.coin_balance >= 5; // Minimum player price is 5 coins
-        console.log(`Player ${playerId} has ${balance?.coin_balance || 0} coins, can afford minimum player: ${hasEnoughCoins}`);
+        
         return !hasEnoughCoins;
       });
       
       if (allPlayersHaveNoCoins) {
-        console.log('All remaining players have insufficient coins, ending marketplace');
+        
         // End the marketplace
         const { error: leagueUpdateError } = await supabase
           .from('leagues')
@@ -931,10 +928,10 @@ export async function autoMarketplaceForBot(botId: string, leagueId: string): Pr
           console.error('Failed to update marketplace_completed:', leagueUpdateError);
           return { success: false, error: leagueUpdateError };
         }
-        console.log('Successfully set marketplace_completed = true');
+        
         return { success: true };
       } else {
-        console.log('Some players still have coins, skipping bot turn');
+        
         // Just skip this bot's turn
         const newMarketplaceTurn = league.current_marketplace_turn + 1;
         const isMarketplaceComplete = newMarketplaceTurn >= league.marketplace_order.length;

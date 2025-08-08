@@ -26,8 +26,11 @@ serve(async (req) => {
     const lastTuesday = new Date(now)
     lastTuesday.setDate(now.getDate() - daysSinceTuesday)
     
-    // Format as YYYY-MM-DD
-    const tuesdayDate = lastTuesday.toISOString().split('T')[0]
+    // Format as YYYY.MM.DD to match the games table format
+    const year = lastTuesday.getFullYear()
+    const month = String(lastTuesday.getMonth() + 1).padStart(2, '0')
+    const day = String(lastTuesday.getDate()).padStart(2, '0')
+    const tuesdayDate = `${year}.${month}.${day}`
 
     // Call the process_weekly_results function
     const { data, error } = await supabase.rpc('process_weekly_results', {
@@ -44,7 +47,6 @@ serve(async (req) => {
         }
       )
     }
-
 
     
     return new Response(

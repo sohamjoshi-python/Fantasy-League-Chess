@@ -369,7 +369,7 @@ const LeaguePage: React.FC = () => {
           .maybeSingle(); // Use maybeSingle instead of single to handle no results
         teamData = teamResult;
       } catch (error) {
-        console.log('Teams query failed (continuing without team data):', error);
+        // Teams query failed, continuing without team data
         teamData = null;
       }
 
@@ -385,7 +385,7 @@ const LeaguePage: React.FC = () => {
             setTeamPlayers(players)
           }
         } catch (error) {
-          console.log('Team players query failed:', error);
+          // Team players query failed
         }
       }
 
@@ -525,7 +525,6 @@ const LeaguePage: React.FC = () => {
         .map(userId => {
           // Double-check this isn't a bot
           if (botData && userId === botData.id) {
-            console.log('Bot ID found in regular users, skipping:', userId)
             return null
           }
           return {
@@ -540,7 +539,6 @@ const LeaguePage: React.FC = () => {
 
       // Add bot to standings if it exists
       if (botData) {
-        console.log('Adding bot to standings:', botData)
         // Sum up all lineups for this bot by bot_id
         let botPoints = 0
         if (lineups) {
@@ -821,7 +819,7 @@ const LeaguePage: React.FC = () => {
           lineupData = data;
         }
       } catch (error) {
-        console.log('Lineups query failed (continuing without lineup data):', error);
+        // Lineups query failed, continuing without lineup data
         lineupData = null;
       }
 
@@ -834,7 +832,7 @@ const LeaguePage: React.FC = () => {
 
           setSelectedUserLineup(lineupPlayers || [])
         } catch (error) {
-          console.log('Lineup players query failed:', error);
+          
           setSelectedUserLineup([]);
         }
       } else {
@@ -943,46 +941,30 @@ const LeaguePage: React.FC = () => {
     if (!window.confirm('Are you sure you want to delete this league? This cannot be undone.')) return;
     setLoading(true);
     try {
-      console.log('Starting league deletion for league:', league.id);
-      console.log('Current user:', user?.id);
-      console.log('Is owner:', isOwner);
-      console.log('League object:', league);
-      
-      // Try the clean function first (removes all triggers)
-      console.log('Attempting to call delete_league_clean function...');
-      console.log('Parameter being passed:', { league_uuid: league.id });
-      
       const { error: rpcError, data: rpcData } = await supabase.rpc('delete_league_clean', {
         league_uuid: league.id
       });
       
-      console.log('RPC call result:', { error: rpcError, data: rpcData });
       
       if (rpcError) {
-        console.log('Clean function failed, trying direct function:', rpcError);
         
         // Try the direct function as fallback
         const { error: directRpcError, data: directRpcData } = await supabase.rpc('delete_league_direct', {
           league_uuid: league.id
         });
         
-        console.log('Direct function result:', { error: directRpcError, data: directRpcData });
         
         if (directRpcError) {
-          console.log('Direct function also failed:', directRpcError);
           
           // Try the RLS restore function
           const { error: rlsRpcError, data: rlsRpcData } = await supabase.rpc('delete_league_and_restore_rls', {
             league_uuid: league.id
           });
           
-          console.log('RLS restore function result:', { error: rlsRpcError, data: rlsRpcData });
           
           if (rlsRpcError) {
-            console.log('RLS restore function also failed:', rlsRpcError);
             
             // Final fallback: try manual deletion
-            console.log('Trying manual deletion...');
             
             const leagueId = league.id;
             
@@ -1004,7 +986,6 @@ const LeaguePage: React.FC = () => {
                 .eq(deletion.table === 'leagues' ? 'id' : 'league_id', 
                     deletion.table === 'leagues' ? leagueId : leagueId);
               
-              console.log(`${deletion.table} deletion result:`, error);
               
               if (error) {
                 console.error(`Failed to delete from ${deletion.table}:`, error);
@@ -1024,7 +1005,7 @@ const LeaguePage: React.FC = () => {
         }
       }
       
-      console.log('League deletion completed successfully');
+      
       navigate('/dashboard');
     } catch (err) {
       console.error('Delete league error:', err);

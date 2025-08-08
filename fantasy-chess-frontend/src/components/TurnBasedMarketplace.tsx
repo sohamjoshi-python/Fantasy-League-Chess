@@ -100,8 +100,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
     try {
       // Don't process if marketplace is already completed
       if (league.marketplace_completed) {
-        console.log('Marketplace is already completed, skipping turn processing');
-        setCurrentTurn(null);
+        // Marketplace is already completed, skip processing
         return;
       }
       
@@ -127,17 +126,11 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
             .maybeSingle();
           
           if (botData) {
-            // It's a bot's turn, auto-process
-            console.log('Bot turn detected, auto-processing marketplace action...');
-            const { success, error } = await autoMarketplaceForBot(currentUserId, league.id);
-            if (success) {
-              console.log('Bot marketplace action completed successfully');
-              // Reload the current turn after a short delay
-              setTimeout(() => {
-                onUpdate();
-              }, 1000);
-            } else {
-              console.error('Bot marketplace action failed:', error);
+            // Bot turn detected, auto-process marketplace action
+            try {
+              await autoMarketplaceForBot(league.id, currentTurn.user_id || currentTurn.bot_id);
+            } catch (error) {
+              // Bot marketplace action failed
             }
           } else {
             // Check if current user has 0 coins and auto-skip if needed
@@ -221,7 +214,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
         .maybeSingle();
 
       if (teamError) {
-        console.log('Team query failed (using empty team):', teamError);
+        // Team query failed (using empty team)
         setUserTeam([]);
         return;
       }
@@ -233,7 +226,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
           .in('id', teamData.player_ids);
 
         if (teamPlayersError) {
-          console.log('Team players query failed:', teamPlayersError);
+          // Team players query failed
           setUserTeam([]);
         } else {
           setUserTeam(teamPlayers || []);
@@ -242,7 +235,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
         setUserTeam([]);
       }
     } catch (error) {
-      console.log('Load user team failed:', error);
+      // Load user team failed
       setUserTeam([]);
     }
   };
@@ -289,18 +282,17 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
               setUserCoinBalance(50); // Default to 50 coins after creation
             }
           } catch (insertErr) {
-            console.log('Coin balance insert failed (using default):', insertErr);
-            setUserCoinBalance(50);
+            // Coin balance insert failed (using default)
           }
         } else {
-          console.log('Coin balance query failed (using default):', error);
+          // Coin balance query failed (using default)
           setUserCoinBalance(50); // Default to 50 coins on error
         }
       } else {
         setUserCoinBalance(data?.coin_balance || 0);
       }
     } catch (err) {
-      console.log('Coin balance load failed (using default):', err);
+      // Coin balance load failed (using default)
       setUserCoinBalance(50); // Default to 50 coins on error
     }
   };
@@ -349,20 +341,8 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
           });
           
           if (allPlayersHaveNoCoins) {
-            console.log('All remaining players have insufficient coins, ending marketplace');
-            // End the marketplace
-            const { error: leagueUpdateError } = await supabase
-              .from('leagues')
-              .update({
-                marketplace_completed: true
-              })
-              .eq('id', league.id);
-            if (!leagueUpdateError) {
-              setTimeout(() => {
-                onUpdate();
-              }, 500);
-            }
-            return;
+            // All remaining players have insufficient coins, ending marketplace
+            await endMarketplace();
           }
         }
         
@@ -587,14 +567,14 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
     // Prevent rapid clicks (debounce)
     const now = Date.now();
     if (now - lastActionTime < 2000) { // 2 second cooldown
-      console.log('⚠️ Action too soon, please wait...');
+      // Action too soon, please wait...
       return;
     }
     setLastActionTime(now);
 
     setLoading(true);
     try {
-      console.log(`🔄 Skipping turn...`);
+      // Skipping turn...
       
       // Remove user from marketplace order
       const currentOrder = league.marketplace_order || [];
@@ -617,16 +597,16 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
         newTurnIndex = 0;
       }
       
-      console.log('Current order:', currentOrder);
-      console.log('New order after removing user:', newOrder);
-      console.log('Current turn index:', league.current_marketplace_turn);
-      console.log('User being removed:', user.id);
-      console.log('New turn index will be:', newTurnIndex);
-      console.log('Will be completed:', isCompleted);
+      // Current order: ${currentOrder}
+      // New order after removing user: ${newOrder}
+      // Current turn index: ${league.current_marketplace_turn}
+      // User being removed: ${user.id}
+      // New turn index will be: ${newTurnIndex}
+      // Will be completed: ${isCompleted}
       
-            console.log('🔄 Updating database with new order:', newOrder);
-      console.log('🔄 New turn index:', newTurnIndex);
-      console.log('🔄 Will be completed:', isCompleted);
+      // Updating database with new order: ${newOrder}
+      // New turn index: ${newTurnIndex}
+      // Will be completed: ${isCompleted}
       
       const { data: updateData, error: updateError } = await supabase
         .from('leagues')
@@ -638,7 +618,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
         .eq('id', league.id)
         .select();
 
-      console.log('🔄 Database update result:', { updateData, updateError });
+      // Database update result: ${updateData}, ${updateError}
       
       if (updateError) {
         console.error('🔄 Database update failed:', updateError);
@@ -650,11 +630,11 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
         throw new Error('Database update failed - no data returned');
       }
       
-      console.log(`✅ Turn skipped successfully`);
+      // Turn skipped successfully
       
       // Add a delay to ensure the database update is reflected
       setTimeout(() => {
-        console.log('🔄 Calling onUpdate() after delay');
+        // Calling onUpdate() after delay
         onUpdate();
       }, 500);
     } catch (err) {
@@ -809,7 +789,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
                     if (currentUserId) {
                       autoMarketplaceForBot(currentUserId, league.id).then(({ success, error }) => {
                         if (success) {
-                          console.log('Manual bot action completed');
+                          // Manual bot action completed
                           setTimeout(() => onUpdate(), 1000);
                         } else {
                           console.error('Manual bot action failed:', error);
