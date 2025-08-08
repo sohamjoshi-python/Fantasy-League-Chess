@@ -128,7 +128,9 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
           if (botData) {
             // Bot turn detected, auto-process marketplace action
             try {
-              await autoMarketplaceForBot(league.id, currentTurn.user_id || currentTurn.bot_id);
+              if (currentTurn) {
+                await autoMarketplaceForBot(league.id, currentTurn.current_user_id);
+              }
             } catch (error) {
               // Bot marketplace action failed
             }
@@ -342,7 +344,17 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
           
           if (allPlayersHaveNoCoins) {
             // All remaining players have insufficient coins, ending marketplace
-            await endMarketplace();
+            // End the marketplace by updating the league
+            const { error: leagueUpdateError } = await supabase
+              .from('leagues')
+              .update({
+                marketplace_completed: true
+              })
+              .eq('id', league.id);
+            if (leagueUpdateError) {
+              throw leagueUpdateError;
+            }
+            onUpdate();
           }
         }
         
@@ -785,7 +797,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
                 </p>
                 <button
                   onClick={() => {
-                    const currentUserId = league.marketplace_order && league.marketplace_order[league.current_marketplace_turn];
+                    const currentUserId = league.marketplace_order?.[league.current_marketplace_turn || 0];
                     if (currentUserId) {
                       autoMarketplaceForBot(currentUserId, league.id).then(({ success, error }) => {
                         if (success) {

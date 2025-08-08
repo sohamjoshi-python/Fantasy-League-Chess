@@ -824,7 +824,7 @@ export async function autoMarketplaceForBot(botId: string, leagueId: string): Pr
       }
     };
 
-    const { success, player, error: playerError } = await getBestAffordablePlayer(leagueId, botCoins);
+    const { success, player } = await getBestAffordablePlayer(leagueId, botCoins);
     if (!success || !player) {
       
       // Bot can't afford any players, check if marketplace should end

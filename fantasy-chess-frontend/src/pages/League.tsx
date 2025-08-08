@@ -361,7 +361,7 @@ const LeaguePage: React.FC = () => {
       // Get user's team
       let teamData = null;
       try {
-        const { data: teamResult, error: teamError } = await supabase
+        const { data: teamResult } = await supabase
           .from('teams')
           .select('*')
           .eq('user_id', user.id)
@@ -941,7 +941,7 @@ const LeaguePage: React.FC = () => {
     if (!window.confirm('Are you sure you want to delete this league? This cannot be undone.')) return;
     setLoading(true);
     try {
-      const { error: rpcError, data: rpcData } = await supabase.rpc('delete_league_clean', {
+      const { error: rpcError } = await supabase.rpc('delete_league_clean', {
         league_uuid: league.id
       });
       
@@ -949,7 +949,7 @@ const LeaguePage: React.FC = () => {
       if (rpcError) {
         
         // Try the direct function as fallback
-        const { error: directRpcError, data: directRpcData } = await supabase.rpc('delete_league_direct', {
+        const { error: directRpcError } = await supabase.rpc('delete_league_direct', {
           league_uuid: league.id
         });
         
@@ -957,7 +957,7 @@ const LeaguePage: React.FC = () => {
         if (directRpcError) {
           
           // Try the RLS restore function
-          const { error: rlsRpcError, data: rlsRpcData } = await supabase.rpc('delete_league_and_restore_rls', {
+          const { error: rlsRpcError } = await supabase.rpc('delete_league_and_restore_rls', {
             league_uuid: league.id
           });
           

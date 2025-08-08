@@ -619,10 +619,7 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
               : 'text-gray-600 hover:text-gray-800'
           }`}
         >
-          Marketplace ({allPlayers.filter(p => {
-            // Ownership is tracked via teams table, not league_owners column
-            return true; // Show all players in marketplace
-          }).length})
+          Marketplace ({allPlayers.length})
         </button>
         <button
           onClick={() => setActiveTab('owned')}
@@ -663,15 +660,9 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
             </div>
             <div className="flex items-center space-x-2">
               <span className="text-sm text-gray-600">
-                Showing {marketplaceListings.length} of {allPlayers.filter(p => {
-                  // Ownership is tracked via teams table, not league_owners column
-                  return true;
-                }).length} players
+                Showing {marketplaceListings.length} of {allPlayers.length} players
               </span>
-              {!showAllPlayers && allPlayers.filter(p => {
-                // Ownership is tracked via teams table, not league_owners column
-                return true;
-              }).length > 30 && (
+              {!showAllPlayers && allPlayers.length > 30 && (
                 <button
                   onClick={() => setShowAllPlayers(true)}
                   className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"

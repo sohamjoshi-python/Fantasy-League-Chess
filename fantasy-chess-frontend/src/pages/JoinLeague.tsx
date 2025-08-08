@@ -207,18 +207,13 @@ const JoinLeague: React.FC = () => {
 
       // Create Discord channel for the league
       try {
-        const discordResponse = await supabase.functions.invoke('discord-bot-hybrid', {
+        await supabase.functions.invoke('discord-bot-hybrid', {
           body: {
             action: 'create_league_channel',
             leagueName: leagueName,
             leagueId: league.id
           }
         });
-        
-        if (discordResponse.error) {
-          console.error('Discord function error:', discordResponse.error);
-          throw new Error(discordResponse.error.message || 'Discord function failed');
-        }
       } catch (error) {
         console.error('Error creating Discord channel (continuing without Discord):', error);
         // Continue without Discord - this is not critical
@@ -349,7 +344,7 @@ const JoinLeague: React.FC = () => {
       // Create Discord channel if it doesn't exist
       if (!league.discord_server_id) {
         try {
-          const discordResponse = await supabase.functions.invoke('discord-bot-hybrid', {
+          await supabase.functions.invoke('discord-bot-hybrid', {
             body: {
               action: 'create_league_channel',
               leagueName: league.name,
@@ -473,7 +468,7 @@ const JoinLeague: React.FC = () => {
       // Create Discord channel if it doesn't exist
       if (!league.discord_server_id) {
         try {
-          const discordResponse = await supabase.functions.invoke('discord-bot-hybrid', {
+          await supabase.functions.invoke('discord-bot-hybrid', {
             body: {
               action: 'create_league_channel',
               leagueName: league.name,
