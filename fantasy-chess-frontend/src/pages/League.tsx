@@ -302,9 +302,7 @@ const LeaguePage: React.FC = () => {
       setBreakdownLoading(true);
       setBreakdownError('');
       try {
-        console.log('Loading breakdown for:', { userId: user.id, leagueId: league?.id, weekDate: selectedWeek.replace(/\./g, '-') });
         const data = await fetchLineupPlayerBreakdownByRounds(user.id, league?.id, selectedWeek.replace(/\./g, '-'));
-        console.log('Breakdown data:', data);
         setPlayerBreakdown(data);
       } catch (e: any) {
         setBreakdownError('Could not load point breakdown');
