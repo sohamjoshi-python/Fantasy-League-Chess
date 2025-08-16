@@ -205,6 +205,10 @@ const AuthModal: React.FC<AuthModalProps> = ({ isSignUp, onClose, onToggleMode }
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  
+  // Progressive disclosure for signup
+  const [signupStep, setSignupStep] = useState<'basic' | 'complete'>('basic')
+  
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -246,80 +250,197 @@ const AuthModal: React.FC<AuthModalProps> = ({ isSignUp, onClose, onToggleMode }
     }
   }
 
+  const handleSignupNext = () => {
+    if (!email.trim() || !displayName.trim()) {
+      setError('Please fill in all required fields')
+      return
+    }
+    setSignupStep('complete')
+    setError('')
+  }
+
+  const handleSignupBack = () => {
+    setSignupStep('basic')
+    setError('')
+  }
+
+  const resetForm = () => {
+    setEmail('')
+    setPassword('')
+    setDisplayName('')
+    setError('')
+    setSignupStep('basic')
+  }
+
+  const handleToggleMode = () => {
+    resetForm()
+    onToggleMode()
+  }
+
   return (
     <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4 relative shadow-lg border-2 border-royalBlue">
       <h2 className="text-2xl font-bold mb-6 text-center text-neutral-900">
         {isSignUp ? 'Create Account' : 'Sign In'}
       </h2>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label htmlFor="email" className="block text-sm font-medium text-neutral-700 mb-1">
-            Email
-          </label>
-          <input
-            type="email"
-            id="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-royalBlue text-neutral-900 placeholder-neutral-500"
-            placeholder="Enter your email"
-          />
-        </div>
-        <div>
-          <label htmlFor="password" className="block text-sm font-medium text-neutral-700 mb-1">
-            Password
-          </label>
-          <input
-            type="password"
-            id="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-royalBlue text-neutral-900 placeholder-neutral-500"
-            placeholder="Enter your password"
-          />
-        </div>
-        {isSignUp && (
-          <div>
-            <label htmlFor="displayName" className="block text-sm font-medium text-neutral-700 mb-1">
-              Display Name
-            </label>
-            <input
-              type="text"
-              id="displayName"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              required
-              className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-royalBlue text-neutral-900 placeholder-neutral-500"
-              placeholder="Enter your display name"
-            />
+      
+      {/* Progress indicator for signup */}
+      {isSignUp && (
+        <div className="mb-6">
+          <div className="flex items-center justify-center space-x-4">
+            <div className={`flex items-center ${signupStep === 'basic' ? 'text-royalBlue' : 'text-gray-400'}`}>
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold ${
+                signupStep === 'basic' ? 'bg-royalBlue text-white' : 'bg-gray-200 text-gray-600'
+              }`}>
+                1
+              </div>
+              <span className="ml-2 text-sm">Basic Info</span>
+            </div>
+            <div className="w-8 h-px bg-gray-300"></div>
+            <div className={`flex items-center ${signupStep === 'complete' ? 'text-royalBlue' : 'text-gray-400'}`}>
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold ${
+                signupStep === 'complete' ? 'bg-royalBlue text-white' : 'bg-gray-200 text-gray-600'
+              }`}>
+                2
+              </div>
+              <span className="ml-2 text-sm">Complete</span>
+            </div>
           </div>
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Step 1: Basic Information (Signup only) */}
+        {isSignUp && signupStep === 'basic' && (
+          <>
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-neutral-700 mb-1">
+                Email *
+              </label>
+              <input
+                type="email"
+                id="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-royalBlue text-neutral-900 placeholder-neutral-500"
+                placeholder="Enter your email"
+              />
+            </div>
+            <div>
+              <label htmlFor="displayName" className="block text-sm font-medium text-neutral-700 mb-1">
+                Display Name *
+              </label>
+              <input
+                type="text"
+                id="displayName"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                required
+                className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-royalBlue text-neutral-900 placeholder-neutral-500"
+                placeholder="Enter your display name"
+              />
+            </div>
+            
+            <button
+              type="button"
+              onClick={handleSignupNext}
+              className="w-full bg-royalBlue hover:bg-blue-700 text-white py-2 px-4 rounded-md font-medium shadow-lg transition-colors"
+            >
+              Continue to Security
+            </button>
+          </>
         )}
+
+        {/* Step 2: Security & Complete (Signup) or Sign In */}
+        {(isSignUp && signupStep === 'complete') || !isSignUp ? (
+          <>
+            {/* Email field for sign in, or show summary for signup */}
+            {!isSignUp ? (
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-neutral-700 mb-1">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  id="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-royalBlue text-neutral-900 placeholder-neutral-500"
+                  placeholder="Enter your email"
+                />
+              </div>
+            ) : (
+              <div className="bg-blue-50 p-3 rounded-md border border-blue-200">
+                <div className="text-sm text-blue-800">
+                  <div className="flex justify-between mb-1">
+                    <span>Email:</span>
+                    <span className="font-medium">{email}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Display Name:</span>
+                    <span className="font-medium">{displayName}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-neutral-700 mb-1">
+                Password
+              </label>
+              <input
+                type="password"
+                id="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-royalBlue text-neutral-900 placeholder-neutral-500"
+                placeholder="Enter your password"
+              />
+            </div>
+
+            {/* Back button for signup step 2 */}
+            {isSignUp && (
+              <button
+                type="button"
+                onClick={handleSignupBack}
+                className="w-full bg-gray-300 hover:bg-gray-400 text-gray-700 py-2 px-4 rounded-md font-medium transition-colors"
+              >
+                Back to Basic Info
+              </button>
+            )}
+
+            {/* Submit button */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-[#1e293b] hover:bg-royalBlue disabled:bg-neutral-400 text-white py-2 px-4 rounded-md font-medium shadow-lg transition-colors"
+            >
+              {loading ? 'Loading...' : (isSignUp ? 'Create Account' : 'Sign In')}
+            </button>
+          </>
+        ) : null}
+
         {error && (
-          <div className="text-red-600 text-sm">{error}</div>
+          <div className="text-red-600 text-sm bg-red-50 p-2 rounded border border-red-200">{error}</div>
         )}
         {success && (
           <div className="text-green-600 text-sm animate-fade-in-out absolute top-2 left-1/2 transform -translate-x-1/2 bg-white px-4 py-2 rounded shadow z-50 border border-green-200">
             {success}
           </div>
         )}
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-[#1e293b] hover:bg-royalBlue disabled:bg-neutral-400 text-white py-2 px-4 rounded-md font-medium shadow-lg transition-colors"
-        >
-          {loading ? 'Loading...' : (isSignUp ? 'Sign Up' : 'Sign In')}
-        </button>
       </form>
+      
       <div className="mt-4 text-center">
         <button
-          onClick={onToggleMode}
+          onClick={handleToggleMode}
           className="text-neutral-500 hover:text-royalBlue text-sm transition-colors"
         >
           {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
         </button>
       </div>
+      
       <button
         onClick={onClose}
         className="absolute top-4 right-4 text-neutral-400 hover:text-neutral-600 transition-colors"
