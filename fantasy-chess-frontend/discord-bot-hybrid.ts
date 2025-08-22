@@ -42,13 +42,109 @@ async function discordApiRequest(endpoint: string, options: RequestInit) {
 // Create a league channel with direct user access
 async function createLeagueDiscordChannel(leagueName: string, leagueId: string) {
   try {
-    console.log('Creating Discord channel for league:', leagueName);
+    console.log(`🚨 CHANNEL CREATION REQUESTED for league: ${leagueName} (${leagueId})`);
+    console.log(`📅 Timestamp: ${new Date().toISOString()}`);
     
     const DISCORD_MAIN_SERVER_ID = Deno.env.get('DISCORD_MAIN_SERVER_ID');
     if (!DISCORD_MAIN_SERVER_ID) {
       throw new Error('DISCORD_MAIN_SERVER_ID not set');
     }
 
+    // FIRST: Check if channel already exists in database
+    const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+    const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+    
+    console.log(`🔍 Checking if league ${leagueId} already has a Discord channel...`);
+    
+    // Check if league already has a Discord channel
+    const { data: existingLeague, error: leagueError } = await supabase
+      .from('leagues')
+      .select('discord_server_id, discord_invite_link')
+      .eq('id', leagueId)
+      .single();
+    
+    if (leagueError) {
+      console.log(`⚠️ Error checking existing league: ${leagueError.message}`);
+    }
+    
+    if (existingLeague?.discord_server_id) {
+      console.log(`✅ League ${leagueName} already has Discord channel: ${existingLeague.discord_server_id}`);
+      console.log(`🔗 Existing invite link: ${existingLeague.discord_invite_link}`);
+      console.log(`🚫 Skipping channel creation - returning existing channel info`);
+      
+      return {
+        channelId: existingLeague.discord_server_id,
+        inviteUrl: existingLeague.discord_invite_link,
+        alreadyExists: true,
+        message: `Channel already exists for league ${leagueName}`
+      };
+    }
+    
+    console.log(`🆕 No existing channel found - proceeding with channel creation...`);
+    
+    // Check if a channel with this league name already exists in Discord
+    console.log(`🔍 Checking Discord for existing channels with league name: ${leagueName}`);
+    
+    try {
+      const existingChannels = await discordApiRequest(`/guilds/${DISCORD_MAIN_SERVER_ID}/channels`, {
+        method: 'GET'
+      });
+      
+      if (existingChannels && Array.isArray(existingChannels)) {
+        const channelName = `league-${leagueName.toLowerCase().replace(/[^a-z0-9]/g, '-')}`;
+        const existingChannel = existingChannels.find((ch: any) => ch.name === channelName);
+        
+        if (existingChannel) {
+          console.log(`⚠️ Found existing Discord channel with same name: ${existingChannel.name} (${existingChannel.id})`);
+          console.log(`🚫 This suggests a duplicate league or naming conflict`);
+          
+          // Update database with existing channel info
+          await supabase
+            .from('leagues')
+            .update({
+              discord_server_id: existingChannel.id,
+              discord_invite_link: null // Will be created below
+            })
+            .eq('id', leagueId);
+          
+          console.log(`✅ Updated database with existing channel ID`);
+          
+          // Create invite link for existing channel
+          const inviteData = await discordApiRequest(`/channels/${existingChannel.id}/invites`, {
+            method: 'POST',
+            body: JSON.stringify({
+              max_age: 0, // Never expires
+              max_uses: 0, // Unlimited uses
+              temporary: false,
+              unique: true
+            }),
+          });
+          
+          const inviteUrl = `https://discord.gg/${inviteData.code}`;
+          console.log(`🔗 Created invite link for existing channel: ${inviteUrl}`);
+          
+          // Update database with invite link
+          await supabase
+            .from('leagues')
+            .update({ discord_invite_link: inviteUrl })
+            .eq('id', leagueId);
+          
+          return {
+            channelId: existingChannel.id,
+            inviteUrl: inviteUrl,
+            alreadyExists: true,
+            message: `Used existing channel for league ${leagueName}`
+          };
+        }
+      }
+    } catch (channelCheckError) {
+      console.log(`⚠️ Could not check existing Discord channels: ${channelCheckError.message}`);
+      console.log(`🔄 Proceeding with new channel creation...`);
+    }
+
+    console.log(`🏗️ Creating new Discord channel for league: ${leagueName}`);
+    
     // Create a private channel with no role permissions initially
     const channel = await discordApiRequest(`/guilds/${DISCORD_MAIN_SERVER_ID}/channels`, {
       method: 'POST',
@@ -67,10 +163,10 @@ async function createLeagueDiscordChannel(leagueName: string, leagueId: string) 
       }),
     });
     
-    console.log('Successfully created channel:', channel);
+    console.log(`✅ Successfully created new Discord channel:`, channel);
     
     const channelId = channel.id;
-    console.log('Channel created with ID:', channelId);
+    console.log(`🆔 New channel ID: ${channelId}`);
     
     // Send a welcome message to the new channel
     const welcomeMessage = `🎉 **Welcome to ${leagueName}!** 🎉
@@ -101,12 +197,14 @@ This is your dedicated Discord channel for the **${leagueName}** Fantasy Chess L
           allowed_mentions: { parse: [] }
         })
       });
-      console.log('Welcome message sent successfully');
+      console.log(`✅ Welcome message sent successfully to new channel`);
     } catch (messageError) {
-      console.error('Error sending welcome message:', messageError);
+      console.error('⚠️ Error sending welcome message:', messageError);
+      console.log(`🔄 Continuing without welcome message...`);
     }
     
     // Create an invite link for the server
+    console.log(`🔗 Creating invite link for new channel...`);
     const inviteData = await discordApiRequest(`/channels/${DISCORD_MAIN_SERVER_ID}/invites`, {
       method: 'POST',
       body: JSON.stringify({
@@ -122,14 +220,10 @@ This is your dedicated Discord channel for the **${leagueName}** Fantasy Chess L
     }
 
     const inviteUrl = `https://discord.gg/${inviteData.code}`;
-    console.log('Server invite URL created:', inviteUrl);
+    console.log(`✅ Server invite URL created: ${inviteUrl}`);
 
     // Store the Discord channel info in the database
-    const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
-    const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
-    
+    console.log(`💾 Updating database with new channel info...`);
     await supabase
       .from('leagues')
       .update({
@@ -138,11 +232,17 @@ This is your dedicated Discord channel for the **${leagueName}** Fantasy Chess L
       })
       .eq('id', leagueId);
 
-    console.log('Database updated with Discord info');
+    console.log(`✅ Database updated successfully with Discord info`);
+    console.log(`🎉 Channel creation completed for league: ${leagueName}`);
 
-    return { channelId, inviteUrl };
+    return { 
+      channelId, 
+      inviteUrl,
+      alreadyExists: false,
+      message: `New channel created for league ${leagueName}`
+    };
   } catch (error) {
-    console.error('Error creating Discord channel:', error);
+    console.error('❌ Error creating Discord channel:', error);
     throw error;
   }
 }
@@ -317,6 +417,87 @@ async function verifyUserAndGrantAccess(userId: string, leagueCode: string, emai
   }
 }
 
+// Check for duplicate channels and clean them up
+async function checkAndCleanupDuplicateChannels() {
+  try {
+    console.log(`🧹 Checking for duplicate Discord channels...`);
+    
+    const DISCORD_MAIN_SERVER_ID = Deno.env.get('DISCORD_MAIN_SERVER_ID');
+    if (!DISCORD_MAIN_SERVER_ID) {
+      throw new Error('DISCORD_MAIN_SERVER_ID not set');
+    }
+    
+    // Get all channels in the Discord server
+    const channels = await discordApiRequest(`/guilds/${DISCORD_MAIN_SERVER_ID}/channels`, {
+      method: 'GET'
+    });
+    
+    if (!channels || !Array.isArray(channels)) {
+      console.log(`⚠️ No channels found or invalid response`);
+      return { success: false, message: 'No channels found' };
+    }
+    
+    // Find league channels (those starting with 'league-')
+    const leagueChannels = channels.filter((ch: any) => ch.name.startsWith('league-'));
+    console.log(`🔍 Found ${leagueChannels.length} league channels:`, leagueChannels.map((ch: any) => ch.name));
+    
+    // Group channels by name to find duplicates
+    const channelGroups: { [name: string]: any[] } = {};
+    leagueChannels.forEach((ch: any) => {
+      if (!channelGroups[ch.name]) {
+        channelGroups[ch.name] = [];
+      }
+      channelGroups[ch.name].push(ch);
+    });
+    
+    // Find duplicates
+    const duplicates = Object.entries(channelGroups).filter(([name, channels]) => channels.length > 1);
+    
+    if (duplicates.length === 0) {
+      console.log(`✅ No duplicate channels found`);
+      return { success: true, message: 'No duplicates found' };
+    }
+    
+    console.log(`🚨 Found ${duplicates.length} duplicate channel groups:`, duplicates.map(([name, chs]) => `${name} (${chs.length} channels)`));
+    
+    // Keep the oldest channel, delete the rest
+    for (const [channelName, channelList] of duplicates) {
+      if (channelList.length > 1) {
+        // Sort by creation time (oldest first)
+        const sortedChannels = channelList.sort((a: any, b: any) => {
+          const aTime = new Date(a.created_at || 0).getTime();
+          const bTime = new Date(b.created_at || 0).getTime();
+          return aTime - bTime;
+        });
+        
+        const keepChannel = sortedChannels[0]; // Keep oldest
+        const deleteChannels = sortedChannels.slice(1); // Delete newer ones
+        
+        console.log(`🔒 Keeping channel: ${keepChannel.name} (${keepChannel.id}) - created: ${keepChannel.created_at}`);
+        
+        for (const deleteChannel of deleteChannels) {
+          console.log(`🗑️ Deleting duplicate channel: ${deleteChannel.name} (${deleteChannel.id})`);
+          try {
+            await discordApiRequest(`/channels/${deleteChannel.id}`, {
+              method: 'DELETE'
+            });
+            console.log(`✅ Successfully deleted duplicate channel: ${deleteChannel.name}`);
+          } catch (deleteError) {
+            console.error(`❌ Failed to delete duplicate channel ${deleteChannel.name}:`, deleteError);
+          }
+        }
+      }
+    }
+    
+    console.log(`🧹 Duplicate channel cleanup completed`);
+    return { success: true, message: 'Cleanup completed' };
+    
+  } catch (error) {
+    console.error('❌ Error during duplicate channel cleanup:', error);
+    return { success: false, message: 'Cleanup failed', error: error.message };
+  }
+}
+
 // Remove user's direct channel access
 async function removeUserChannelAccess(userId: string, leagueCode: string) {
   try {
@@ -401,13 +582,21 @@ serve(async (req) => {
 
     switch (action) {
       case 'create_league_channel':
+        console.log(`🚨 CHANNEL CREATION REQUESTED for league: ${leagueName} (${leagueId})`);
+        console.log(`📅 Request timestamp: ${new Date().toISOString()}`);
+        console.log(`🔍 Request details:`, { leagueName, leagueId, timestamp: new Date().toISOString() });
+        
         if (!leagueName || !leagueId) {
+          console.log(`❌ Missing required parameters: leagueName=${leagueName}, leagueId=${leagueId}`);
           return new Response(
             JSON.stringify({ error: 'Missing leagueName or leagueId' }),
             { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
+        
+        console.log(`✅ Parameters valid, proceeding with channel creation...`);
         result = await createLeagueDiscordChannel(leagueName, leagueId);
+        console.log(`🏁 Channel creation result:`, result);
         break;
 
       case 'verify_user_and_grant_access':
@@ -428,6 +617,12 @@ serve(async (req) => {
           );
         }
         result = await removeUserChannelAccess(userId, leagueCode);
+        break;
+
+      case 'cleanup_duplicates':
+        console.log(`🧹 DUPLICATE CLEANUP REQUESTED`);
+        console.log(`📅 Request timestamp: ${new Date().toISOString()}`);
+        result = await checkAndCleanupDuplicateChannels();
         break;
 
       default:

@@ -272,6 +272,8 @@ const Onboarding: React.FC = () => {
           </div>
         </div>
 
+
+
         {/* Prominent Sign Up Section */}
         <div className="mt-12 bg-gradient-to-r from-royalBlue to-blue-600 rounded-xl p-8 text-white text-center">
           <h2 className="text-3xl font-bold mb-4">Ready to Start Playing?</h2>

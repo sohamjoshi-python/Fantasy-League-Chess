@@ -205,19 +205,7 @@ const JoinLeague: React.FC = () => {
         await sendLeagueJoinedEmail(user.email, leagueName)
       }
 
-      // Create Discord channel for the league
-      try {
-        await supabase.functions.invoke('discord-bot-hybrid', {
-          body: {
-            action: 'create_league_channel',
-            leagueName: leagueName,
-            leagueId: league.id
-          }
-        });
-      } catch (error) {
-        console.error('Error creating Discord channel (continuing without Discord):', error);
-        // Continue without Discord - this is not critical
-      }
+
 
       navigate(`/league/${league.id}`)
     } catch (error) {
@@ -341,23 +329,6 @@ const JoinLeague: React.FC = () => {
         await sendLeagueJoinedEmail(user.email, league.name)
       }
 
-      // Create Discord channel if it doesn't exist
-      if (!league.discord_server_id) {
-        try {
-          await supabase.functions.invoke('discord-bot-hybrid', {
-            body: {
-              action: 'create_league_channel',
-              leagueName: league.name,
-              leagueId: league.id
-            }
-          });
-          // Discord channel created
-        } catch (error) {
-          
-          // Continue without Discord - this is not critical
-        }
-      }
-
       navigate(`/league/${league.id}`)
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to join league')
@@ -463,23 +434,6 @@ const JoinLeague: React.FC = () => {
       // Send league joined email
       if (user.email) {
         await sendLeagueJoinedEmail(user.email, league.name)
-      }
-
-      // Create Discord channel if it doesn't exist
-      if (!league.discord_server_id) {
-        try {
-          await supabase.functions.invoke('discord-bot-hybrid', {
-            body: {
-              action: 'create_league_channel',
-              leagueName: league.name,
-              leagueId: league.id
-            }
-          });
-          // Discord channel created
-        } catch (error) {
-          
-          // Continue without Discord - this is not critical
-        }
       }
 
       navigate(`/league/${league.id}`)

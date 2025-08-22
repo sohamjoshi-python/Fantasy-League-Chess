@@ -108,6 +108,7 @@ const Navbar: React.FC = () => {
                   <HelpCircle className="h-4 w-4 mr-1" />
                   Help
                 </Link>
+
                 <button
                   onClick={() => setShowInbox(true)}
                   className="relative text-neutral-700 hover:text-royalBlue px-3 py-2 rounded-md text-sm font-medium transition-colors"

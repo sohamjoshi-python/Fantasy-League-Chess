@@ -11,7 +11,7 @@ import fantasyLeagueChessLogo from '../assets/fantasy-league-chess-logo-updated.
 
 import Marketplace from '../components/Marketplace';
 import TurnBasedMarketplace from '../components/TurnBasedMarketplace';
-import DiscordIntegration from '../components/DiscordIntegration';
+
 // Remove: import { useQuery } from '@tanstack/react-query';
 // Remove: fetchLeague function
 // Remove: all useQuery calls and destructuring
@@ -1731,15 +1731,7 @@ const LeaguePage: React.FC = () => {
             </div>
           </div>
 
-          {/* Discord Integration - Above Marketplace */}
-          {league && (
-            <div className="mt-8">
-              <DiscordIntegration 
-                discordInviteLink={league.discord_invite_link}
-                leagueName={league.name}
-              />
-            </div>
-          )}
+
 
           {/* Coin Marketplace - Show after draft is completed */}
           {league && (league.draft_completed || league.marketplace_completed || (league.marketplace_order && league.marketplace_order.length === 0)) && (
