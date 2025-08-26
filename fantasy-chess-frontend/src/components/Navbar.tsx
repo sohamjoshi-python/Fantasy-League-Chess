@@ -232,22 +232,14 @@ const AuthModal: React.FC<AuthModalProps> = ({ isSignUp, onClose, onToggleMode }
     setSuccess('')
 
     try {
-      if (isSignUp) {
-        await signUp(email, password, displayName)
-        setTimeout(async () => {
-          const { supabase } = await import('../lib/supabase')
-          const { data: { user } } = await supabase.auth.getUser()
-          if (!user) {
-            setSuccess('Check your inbox to confirm your email before logging in.')
-          } else {
-            setSuccess('Account created! Logging you in...')
-            setTimeout(() => {
-              setSuccess('')
-              onClose()
-            }, 2000)
-          }
-        }, 500)
-      } else {
+             if (isSignUp) {
+         await signUp(email, password, displayName)
+         setSuccess('Account created! Please check your email to verify your account before signing in.')
+         setTimeout(() => {
+           setSuccess('')
+           onClose()
+         }, 5000)
+       } else {
         await signIn(email, password)
         setSuccess('Logged in!')
         navigate('/dashboard');

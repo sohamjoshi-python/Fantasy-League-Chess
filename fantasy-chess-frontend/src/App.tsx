@@ -16,6 +16,7 @@ import Privacy from './pages/privacy';
 import { useAuth } from './contexts/AuthContext'
 import React from 'react';
 import Footer from './components/Footer';
+import ProtectedRoute from './components/ProtectedRoute';
 
 function AvatarShopPage() {
   const { user } = useAuth();
@@ -37,15 +38,15 @@ function App() {
         <main className="flex-1 w-full px-0 py-0">
           <Routes>
             <Route path="/" element={<Home />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/join-league" element={<JoinLeague />} />
-            <Route path="/league/:leagueId" element={<LeaguePage />} />
-            <Route path="/profile" element={<Profile />} />
+            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/join-league" element={<ProtectedRoute><JoinLeague /></ProtectedRoute>} />
+            <Route path="/league/:leagueId" element={<ProtectedRoute><LeaguePage /></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="/help" element={<Help />} />
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/signup" element={<SignUp />} />
-            <Route path="/leaderboard" element={<Leaderboard />} />
-            <Route path="/avatar-shop" element={<AvatarShopPage />} />
+            <Route path="/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
+            <Route path="/avatar-shop" element={<ProtectedRoute><AvatarShopPage /></ProtectedRoute>} />
             <Route path="/tos" element={<Tos />} />
             <Route path="/privacy" element={<Privacy />} />
           </Routes>
