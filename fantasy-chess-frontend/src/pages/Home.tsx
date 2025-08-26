@@ -4,9 +4,11 @@ import DiscordServerJoin from '../components/DiscordServerJoin'
 import { Trophy, Users, Coins, Store, HelpCircle, Star, Swords, Shield, Calendar } from 'lucide-react'
 import logo from '../assets/fantasy-league-chess-logo-updated.png'
 import { useResponsiveBrandName } from '../utils/browserDetection';
+import { useAuth } from '../contexts/AuthContext';
 
 const Home: React.FC = () => {
   const { brandName, brandNameFull } = useResponsiveBrandName();
+  const { user } = useAuth();
   
   return (
     <div className="w-full min-h-screen bg-white flex flex-col items-center font-sans pt-20">
@@ -39,12 +41,14 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* Discord Server Join Section */}
-      <section className="w-full py-12 flex justify-center bg-white">
-        <div className="max-w-4xl w-full px-4">
-          <DiscordServerJoin />
-        </div>
-      </section>
+      {/* Discord Server Join Section - Only visible when signed in */}
+      {user && (
+        <section className="w-full py-12 flex justify-center bg-white">
+          <div className="max-w-4xl w-full px-4">
+            <DiscordServerJoin />
+          </div>
+        </section>
+      )}
 
       {/* How It Works Section */}
       <section className="w-full py-12 bg-white flex justify-center">

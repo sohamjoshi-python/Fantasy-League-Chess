@@ -111,7 +111,7 @@ const Navbar: React.FC = () => {
 
                  {/* Discord Server Join - Only visible when signed in */}
                  <a
-                   href="https://discord.gg/M8vTmfKN"
+                   href="https://discord.gg/3vVPvX6AVf"
                    target="_blank"
                    rel="noopener noreferrer"
                    className="text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 shadow-md hover:shadow-lg flex items-center space-x-1"

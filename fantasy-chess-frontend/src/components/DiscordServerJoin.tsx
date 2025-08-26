@@ -6,7 +6,7 @@ interface DiscordServerJoinProps {
 
 const DiscordServerJoin: React.FC<DiscordServerJoinProps> = ({ className = '' }) => {
   // You can replace this with your actual Discord server invite link
-  const discordInviteLink = 'https://discord.gg/M8vTmfKN'; // Your Discord server invite link
+  const discordInviteLink = 'https://discord.gg/3vVPvX6AVf'; // Your Discord server invite link
   
   return (
     <div className={`bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg p-6 text-white shadow-lg ${className}`}>
