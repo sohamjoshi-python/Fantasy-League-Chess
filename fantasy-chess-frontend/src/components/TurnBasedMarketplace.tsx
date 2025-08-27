@@ -127,12 +127,39 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
           
           if (botData) {
             // Bot turn detected, auto-process marketplace action
+            // Note: 400 errors are expected when it's not the bot's turn yet
             try {
               if (currentTurn) {
-                await autoMarketplaceForBot(league.id, currentTurn.current_user_id);
+                const result = await autoMarketplaceForBot(currentTurn.current_user_id, league.id);
+                                 if (result.success) {
+                   console.log('🤖 Bot turn completed successfully:', result.data);
+                   
+                   // Handle special bot actions
+                   if (result.data?.action === 'removed_zero_coins') {
+                     console.log('🔄 Bot removed due to 0 coins, updating marketplace...');
+                     // Refresh data to show updated marketplace order
+                     onUpdate();
+                     
+                     // If marketplace ended, show completion message
+                     if (result.data?.marketplaceCompleted) {
+                       console.log('🏁 Marketplace ended due to empty order');
+                     }
+                   } else {
+                     // Normal bot turn completion
+                     console.log('✅ Bot completed normal turn, updating marketplace...');
+                     onUpdate();
+                   }
+                 } else {
+                   // This is expected when it's not the bot's turn
+                   if (result.error?.includes('400') || result.error?.includes('not the bot')) {
+                     console.log('⏳ Bot turn not ready yet (expected behavior)');
+                   } else {
+                     console.error('❌ Bot turn failed:', result.error);
+                   }
+                 }
               }
             } catch (error) {
-              // Bot marketplace action failed
+              console.error('Bot marketplace action failed:', error);
             }
           } else {
             // Check if current user has 0 coins and auto-skip if needed
@@ -795,24 +822,29 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
                 <p className="text-purple-700 text-sm">
                   🤖 Bot's turn - Processing automatically...
                 </p>
-                <button
-                  onClick={() => {
-                    const currentUserId = league.marketplace_order?.[league.current_marketplace_turn || 0];
-                    if (currentUserId) {
-                      autoMarketplaceForBot(currentUserId, league.id).then(({ success, error }) => {
-                        if (success) {
-                          // Manual bot action completed
-                          setTimeout(() => onUpdate(), 1000);
-                        } else {
-                          console.error('Manual bot action failed:', error);
-                        }
-                      });
-                    }
-                  }}
-                  className="mt-2 bg-purple-500 hover:bg-purple-600 text-white px-3 py-1 rounded text-xs"
-                >
-                  Manual Trigger Bot Action
-                </button>
+                                 <button
+                   onClick={() => {
+                     const currentUserId = league.marketplace_order?.[league.current_marketplace_turn || 0];
+                     if (currentUserId) {
+                       console.log('🔄 Manually triggering bot action for:', currentUserId);
+                       autoMarketplaceForBot(currentUserId, league.id).then(({ success, error, data }) => {
+                         if (success) {
+                           console.log('✅ Manual bot action completed:', data?.action);
+                           setTimeout(() => onUpdate(), 1000);
+                         } else {
+                           if (error?.includes('400') || error?.includes('not the bot')) {
+                             console.log('⏳ Bot not ready for manual action (expected)');
+                           } else {
+                             console.error('❌ Manual bot action failed:', error);
+                           }
+                         }
+                       });
+                     }
+                   }}
+                   className="mt-2 bg-purple-500 hover:bg-purple-600 text-white px-3 py-1 rounded text-xs"
+                 >
+                   Manual Trigger Bot Action
+                 </button>
               </div>
             )}
           </div>

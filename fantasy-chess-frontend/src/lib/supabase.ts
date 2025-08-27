@@ -665,348 +665,41 @@ export async function autoSetLineupForBot(botId: string, leagueId: string, weekS
 }
 
 /**
- * Auto-marketplace for a bot (buys highest ELO available player)
+ * Auto-marketplace for a bot using Edge Function (buys highest ELO available player)
  * @param botId string
  * @param leagueId string
  * @returns {Promise<{ success: boolean, error?: any }>}
  */
-export async function autoMarketplaceForBot(botId: string, leagueId: string): Promise<{ success: boolean, error?: any }> {
-  const draftKey = `${botId}-${leagueId}`;
-  
-  // Prevent concurrent drafts for the same bot
-  if (ongoingBotDrafts.has(draftKey)) {
-    return { success: false, error: 'Bot is already processing a marketplace action' };
-  }
-  
-  ongoingBotDrafts.add(draftKey);
-  
-  // --- Calculate player price based on ELO ---
-  const calculatePlayerPrice = (elo: number): number => {
-    if (elo >= 3000) return 50;      // World Champion level
-    if (elo >= 2800) return 45;      // Super GM level
-    if (elo >= 2600) return 40;      // GM level
-    if (elo >= 2400) return 35;      // IM level
-    if (elo >= 2200) return 30;      // FM level
-    if (elo >= 2000) return 25;      // Expert level
-    if (elo >= 1800) return 20;      // Class A
-    if (elo >= 1600) return 15;      // Class B
-    if (elo >= 1400) return 10;      // Class C
-    return 5;                         // Beginner
-  };
-  
+export async function autoMarketplaceForBot(botId: string, leagueId: string): Promise<{ success: boolean, error?: any, data?: any }> {
   try {
-    // --- Get league info for marketplace order and turn logic ---
-    const { data: league, error: leagueError } = await supabase
-      .from('leagues')
-      .select('id, marketplace_order, current_marketplace_turn, marketplace_completed, member_ids')
-      .eq('id', leagueId)
-      .single();
-    if (leagueError || !league) {
-      console.error('Failed to fetch league:', leagueError);
-      return { success: false, error: leagueError || 'No league found' };
-    }
-
-    // Check if it's the bot's turn
-    const currentMarketplaceUserId = league.marketplace_order[league.current_marketplace_turn];
-    if (currentMarketplaceUserId !== botId) {
-      return { success: false, error: 'Not bot\'s turn' };
-    }
-
-    // --- Get bot's coin balance ---
-    const { data: botBalance, error: balanceError } = await supabase
-      .from('league_coin_balances')
-      .select('coin_balance')
-      .eq('bot_id', botId)
-      .eq('league_id', leagueId)
-      .maybeSingle();
-
-    if (balanceError || !botBalance) {
-      console.error('Failed to fetch bot balance:', balanceError);
-      return { success: false, error: 'Failed to fetch bot balance' };
-    }
-
-    const botCoins = botBalance.coin_balance || 0;
-
-    // --- Get or create bot team ---
-    let { data: team } = await supabase
-      .from('teams')
-      .select('id, player_ids')
-      .eq('bot_id', botId)
-      .eq('league_id', leagueId)
-      .maybeSingle();
-
-    if (!team) {
-      // Try to create a team for the bot
-      const { data: newTeam, error: createError } = await supabase
-        .from('teams')
-        .insert({ 
-          bot_id: botId, 
-          league_id: leagueId, 
-          player_ids: [],
-          created_at: new Date().toISOString()
-        })
-        .select('id, player_ids')
-        .single();
-      
-      if (createError) {
-        console.error('Failed to create bot team:', createError);
-        // If we can't create a team, just skip the turn
-        const newMarketplaceTurn = league.current_marketplace_turn + 1;
-        const isMarketplaceComplete = newMarketplaceTurn >= league.marketplace_order.length;
-        const { error: leagueUpdateError } = await supabase
-          .from('leagues')
-          .update({
-            current_marketplace_turn: newMarketplaceTurn,
-            marketplace_completed: isMarketplaceComplete
-          })
-          .eq('id', leagueId);
-        if (leagueUpdateError) {
-          return { success: false, error: leagueUpdateError };
-        }
-        return { success: true };
-      }
-      team = newTeam;
-    }
-
-    // --- Enforce max team size ---
-    if ((team.player_ids?.length || 0) >= 10) {
-      // Bot team is full, skip turn
-      const newMarketplaceTurn = league.current_marketplace_turn + 1;
-      const isMarketplaceComplete = newMarketplaceTurn >= league.marketplace_order.length;
-      const { error: leagueUpdateError } = await supabase
-        .from('leagues')
-        .update({
-          current_marketplace_turn: newMarketplaceTurn,
-          marketplace_completed: isMarketplaceComplete
-        })
-        .eq('id', leagueId);
-      if (leagueUpdateError) {
-        return { success: false, error: leagueUpdateError };
-      }
-      return { success: true };
-    }
-
-    // --- Get best available player the bot can afford ---
-    const getBestAffordablePlayer = async (leagueId: string, maxPrice: number): Promise<{ success: boolean, player?: any, error?: any }> => {
-      try {
-        // Searching for players with max price ${maxPrice} coins
-        
-        // Get all drafted players in this league
-        const { data: draftedPlayers, error: draftedError } = await supabase
-          .from('teams')
-          .select('player_ids')
-          .eq('league_id', leagueId);
-        
-        if (draftedError) {
-          console.error('Error fetching drafted players:', draftedError);
-          return { success: false, error: draftedError };
-        }
-        
-        // Flatten all drafted player IDs
-        const draftedPlayerIds = draftedPlayers?.flatMap(team => team.player_ids || []) || [];
-        
-        // Get all players and filter by price and availability
-        const { data: allPlayers, error } = await supabase
-          .from('chess_players')
-          .select('*')
-          .order('elo', { ascending: false }); // Start with highest ELO (best players first)
-        
-        if (error) {
-          console.error('Error fetching all players:', error);
-          return { success: false, error };
-        }
-        
-        // Find the best available player the bot can afford
-        for (const player of allPlayers || []) {
-          if (draftedPlayerIds.includes(player.id)) {
-            continue; // Skip already drafted players
-          }
-          
-          const playerPrice = calculatePlayerPrice(player.elo || 0);
-          
-          
-          if (playerPrice <= maxPrice) {
-            
-            return { success: true, player };
-          }
-        }
-        
-        
-        return { success: false, error: 'No affordable players found' };
-      } catch (error) {
-        console.error('Error in getCheapestAvailablePlayer:', error);
-        return { success: false, error };
-      }
-    };
-
-    const { success, player } = await getBestAffordablePlayer(leagueId, botCoins);
-    if (!success || !player) {
-      
-      // Bot can't afford any players, check if marketplace should end
-      const remainingPlayerIds = league.marketplace_order.slice(league.current_marketplace_turn);
-      const { data: remainingBalances, error: balanceCheckError } = await supabase
-        .from('league_coin_balances')
-        .select('user_id, bot_id, coin_balance')
-        .or(`user_id.in.(${remainingPlayerIds.join(',')}),bot_id.in.(${remainingPlayerIds.join(',')})`)
-        .eq('league_id', leagueId);
-      
-      if (!balanceCheckError && remainingBalances) {
-        // Check if all remaining players have insufficient coins
-        const allPlayersHaveNoCoins = remainingPlayerIds.every((playerId: string) => {
-          const balance = remainingBalances.find(b => b.user_id === playerId || b.bot_id === playerId);
-          return !balance || balance.coin_balance < 5; // Minimum player price is 5 coins
-        });
-        
-        if (allPlayersHaveNoCoins) {
-          
-          // End the marketplace
-          const { error: leagueUpdateError } = await supabase
-            .from('leagues')
-            .update({
-              marketplace_completed: true
-            })
-            .eq('id', leagueId);
-          if (leagueUpdateError) {
-            return { success: false, error: leagueUpdateError };
-          }
-          return { success: true };
-        }
-      }
-      
-      // Just skip this bot's turn
-      const newMarketplaceTurn = league.current_marketplace_turn + 1;
-      const isMarketplaceComplete = newMarketplaceTurn >= league.marketplace_order.length;
-      const { error: leagueUpdateError } = await supabase
-        .from('leagues')
-        .update({
-          current_marketplace_turn: newMarketplaceTurn,
-          marketplace_completed: isMarketplaceComplete
-        })
-        .eq('id', leagueId);
-      if (leagueUpdateError) {
-        return { success: false, error: leagueUpdateError };
-      }
-      return { success: true };
-    }
-
-    // --- Check if bot has enough coins for this player ---
-    const playerPrice = calculatePlayerPrice(player.elo || 0);
+    console.log(`🤖 Calling Edge Function for bot ${botId} in league ${leagueId}`);
     
+    // Call the Edge Function instead of local processing
+    const { data, error } = await supabase.functions.invoke('process-bot-marketplace-turn', {
+      body: { botId, leagueId }
+    });
     
-    if (botCoins < playerPrice) {
-      
-      
-      // Check if all remaining players in the marketplace order have 0 coins
-      const remainingPlayerIds = league.marketplace_order.slice(league.current_marketplace_turn);
-      const { data: remainingBalances, error: balanceCheckError } = await supabase
-        .from('league_coin_balances')
-        .select('user_id, bot_id, coin_balance')
-        .or(`user_id.in.(${remainingPlayerIds.join(',')}),bot_id.in.(${remainingPlayerIds.join(',')})`)
-        .eq('league_id', leagueId);
-      
-      if (balanceCheckError) {
-        console.error('Failed to check remaining balances:', balanceCheckError);
-        // Fall back to just skipping turn
-        const newMarketplaceTurn = league.current_marketplace_turn + 1;
-        const isMarketplaceComplete = newMarketplaceTurn >= league.marketplace_order.length;
-        const { error: leagueUpdateError } = await supabase
-          .from('leagues')
-          .update({
-            current_marketplace_turn: newMarketplaceTurn,
-            marketplace_completed: isMarketplaceComplete
-          })
-          .eq('id', leagueId);
-        if (leagueUpdateError) {
-          return { success: false, error: leagueUpdateError };
-        }
-        return { success: true };
+    if (error) {
+      // 400 errors are often expected (bot not ready, wrong turn, etc.)
+      if (error.status === 400) {
+        console.log(`⏳ Bot ${botId} turn not ready yet (400 - expected behavior)`);
+        return { success: false, error: 'Bot turn not ready yet' };
       }
       
-      // Check if all remaining players have 0 or insufficient coins
-      const allPlayersHaveNoCoins = remainingPlayerIds.every((playerId: string) => {
-        const balance = remainingBalances?.find(b => b.user_id === playerId || b.bot_id === playerId);
-        const hasEnoughCoins = balance && balance.coin_balance >= 5; // Minimum player price is 5 coins
-        
-        return !hasEnoughCoins;
-      });
-      
-      if (allPlayersHaveNoCoins) {
-        
-        // End the marketplace
-        const { error: leagueUpdateError } = await supabase
-          .from('leagues')
-          .update({
-            marketplace_completed: true
-          })
-          .eq('id', leagueId);
-        if (leagueUpdateError) {
-          console.error('Failed to update marketplace_completed:', leagueUpdateError);
-          return { success: false, error: leagueUpdateError };
-        }
-        
-        return { success: true };
-      } else {
-        
-        // Just skip this bot's turn
-        const newMarketplaceTurn = league.current_marketplace_turn + 1;
-        const isMarketplaceComplete = newMarketplaceTurn >= league.marketplace_order.length;
-        const { error: leagueUpdateError } = await supabase
-          .from('leagues')
-          .update({
-            current_marketplace_turn: newMarketplaceTurn,
-            marketplace_completed: isMarketplaceComplete
-          })
-          .eq('id', leagueId);
-        if (leagueUpdateError) {
-          return { success: false, error: leagueUpdateError };
-        }
-        return { success: true };
-      }
+      console.error('❌ Edge Function error:', error);
+      return { success: false, error: error.message };
     }
-
-    // --- Add player to bot's team ---
-    const newPlayerIds = [...(team.player_ids || []), player.id];
-    const { error: teamUpdateError } = await supabase
-      .from('teams')
-      .update({ player_ids: newPlayerIds })
-      .eq('id', team.id);
-    if (teamUpdateError) {
-      return { success: false, error: teamUpdateError };
+    
+    if (data && data.success) {
+      console.log('✅ Bot marketplace turn completed via Edge Function:', data);
+      return { success: true, data };
+    } else {
+      console.log('⚠️ Edge Function returned non-success response:', data);
+      return { success: false, error: data?.error || 'Unknown response from Edge Function' };
     }
-
-    // --- Deduct coins from bot's balance ---
-    const { error: coinUpdateError } = await supabase
-      .from('league_coin_balances')
-      .update({ 
-        coin_balance: botCoins - playerPrice,
-        updated_at: new Date().toISOString()
-      })
-      .eq('bot_id', botId)
-      .eq('league_id', leagueId);
-    if (coinUpdateError) {
-      return { success: false, error: coinUpdateError };
-    }
-
-    // --- Advance marketplace turn and check for completion ---
-    const newMarketplaceTurn = league.current_marketplace_turn + 1;
-    const isMarketplaceComplete = newMarketplaceTurn >= league.marketplace_order.length;
-    const { error: leagueUpdateError } = await supabase
-      .from('leagues')
-      .update({
-        current_marketplace_turn: newMarketplaceTurn,
-        marketplace_completed: isMarketplaceComplete
-      })
-      .eq('id', leagueId);
-    if (leagueUpdateError) {
-      return { success: false, error: leagueUpdateError };
-    }
-
-    return { success: true };
   } catch (error) {
-    console.error('Error in autoMarketplaceForBot:', error);
-    return { success: false, error };
-  } finally {
-    ongoingBotDrafts.delete(draftKey);
+    console.error('❌ Error calling Edge Function:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }
 
