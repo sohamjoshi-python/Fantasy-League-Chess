@@ -47,8 +47,6 @@ export interface League {
   payout_processed?: boolean
   bot_id?: string
   max_members?: number
-  discord_server_id?: string
-  discord_invite_link?: string
   // New marketplace fields
   marketplace_started?: boolean
   marketplace_order?: string[]

@@ -1,4 +1,4 @@
-// Add Discord user ID column to users table
+// Add    user ID column to users table
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 

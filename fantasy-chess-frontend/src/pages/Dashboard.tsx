@@ -6,7 +6,6 @@ import { supabase } from '../lib/supabase'
 import { League, Team, Lineup, ChessPlayer } from '../types'
 import { Crown, Users, Trophy, Calendar, Plus, ExternalLink } from 'lucide-react'
 import { fetchLineupPlayerBreakdownByRounds } from '../lib/supabase'
-import DiscordServerJoin from '../components/DiscordServerJoin'
 
 function getCurrentWeekStart() {
   const now = new Date();
@@ -229,8 +228,6 @@ const Dashboard: React.FC = () => {
         <span className="block w-16 h-1 bg-royalBlue rounded-full mx-auto mt-3"></span>
       </h1>
       
-      {/* Discord Server Join Component */}
-      <DiscordServerJoin className="mb-8" />
       {activeLeagues.length === 0 ? (
         <div className="text-center py-12 lg:py-16">
           <div className="bg-white rounded-lg shadow-lg p-6 lg:p-8 max-w-md mx-auto border-2 border-royalBlue">
