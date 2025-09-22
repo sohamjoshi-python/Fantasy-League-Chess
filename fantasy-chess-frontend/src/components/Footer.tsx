@@ -7,7 +7,7 @@ const Footer: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 py-6">
         <div className="flex flex-col md:flex-row justify-between items-center">
           <div className="flex items-center space-x-6 mb-4 md:mb-0">
-            <span className="text-sm text-neutral-600">© 2024 Fantasy League Chess</span>
+            <span className="text-sm text-neutral-600">2024 Fantasy League Chess</span>
           </div>
           
           <div className="flex items-center space-x-6">

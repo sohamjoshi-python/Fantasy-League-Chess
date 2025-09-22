@@ -670,25 +670,46 @@ export async function autoSetLineupForBot(botId: string, leagueId: string, weekS
  * @param leagueId string
  * @returns {Promise<{ success: boolean, error?: any }>}
  */
-export async function autoMarketplaceForBot(botId: string, leagueId: string): Promise<{ success: boolean, error?: any, data?: any }> {
+export async function autoMarketplaceForBot(botId: string, leagueId: string): Promise<{ success: boolean, error?: any, data?: any, debug?: any }> {
   try {
     console.log(`🤖 Calling Edge Function for bot ${botId} in league ${leagueId}`);
     
     // Call the Edge Function instead of local processing
-    const { data, error } = await supabase.functions.invoke('process-bot-marketplace-turn', {
+    const response = await supabase.functions.invoke('process-bot-marketplace-turn', {
       body: { botId, leagueId }
     });
     
-    if (error) {
-      // 400 errors are often expected (bot not ready, wrong turn, etc.)
-      if (error.status === 400) {
+    console.log('Full response:', response);
+    
+    if (response.error) {
+      // Check if it's a 400 error by looking at the response
+      const is400Error = response.response && response.response.status === 400;
+      
+      if (is400Error) {
         console.log(`⏳ Bot ${botId} turn not ready yet (400 - expected behavior)`);
-        return { success: false, error: 'Bot turn not ready yet' };
+        console.log('Error response:', response.error);
+        console.log('Response data:', response.data);
+        
+        // Try to extract the response body for debug info
+        try {
+          if (response.response) {
+            const responseText = await response.response.text();
+            console.log('Response body:', responseText);
+            const responseData = JSON.parse(responseText);
+            console.log('Parsed response:', responseData);
+            return { success: false, error: 'Bot turn not ready yet', debug: responseData };
+          }
+        } catch (parseError) {
+          console.log('Could not parse response body:', parseError);
+        }
+        return { success: false, error: 'Bot turn not ready yet', debug: response };
       }
       
-      console.error('❌ Edge Function error:', error);
-      return { success: false, error: error.message };
+      console.error('❌ Edge Function error:', response.error);
+      return { success: false, error: response.error.message };
     }
+    
+    const { data } = response;
     
     if (data && data.success) {
       console.log('✅ Bot marketplace turn completed via Edge Function:', data);

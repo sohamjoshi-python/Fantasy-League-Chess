@@ -11,6 +11,8 @@ import Profile from './pages/Profile'
 import Help from './pages/Help'
 import Onboarding from './pages/Onboarding'
 import SignUp from './pages/SignUp'
+import Tutorial from './pages/Tutorial'
+import EmailConfirmationSuccess from './pages/EmailConfirmationSuccess'
 import Leaderboard from './pages/Leaderboard';
 import Tos from './pages/tos';
 import Privacy from './pages/privacy';
@@ -44,6 +46,8 @@ function App() {
             <Route path="/league/:leagueId" element={<ProtectedRoute><LeaguePage /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="/help" element={<Help />} />
+            <Route path="/tutorial" element={<ProtectedRoute><Tutorial /></ProtectedRoute>} />
+            <Route path="/email-confirmed" element={<EmailConfirmationSuccess />} />
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/signup" element={<SignUp />} />
             <Route path="/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />

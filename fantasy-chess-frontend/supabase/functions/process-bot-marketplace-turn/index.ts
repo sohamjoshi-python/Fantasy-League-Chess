@@ -54,10 +54,25 @@ serve(async (req) => {
 
     // Check if it's the bot's turn
     const currentMarketplaceUserId = league.marketplace_order[league.current_marketplace_turn]
+    console.log(`Marketplace order: ${JSON.stringify(league.marketplace_order)}`)
+    console.log(`Current turn index: ${league.current_marketplace_turn}`)
+    console.log(`Current marketplace user ID: ${currentMarketplaceUserId}`)
+    console.log(`Bot ID: ${botId}`)
+    console.log(`Is bot's turn: ${currentMarketplaceUserId === botId}`)
+    
     if (currentMarketplaceUserId !== botId) {
       console.log(`Not bot's turn. Current user: ${currentMarketplaceUserId}, Bot: ${botId}`)
       return new Response(
-        JSON.stringify({ success: false, error: "Not bot's turn" }),
+        JSON.stringify({ 
+          success: false, 
+          error: "Not bot's turn",
+          debug: {
+            marketplaceOrder: league.marketplace_order,
+            currentTurnIndex: league.current_marketplace_turn,
+            currentUserId: currentMarketplaceUserId,
+            botId: botId
+          }
+        }),
         { 
           status: 400, 
           headers: { ...corsHeaders, "Content-Type": "application/json" } 

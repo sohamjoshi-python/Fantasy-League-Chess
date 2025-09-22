@@ -12,10 +12,10 @@ const NewUserRedirect: React.FC = () => {
     const checkAndRedirect = async () => {
       if (user && !hasChecked) {
         try {
-          // Check if user has been redirected to help page before
-          const helpRedirected = localStorage.getItem(`help_redirected_${user.id}`)
+          // Check if user has been redirected to tutorial before
+          const tutorialRedirected = localStorage.getItem(`tutorial_redirected_${user.id}`)
           
-          if (!helpRedirected) {
+          if (!tutorialRedirected) {
             // Check if user has any leagues (indicating they're not completely new)
             const { data: userLeagues } = await supabase
               .from('leagues')
@@ -23,11 +23,11 @@ const NewUserRedirect: React.FC = () => {
               .contains('member_ids', [user.id])
               .limit(1)
 
-            // If user has no leagues, they're new and should see help
+            // If user has no leagues, they're new and should see tutorial
             if (!userLeagues || userLeagues.length === 0) {
-              // Mark as redirected and navigate to help
-              localStorage.setItem(`help_redirected_${user.id}`, 'true')
-              navigate('/help')
+              // Mark as redirected and navigate to tutorial
+              localStorage.setItem(`tutorial_redirected_${user.id}`, 'true')
+              navigate('/tutorial')
             }
           }
         } catch (error) {

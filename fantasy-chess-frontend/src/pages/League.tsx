@@ -675,13 +675,24 @@ const LeaguePage: React.FC = () => {
         const allDraftParticipants = [...league.member_ids, newBot.id]
         const updatedDraftOrder = generateSnakeDraftOrder(allDraftParticipants, 10)
         
+        // Also regenerate marketplace order if marketplace has started
+        let marketplaceOrderUpdate = {}
+        if (league.marketplace_started && league.marketplace_order) {
+          const updatedMarketplaceOrder = generateSnakeDraftOrder(allDraftParticipants, 10)
+          marketplaceOrderUpdate = {
+            marketplace_order: updatedMarketplaceOrder,
+            current_marketplace_turn: 0 // Reset marketplace turn
+          }
+        }
+        
         // Update the league with bot information
         await supabase
           .from('leagues')
           .update({ 
             member_ids: allDraftParticipants, // Add bot to member_ids
             draft_order: updatedDraftOrder,
-            current_draft_turn: 0
+            current_draft_turn: 0,
+            ...marketplaceOrderUpdate // Include marketplace order update if needed
           })
           .eq('id', league.id)
         
@@ -714,13 +725,18 @@ const LeaguePage: React.FC = () => {
         const updatedMemberIds = (league.member_ids || []).filter((id: string) => id !== bot.id);
         const updatedDraftOrder = generateSnakeDraftOrder(updatedMemberIds, 10)
         
+        // Also regenerate marketplace order if marketplace has started
+        const updatedMarketplaceOrder = league.marketplace_started ? generateSnakeDraftOrder(updatedMemberIds, 10) : league.marketplace_order;
+        
         // Update the league to remove bot information
         await supabase
           .from('leagues')
           .update({ 
             member_ids: updatedMemberIds, // Remove bot from member_ids
             draft_order: updatedDraftOrder,
-            current_draft_turn: 0
+            marketplace_order: updatedMarketplaceOrder, // Update marketplace order too
+            current_draft_turn: 0,
+            current_marketplace_turn: 0 // Reset marketplace turn too
           })
           .eq('id', league.id)
         
@@ -1062,17 +1078,15 @@ const LeaguePage: React.FC = () => {
         return;
       }
       
-      // Then remove from league_members
+      // Then remove from league_members (if table exists and user is not a bot)
       const { error: leagueMembersError } = await supabase
         .from('league_members')
         .delete()
         .eq('league_id', league.id)
         .eq('user_id', userIdToRemove);
       if (leagueMembersError) {
-        console.error('Error removing from league_members:', leagueMembersError);
-        setError('Failed to remove from league_members: ' + leagueMembersError.message);
-        setLoading(false);
-        return;
+        // Don't fail if league_members table doesn't exist or user is a bot
+        console.log('Note: Could not remove from league_members (table may not exist or user is bot):', leagueMembersError.message);
       }
       
       // Remove user's team

@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 interface AuthContextType {
   user: User | null
   loading: boolean
+  isNewUser: boolean
   signIn: (email: string, password: string) => Promise<void>
   signUp: (email: string, password: string, displayName: string) => Promise<void>
   signOut: () => Promise<void>
@@ -44,6 +45,7 @@ const sendWelcomeEmail = async (email: string) => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(false)
+  const [isNewUser, setIsNewUser] = useState(false)
 
   useEffect(() => {
     // Get initial session
@@ -69,6 +71,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) throw error
+    
+    // Check if this is a new user by looking at their created_at timestamp
+    const { data: { user: currentUser } } = await supabase.auth.getUser()
+    if (currentUser) {
+      const createdAt = new Date(currentUser.created_at)
+      const now = new Date()
+      const timeDiff = now.getTime() - createdAt.getTime()
+      const hoursDiff = timeDiff / (1000 * 3600)
+      
+      // If user was created within the last 24 hours, consider them new
+      setIsNewUser(hoursDiff < 24)
+    }
   }
 
   const signUp = async (email: string, password: string, displayName: string) => {

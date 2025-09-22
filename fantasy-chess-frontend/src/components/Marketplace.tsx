@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { CoinTransaction, calculatePlayerPrice, getPlayerTier } from '../types/coin-system';
 import { useAuth } from '../contexts/AuthContext';
+import { LoadingSpinner } from './ui/LoadingSpinner';
+import { StaggeredTransition } from './ui/SmoothTransition';
 import { ChessPlayer } from '../types';
 
 interface MarketplaceProps {
@@ -559,9 +561,7 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
 
   if (loading && !league) {
     return (
-      <div className="flex justify-center items-center p-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
+      <LoadingSpinner size="lg" text="Loading marketplace..." className="p-8" />
     );
   }
 
@@ -689,7 +689,8 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
             </div>
           ) : (
             <div className="grid gap-4">
-              {marketplaceListings.map((listing) => {
+              <StaggeredTransition staggerDelay={50}>
+                {marketplaceListings.map((listing) => {
                 const details = getPlayerDetails(listing.name);
                 const price = calculatePlayerPrice(listing.elo);
                 return (
@@ -733,6 +734,7 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
                   </div>
                 );
               })}
+              </StaggeredTransition>
             </div>
           )}
         </div>
@@ -746,7 +748,8 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
             </div>
           ) : (
             <div className="grid gap-4">
-              {ownedPlayers.map((player) => {
+              <StaggeredTransition staggerDelay={50}>
+                {ownedPlayers.map((player) => {
                 const details = getPlayerDetails(player.name);
                 const price = calculatePlayerPrice(player.elo);
                 return (
@@ -802,6 +805,7 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
                   </div>
                 );
               })}
+              </StaggeredTransition>
             </div>
           )}
         </div>
