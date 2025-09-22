@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight, ChevronLeft, X, Trophy, Users, Target, Coins, Store, CheckCircle } from 'lucide-react';
+import { ChevronRight, ChevronLeft, X, Trophy, CheckCircle } from 'lucide-react';
 
 interface TutorialStep {
   id: string;
@@ -33,12 +33,10 @@ interface SampleLeague {
 
 const Tutorial: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(0);
-  const [showTutorial, setShowTutorial] = useState(true);
+  const [showTutorial] = useState(true);
   const [sampleLeague, setSampleLeague] = useState<SampleLeague | null>(null);
   const [userTeam, setUserTeam] = useState<string[]>([]);
   const [userCoins, setUserCoins] = useState(100);
-  const [currentTurn, setCurrentTurn] = useState(0);
-  const [marketplaceCompleted, setMarketplaceCompleted] = useState(false);
   const navigate = useNavigate();
 
   // Sample league data with past chess data
