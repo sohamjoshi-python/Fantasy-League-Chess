@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Trophy, Users, Target, Coins, Store, CheckCircle, Crown, Calendar, Plus, Medal, ArrowDown, User, Lightbulb } from 'lucide-react';
+import { X, Trophy, Users, Target, Coins, Store, CheckCircle, Crown, Calendar, Plus, Medal, User, Lightbulb } from 'lucide-react';
 
 interface TutorialStep {
   id: string;
@@ -15,7 +15,7 @@ const ComprehensiveTutorial: React.FC = () => {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(0);
   const [currentPage, setCurrentPage] = useState('dashboard');
-  const [showTutorial, setShowTutorial] = useState(true);
+  const [showTutorial] = useState(true);
   const [sampleData, setSampleData] = useState<any>(null);
   
   // Sample data initialization
@@ -208,7 +208,7 @@ const ComprehensiveTutorial: React.FC = () => {
   };
 
 
-  const [leagueJoined, setLeagueJoined] = useState(false);
+  const [leagueJoined] = useState(false);
 
   if (!showTutorial || !sampleData) {
     return null;

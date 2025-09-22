@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight, ChevronLeft, X, Trophy, Users, Target, Coins, Store, CheckCircle, Crown, Calendar, Plus, ExternalLink, Search, Copy, Medal, Clock, ArrowRight, ArrowDown, ArrowUp, User, Lightbulb } from 'lucide-react';
+import { ChevronLeft, X, Trophy, Users, Target, Coins, Store, CheckCircle, Crown, Calendar, Plus, ExternalLink, Search, Copy, Medal, Clock, ArrowRight, ArrowDown, ArrowUp, User, Lightbulb } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 interface TutorialStep {
