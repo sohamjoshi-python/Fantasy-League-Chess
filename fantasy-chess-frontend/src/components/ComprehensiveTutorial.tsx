@@ -164,6 +164,38 @@ const ComprehensiveTutorial: React.FC = () => {
         page: 'leaderboard'
       },
     {
+      id: 'bots-explanation',
+      title: 'Understanding Bots',
+      description: 'Fantasy Chess includes AI bots that serve as competitors when leagues don\'t have enough human players. Bots draft players automatically, set lineups, and compete just like human players. They ensure leagues always have full competition!',
+      action: 'Click "Next" to learn about league mechanics',
+      target: 'next-step-button',
+      page: 'leaderboard'
+    },
+    {
+      id: 'league-mechanics',
+      title: 'How Leagues Work',
+      description: 'Leagues run for one month (from start date to end of month) with weekly rounds. Each Tuesday, titled tournaments provide real games for scoring. You win by having the highest total points at the end. Entry fees create prize pools for winners!',
+      action: 'Click "Next" to learn about game timing',
+      target: 'next-step-button',
+      page: 'leaderboard'
+    },
+    {
+      id: 'game-timing',
+      title: 'Game Schedule & Scoring',
+      description: 'Games are based on real titled tournaments every Tuesday. Your players earn points based on their actual tournament performance. Points are calculated using ACL (Average Centipawn Loss) - lower is better!',
+      action: 'Click "Next" to learn about marketplace trading',
+      target: 'next-step-button',
+      page: 'leaderboard'
+    },
+    {
+      id: 'normal-marketplace',
+      title: 'Normal Marketplace Trading',
+      description: 'After the draft, you get 50 coins weekly for trading. You can buy new players, sell current ones, or trade with other league members. Prices fluctuate based on player performance and demand!',
+      action: 'Click "Next" to complete the tutorial',
+      target: 'next-step-button',
+      page: 'leaderboard'
+    },
+    {
       id: 'profile',
       title: 'Tutorial Complete!',
       description: 'Congratulations! You\'ve completed the Fantasy Chess tutorial. Your profile shows your stats, achievements, and league history. You\'re now ready to join real leagues and compete against other players.',
@@ -825,34 +857,147 @@ const ComprehensiveTutorial: React.FC = () => {
         {/* Content */}
         <div className="bg-white rounded-lg shadow-xl overflow-hidden">
           <div className="p-6">
-            <h2 className="text-2xl font-bold mb-6 flex items-center">
-              <Crown className="w-6 h-6 mr-2 text-yellow-500" />
-              Most League Wins
-            </h2>
-            <div className="space-y-4">
-              {sampleData.leaderboard.map((entry: any, index: number) => (
-                <div key={entry.user_id} className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                  <div className="flex items-center justify-center w-8">
-                    {index === 0 ? <Crown className="w-5 h-5 text-yellow-500" /> :
-                     index === 1 ? <Medal className="w-5 h-5 text-gray-400" /> :
-                     index === 2 ? <Medal className="w-5 h-5 text-amber-600" /> :
-                     <span className="text-lg font-bold text-gray-600">{index + 1}</span>}
-                  </div>
-                  <div className="w-12 h-12 rounded-full border-2 border-yellow-500 bg-gray-200"></div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-lg">{entry.username}</h3>
-                    <p className="text-sm text-gray-600">{entry.total_leagues} leagues played</p>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-2xl font-bold text-yellow-500">{entry.wins} wins</div>
-                    <div className="text-sm text-gray-600">$0</div>
-                  </div>
+            {/* Tutorial Content Based on Current Step */}
+            {currentStepData.id === 'bots-explanation' && (
+              <div className="text-center">
+                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Users className="w-8 h-8 text-blue-600" />
                 </div>
-              ))}
-            </div>
+                <h2 className="text-2xl font-bold mb-4 text-gray-900">Understanding Bots</h2>
+                <div className="max-w-2xl mx-auto space-y-4 text-gray-700">
+                  <p>Fantasy Chess includes AI bots that serve as competitors when leagues don't have enough human players.</p>
+                  <div className="bg-blue-50 p-4 rounded-lg">
+                    <h3 className="font-semibold mb-2">How Bots Work:</h3>
+                    <ul className="text-left space-y-2">
+                      <li>• Bots draft players automatically using smart algorithms</li>
+                      <li>• They set competitive lineups each week</li>
+                      <li>• They compete just like human players</li>
+                      <li>• They ensure leagues always have full competition</li>
+                    </ul>
+                  </div>
+                  <p className="text-sm text-gray-600">Bots make leagues more exciting and ensure you always have opponents to compete against!</p>
+                </div>
+              </div>
+            )}
+
+            {currentStepData.id === 'league-mechanics' && (
+              <div className="text-center">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Trophy className="w-8 h-8 text-green-600" />
+                </div>
+                <h2 className="text-2xl font-bold mb-4 text-gray-900">How Leagues Work</h2>
+                <div className="max-w-2xl mx-auto space-y-4 text-gray-700">
+                  <p>Leagues are competitive tournaments that run for <strong>one month</strong> (from start date to end of month) with weekly scoring rounds.</p>
+                  <div className="bg-green-50 p-4 rounded-lg">
+                    <h3 className="font-semibold mb-2">League Structure:</h3>
+                    <ul className="text-left space-y-2">
+                      <li>• <strong>Duration:</strong> One month (start date to end of month)</li>
+                      <li>• <strong>Team Size:</strong> 10 players per team (drafted)</li>
+                      <li>• <strong>Lineup:</strong> 5 players compete each week</li>
+                      <li>• <strong>Scoring:</strong> Weekly rounds based on real tournaments</li>
+                      <li>• <strong>Winning:</strong> Highest total points at the end</li>
+                      <li>• <strong>Prizes:</strong> Entry fees create prize pools for winners</li>
+                    </ul>
+                  </div>
+                  <p className="text-sm text-gray-600">Each league has different entry fees, prize pools, and difficulty levels!</p>
+                </div>
+              </div>
+            )}
+
+            {currentStepData.id === 'game-timing' && (
+              <div className="text-center">
+                <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Calendar className="w-8 h-8 text-purple-600" />
+                </div>
+                <h2 className="text-2xl font-bold mb-4 text-gray-900">Game Schedule & Scoring</h2>
+                <div className="max-w-2xl mx-auto space-y-4 text-gray-700">
+                  <p>Games are based on real titled tournaments that happen every Tuesday.</p>
+                  <div className="bg-purple-50 p-4 rounded-lg">
+                    <h3 className="font-semibold mb-2">Scoring System:</h3>
+                    <ul className="text-left space-y-2">
+                      <li>• <strong>Tournaments:</strong> Real titled tournaments every Tuesday</li>
+                      <li>• <strong>Scoring:</strong> Based on actual tournament performance</li>
+                      <li>• <strong>ACL:</strong> Average Centipawn Loss (lower is better)</li>
+                      <li>• <strong>Points:</strong> Calculated from player's real game results</li>
+                    </ul>
+                  </div>
+                  <p className="text-sm text-gray-600">Your players earn points based on their actual chess performance in real tournaments!</p>
+                </div>
+              </div>
+            )}
+
+            {currentStepData.id === 'normal-marketplace' && (
+              <div className="text-center">
+                <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Store className="w-8 h-8 text-orange-600" />
+                </div>
+                <h2 className="text-2xl font-bold mb-4 text-gray-900">Normal Marketplace Trading</h2>
+                <div className="max-w-2xl mx-auto space-y-4 text-gray-700">
+                  <p>After the draft, you get 50 coins weekly for trading and managing your team.</p>
+                  <div className="bg-orange-50 p-4 rounded-lg">
+                    <h3 className="font-semibold mb-2">Trading Features:</h3>
+                    <ul className="text-left space-y-2">
+                      <li>• <strong>Buy:</strong> Purchase new players with your weekly coins</li>
+                      <li>• <strong>Sell:</strong> Trade current players for coins</li>
+                      <li>• <strong>Trade:</strong> Exchange players with other league members</li>
+                      <li>• <strong>Prices:</strong> Fluctuate based on performance and demand</li>
+                    </ul>
+                  </div>
+                  <p className="text-sm text-gray-600">Strategic trading can give you an edge over your competitors!</p>
+                </div>
+              </div>
+            )}
+
+            {/* Default Leaderboard Content */}
+            {!['bots-explanation', 'league-mechanics', 'game-timing', 'normal-marketplace'].includes(currentStepData.id) && (
+              <>
+                <h2 className="text-2xl font-bold mb-6 flex items-center">
+                  <Crown className="w-6 h-6 mr-2 text-yellow-500" />
+                  Most League Wins
+                </h2>
+                <div className="space-y-4">
+                  {sampleData.leaderboard.map((entry: any, index: number) => (
+                    <div key={entry.user_id} className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                      <div className="flex items-center justify-center w-8">
+                        {index === 0 ? <Crown className="w-5 h-5 text-yellow-500" /> :
+                         index === 1 ? <Medal className="w-5 h-5 text-gray-400" /> :
+                         index === 2 ? <Medal className="w-5 h-5 text-amber-600" /> :
+                         <span className="text-lg font-bold text-gray-600">{index + 1}</span>}
+                      </div>
+                      <div className="w-12 h-12 rounded-full border-2 border-yellow-500 bg-gray-200"></div>
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-lg">{entry.username}</h3>
+                        <p className="text-sm text-gray-600">{entry.total_leagues} leagues played</p>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-2xl font-bold text-yellow-500">{entry.wins} wins</div>
+                        <div className="text-sm text-gray-600">$0</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>
+
+      {/* Next Step Button for Tutorial Steps */}
+      {['bots-explanation', 'league-mechanics', 'game-timing', 'normal-marketplace'].includes(currentStepData.id) && (
+        <div className="bg-white border border-gray-300 rounded-lg shadow-lg p-6 text-center mb-4">
+          <div className="relative">
+            <button
+              id="next-step-button"
+              onClick={() => handleTargetClick('next-step-button')}
+              className={`bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition-all duration-300 shadow-lg ${
+                currentStepData.target === 'next-step-button' ? 'ring-2 ring-blue-300 animate-pulse' : ''
+              }`}
+            >
+              Next Step
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* View Profile Button */}
       <div className="bg-white border border-gray-300 rounded-lg shadow-lg p-6 text-center">
