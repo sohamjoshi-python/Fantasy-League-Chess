@@ -122,14 +122,14 @@ const Tutorial: React.FC = () => {
     {
       id: 'bot-turn',
       title: 'Bot\'s Turn',
-      description: 'The bot automatically drafts players. Watch as it selects Fabiano Caruana and Ding Liren. The marketplace continues until everyone runs out of coins.',
+      description: 'The bot automatically selects players. Watch as it selects Fabiano Caruana and Ding Liren. The turn-based marketplace continues until everyone runs out of coins.',
       action: 'Click "Next" to continue',
       target: 'next-button'
     },
     {
       id: 'marketplace-complete',
       title: 'Marketplace Complete!',
-      description: 'The draft is finished! Your team: Magnus Carlsen. Bot\'s team: Fabiano Caruana, Ding Liren. Now the real competition begins!',
+      description: 'The turn-based marketplace is finished! Your team: Magnus Carlsen. Bot\'s team: Fabiano Caruana, Ding Liren. Now the real competition begins!',
       action: 'Click "Next" to see scoring',
       target: 'next-button'
     },

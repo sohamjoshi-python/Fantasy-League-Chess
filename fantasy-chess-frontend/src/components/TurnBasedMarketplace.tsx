@@ -48,6 +48,8 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
   const [lastActionTime, setLastActionTime] = useState(0);
+  
+  
   // Add state for draft completed - check both league state and marketplace order
   const [marketplaceDraftCompleted, setMarketplaceDraftCompleted] = useState(
     league.draft_completed || 
@@ -103,6 +105,8 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
       loadTurnHistory();
     }
   }, [league?.id]);
+
+
 
   // Separate useEffect for turn-specific updates (only when turn changes)
   useEffect(() => {
@@ -1007,12 +1011,12 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
     return (
       <div className="bg-white rounded-lg shadow-lg p-6 border-2 border-green-200">
         <h3 className="text-xl font-bold mb-4 text-gray-900">
-          {league.marketplace_completed ? 'Marketplace Complete!' : 'Draft Complete!'}
+          {league.marketplace_completed ? 'Turn-Based Marketplace Complete!' : 'Turn-Based Marketplace Complete!'}
         </h3>
         <p className="text-gray-600 mb-4">
           {league.marketplace_completed 
-            ? 'The marketplace phase is complete! All players have used their coins to build their teams. You can now set your weekly lineups for the season.'
-            : 'All players have completed their turns. The draft is now finished, but the marketplace remains open for trading.'
+            ? 'The turn-based marketplace phase is complete! All players have used their coins to build their teams. You can now set your weekly lineups for the season.'
+            : 'All players have completed their turns. The turn-based marketplace is now finished, but the regular marketplace remains open for trading.'
           }
         </p>
         <div className="bg-green-50 p-4 rounded-lg">
@@ -1047,13 +1051,13 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
     <div className="bg-white rounded-lg shadow-lg p-6 border-2 border-blue-200">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-xl font-bold text-gray-900">Turn-Based Marketplace</h3>
-                        <div className="text-lg font-semibold text-amber-700 bg-amber-100 px-4 py-2 rounded">
+        <div className="text-lg font-semibold text-amber-700 bg-amber-100 px-4 py-2 rounded">
           Coins: {userCoinBalance !== null ? userCoinBalance : '...'} 🪙
         </div>
       </div>
-      
-      {/* Current Turn Status */}
-      <div className="bg-blue-50 p-4 rounded-lg mb-6">
+
+          {/* Current Turn Status */}
+          <div className="bg-blue-50 p-4 rounded-lg mb-6">
         <h4 className="font-semibold text-blue-900 mb-2">Current Turn</h4>
         {league.marketplace_completed ? (
           <div className="space-y-2">
@@ -1283,7 +1287,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
 
       {/* Hide buy/skip/end UI if user has no coins or draft is completed */}
       {(userCoinBalance === 0 || userCoinBalance === null || marketplaceDraftCompleted) && isUserTurn && (
-        <div className="text-gray-500 italic">You have no coins remaining or the draft is completed.</div>
+        <div className="text-gray-500 italic">You have no coins remaining or the turn-based marketplace is completed.</div>
       )}
 
       {/* Marketplace Completion Modal */}
@@ -1308,6 +1312,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
           </div>
         </div>
       )}
+
     </div>
   );
-} 
+}

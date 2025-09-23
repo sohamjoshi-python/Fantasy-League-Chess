@@ -155,4 +155,48 @@ export interface Notification {
   is_read: boolean
   created_at: string
   data?: any
+}
+
+// Trading System Types
+export interface Trade {
+  id: string
+  league_id: string
+  seller_id: string
+  buyer_id?: string
+  player_id: string
+  price: number
+  status: 'pending' | 'accepted' | 'cancelled' | 'expired'
+  created_at: string
+  expires_at: string
+  accepted_at?: string
+  cancelled_at?: string
+}
+
+export interface TradeNotification {
+  id: string
+  trade_id: string
+  user_id: string
+  seen: boolean
+  created_at: string
+}
+
+export interface TradeWithDetails {
+  trade_id: string
+  player_name: string
+  player_elo: number
+  price: number
+  status: string
+  created_at: string
+  expires_at: string
+  is_seller: boolean
+}
+
+export interface TradeNotificationWithDetails {
+  notification_id: string
+  trade_id: string
+  seller_name: string
+  player_name: string
+  player_elo: number
+  price: number
+  created_at: string
 } 

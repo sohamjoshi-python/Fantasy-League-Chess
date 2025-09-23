@@ -46,6 +46,19 @@ const Dashboard: React.FC = () => {
     }
   }, [user])
 
+  // Add a refresh mechanism for intermittent loading issues
+  useEffect(() => {
+    if (user && !loading && activeLeagues.length === 0 && futureLeagues.length === 0) {
+      // If user exists but no leagues are loaded, try refreshing after a delay
+      const refreshTimer = setTimeout(() => {
+        console.log('No leagues found, attempting refresh...');
+        loadDashboardData();
+      }, 2000);
+      
+      return () => clearTimeout(refreshTimer);
+    }
+  }, [user, loading, activeLeagues.length, futureLeagues.length])
+
   useEffect(() => {
     async function fetchAvailableWeeks() {
       if (!currentLeague || !user) return;
@@ -101,21 +114,50 @@ const Dashboard: React.FC = () => {
     try {
       setLoading(true)
 
-      // Get all leagues where user is a member
-      const { data: allLeagues, error: allLeaguesError } = await supabase
-        .from('leagues')
-        .select('*')
-        .order('start_date', { ascending: true })
+      // Get all leagues where user is a member with retry logic
+      let allLeagues = null;
+      let retryCount = 0;
+      const maxRetries = 3;
 
-      if (allLeaguesError) {
-        console.error('Dashboard - all leagues query error:', allLeaguesError)
+      while (retryCount < maxRetries) {
+        const { data, error } = await supabase
+          .from('leagues')
+          .select('*')
+          .order('start_date', { ascending: true })
+
+        if (error) {
+          console.error(`Dashboard - leagues query error (attempt ${retryCount + 1}):`, error)
+          retryCount++;
+          if (retryCount < maxRetries) {
+            await new Promise(resolve => setTimeout(resolve, 1000 * retryCount)); // Exponential backoff
+            continue;
+          }
+          throw error;
+        }
+
+        allLeagues = data;
+        break;
       }
 
-      // Filter leagues where user is a member
-      const leagues = allLeagues?.filter(league => {
-        const isMember = league.member_ids && league.member_ids.includes(user.id)
-        return isMember
-      }) || []
+      if (!allLeagues) {
+        console.error('Failed to load leagues after all retries');
+        return;
+      }
+
+      // Filter leagues where user is a member with more robust checking
+      const leagues = allLeagues.filter(league => {
+        if (!league.member_ids || !Array.isArray(league.member_ids)) {
+          console.warn('League has invalid member_ids:', league.id, league.member_ids);
+          return false;
+        }
+        const isMember = league.member_ids.includes(user.id);
+        if (!isMember) {
+          console.log('User not found in league members:', user.id, league.member_ids);
+        }
+        return isMember;
+      });
+
+      console.log('User leagues found:', leagues.length, 'out of', allLeagues.length);
 
       // Split into active, future, and past leagues
       const todayStr = new Date().toISOString().split('T')[0];
@@ -128,42 +170,76 @@ const Dashboard: React.FC = () => {
       // Set currentLeague to the first active league (if any)
       setCurrentLeague(active.length > 0 ? active[0] : null);
 
-      // Get user's team for the current league (if any)
+      // Get user's team for the current league (if any) with better error handling
       if (active.length > 0) {
         const league = active[0];
-        const { data: teams } = await supabase
-          .from('teams')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('league_id', league.id)
-          .single()
-        if (teams) {
-          setUserTeam(teams)
-          const { data: players } = await supabase
-            .from('chess_players')
+        try {
+          const { data: teams, error: teamError } = await supabase
+            .from('teams')
             .select('*')
-            .in('name', teams.player_ids)
-          if (players) {
-            // setTeamPlayers(players) // This line was removed as per the edit hint
+            .eq('user_id', user.id)
+            .eq('league_id', league.id)
+            .maybeSingle(); // Use maybeSingle to handle no results gracefully
+
+          if (teamError) {
+            console.error('Error loading team:', teamError);
+          } else if (teams) {
+            setUserTeam(teams);
+            // Load team players if team exists
+            if (teams.player_ids && teams.player_ids.length > 0) {
+              try {
+                const { error: playersError } = await supabase
+                  .from('chess_players')
+                  .select('*')
+                  .in('id', teams.player_ids);
+                
+                if (playersError) {
+                  console.error('Error loading team players:', playersError);
+                }
+                // Note: setTeamPlayers was removed as per previous edit
+              } catch (error) {
+                console.error('Exception loading team players:', error);
+              }
+            }
           }
-          const currentWeek = getCurrentWeekStart()
-          const { data: lineups } = await supabase
+        } catch (error) {
+          console.error('Exception loading team:', error);
+        }
+
+        // Load current week lineup
+        try {
+          const currentWeek = getCurrentWeekStart();
+          const { data: lineups, error: lineupError } = await supabase
             .from('lineups')
             .select('*')
             .eq('user_id', user.id)
             .eq('league_id', league.id)
             .eq('week_start_date', currentWeek)
-            .single()
-          if (lineups) {
-            setCurrentLineup(lineups)
-            const { data: lineupPlayerData } = await supabase
-              .from('chess_players')
-              .select('*')
-              .in('name', lineups.player_ids)
-            if (lineupPlayerData) {
-              setLineupPlayers(lineupPlayerData)
+            .maybeSingle();
+
+          if (lineupError) {
+            console.error('Error loading lineup:', lineupError);
+          } else if (lineups) {
+            setCurrentLineup(lineups);
+            if (lineups.player_ids && lineups.player_ids.length > 0) {
+              try {
+                const { data: lineupPlayerData, error: lineupPlayersError } = await supabase
+                  .from('chess_players')
+                  .select('*')
+                  .in('id', lineups.player_ids);
+                
+                if (lineupPlayersError) {
+                  console.error('Error loading lineup players:', lineupPlayersError);
+                } else if (lineupPlayerData) {
+                  setLineupPlayers(lineupPlayerData);
+                }
+              } catch (error) {
+                console.error('Exception loading lineup players:', error);
+              }
             }
           }
+        } catch (error) {
+          console.error('Exception loading lineup:', error);
         }
       }
 

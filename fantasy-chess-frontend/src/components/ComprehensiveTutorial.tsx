@@ -102,15 +102,15 @@ const ComprehensiveTutorial: React.FC = () => {
     {
       id: 'league-overview',
       title: 'League Overview',
-      description: 'Welcome to your league! Here you can see all participants, league settings, and current standings. The marketplace (draft) is ready to begin!',
-      action: 'Click "Start Marketplace" to begin drafting players',
+      description: 'Welcome to your league! Here you can see all participants, league settings, and current standings. The turn-based marketplace is ready to begin!',
+      action: 'Click "Start Marketplace" to begin selecting players',
       target: 'start-marketplace-button',
       page: 'league'
     },
     {
       id: 'marketplace-start',
-      title: 'Turn-Based Marketplace (Draft) Begins!',
-      description: 'This is Phase 1 - the Draft! You start with 50 coins and take turns selecting players. High-rated players like Magnus Carlsen cost 50 coins. After the draft, you\'ll get 50 coins per week for trading.',
+      title: 'Turn-Based Marketplace Begins!',
+      description: 'This is Phase 1 - the Turn-Based Marketplace! You start with 50 coins and take turns selecting players. High-rated players like Magnus Carlsen cost 50 coins. After the turn-based marketplace, you\'ll get 50 coins per week for trading.',
       action: 'Click "Buy Player" on Magnus Carlsen',
       target: 'buy-magnus',
       page: 'league'
@@ -126,7 +126,7 @@ const ComprehensiveTutorial: React.FC = () => {
     {
       id: 'marketplace-complete',
       title: 'Marketplace Complete!',
-      description: 'The draft is finished! Your team: Magnus Carlsen, Fabiano Caruana, Ding Liren. Now you need to set your weekly lineup to start competing.',
+      description: 'The turn-based marketplace is finished! Your team: Magnus Carlsen, Fabiano Caruana, Ding Liren. Now you need to set your weekly lineup to start competing.',
       action: 'Click "Set Lineup" to choose your starting players',
       target: 'set-lineup-button',
       page: 'league'
@@ -458,8 +458,8 @@ const ComprehensiveTutorial: React.FC = () => {
             <div className="bg-yellow-50 p-4 rounded-lg mb-6 border border-yellow-200">
               <h4 className="font-semibold text-yellow-900 mb-2">📚 How the Marketplace Works</h4>
               <div className="text-sm text-yellow-800 space-y-2">
-                <p><strong>Phase 1 - Draft:</strong> You start with 50 coins and take turns drafting players. High-rated players like Magnus Carlsen cost 50 coins.</p>
-                <p><strong>Phase 2 - Trading:</strong> After the draft, you get 50 coins per week to buy/sell/trade players in the regular marketplace.</p>
+                <p><strong>Phase 1 - Turn-Based Marketplace:</strong> You start with 50 coins and take turns selecting players. High-rated players like Magnus Carlsen cost 50 coins.</p>
+                <p><strong>Phase 2 - Trading:</strong> After the turn-based marketplace, you get 50 coins per week to buy/sell/trade players in the regular marketplace.</p>
               </div>
             </div>
 
@@ -619,8 +619,8 @@ const ComprehensiveTutorial: React.FC = () => {
         {/* Start Marketplace Button */}
         {currentStepData.target === 'start-marketplace-button' && (
           <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6 border-2 border-gold text-center">
-            <h3 className="text-lg lg:text-xl font-bold mb-4 text-neutral-900">Ready to Draft?</h3>
-            <p className="text-neutral-600 mb-4">The marketplace (draft) is ready to begin!</p>
+            <h3 className="text-lg lg:text-xl font-bold mb-4 text-neutral-900">Ready to Start?</h3>
+            <p className="text-neutral-600 mb-4">The turn-based marketplace is ready to begin!</p>
             <div className="relative">
               <button
                 id="start-marketplace-button"

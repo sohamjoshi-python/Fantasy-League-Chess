@@ -790,13 +790,160 @@ export async function getUnreadNotificationCount(): Promise<{ success: boolean, 
   return { success: true, count: count || 0 };
 } 
 
-// Temporary debug: expose a function to get the current Supabase session JWT
-if (typeof window !== 'undefined') {
-  // @ts-ignore
-  window.getSupabaseSession = async () => {
-    const { data } = await supabase.auth.getSession();
-    return data.session;
-  };
+// Trading System Functions
+
+export async function createTrade(
+  leagueId: string,
+  sellerId: string,
+  playerId: string,
+  price: number
+): Promise<{ success: boolean, tradeId?: string, error?: any }> {
+  try {
+    const { data, error } = await supabase.rpc('create_trade', {
+      p_league_id: leagueId,
+      p_seller_id: sellerId,
+      p_player_id: playerId,
+      p_price: price
+    });
+
+    if (error) throw error;
+
+    return { success: true, tradeId: data };
+  } catch (error) {
+    console.error('Error creating trade:', error);
+    return { success: false, error };
+  }
+}
+
+export async function acceptTrade(
+  tradeId: string,
+  buyerId: string
+): Promise<{ success: boolean, error?: any }> {
+  try {
+    const { data, error } = await supabase.rpc('accept_trade', {
+      p_trade_id: tradeId,
+      p_buyer_id: buyerId
+    });
+
+    if (error) throw error;
+
+    return { success: data };
+  } catch (error) {
+    console.error('Error accepting trade:', error);
+    return { success: false, error };
+  }
+}
+
+export async function cancelTrade(
+  tradeId: string,
+  userId: string
+): Promise<{ success: boolean, error?: any }> {
+  try {
+    const { data, error } = await supabase.rpc('cancel_trade', {
+      p_trade_id: tradeId,
+      p_user_id: userId
+    });
+
+    if (error) throw error;
+
+    return { success: data };
+  } catch (error) {
+    console.error('Error cancelling trade:', error);
+    return { success: false, error };
+  }
+}
+
+export async function getUserTrades(
+  userId: string,
+  leagueId: string
+): Promise<{ success: boolean, trades?: any[], error?: any }> {
+  try {
+    const { data, error } = await supabase.rpc('get_user_trades', {
+      p_user_id: userId,
+      p_league_id: leagueId
+    });
+
+    if (error) throw error;
+
+    return { success: true, trades: data };
+  } catch (error) {
+    console.error('Error getting user trades:', error);
+    return { success: false, error };
+  }
+}
+
+export async function getTradeNotifications(
+  userId: string,
+  leagueId: string
+): Promise<{ success: boolean, notifications?: any[], error?: any }> {
+  try {
+    const { data, error } = await supabase.rpc('get_trade_notifications', {
+      p_user_id: userId,
+      p_league_id: leagueId
+    });
+
+    if (error) throw error;
+
+    return { success: true, notifications: data };
+  } catch (error) {
+    console.error('Error getting trade notifications:', error);
+    return { success: false, error };
+  }
+}
+
+export async function markNotificationSeen(
+  notificationId: string
+): Promise<{ success: boolean, error?: any }> {
+  try {
+    const { data, error } = await supabase.rpc('mark_notification_seen', {
+      p_notification_id: notificationId
+    });
+
+    if (error) throw error;
+
+    return { success: data };
+  } catch (error) {
+    console.error('Error marking notification as seen:', error);
+    return { success: false, error };
+  }
+}
+
+export async function getAllTrades(
+  leagueId: string
+): Promise<{ success: boolean, trades?: any[], error?: any }> {
+  try {
+    const { data, error } = await supabase
+      .from('trades')
+      .select(`
+        *,
+        chess_players!inner(name, elo)
+      `)
+      .eq('league_id', leagueId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    // Manually fetch seller and buyer usernames
+    const tradesWithUsers = await Promise.all(
+      data.map(async (trade) => {
+        const [sellerResult, buyerResult] = await Promise.all([
+          trade.seller_id ? supabase.from('users').select('username').eq('id', trade.seller_id).single() : Promise.resolve({ data: null }),
+          trade.buyer_id ? supabase.from('users').select('username').eq('id', trade.buyer_id).single() : Promise.resolve({ data: null })
+        ]);
+
+        return {
+          ...trade,
+          seller: sellerResult.data ? { username: sellerResult.data.username } : null,
+          buyer: buyerResult.data ? { username: buyerResult.data.username } : null
+        };
+      })
+    );
+
+    return { success: true, trades: tradesWithUsers };
+  } catch (error) {
+    console.error('Error getting all trades:', error);
+    return { success: false, error };
+  }
 } 
 
 // Temporary debug: expose a function to get all leagues from the schema

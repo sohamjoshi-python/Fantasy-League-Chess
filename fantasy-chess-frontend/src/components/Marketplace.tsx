@@ -5,6 +5,11 @@ import { useAuth } from '../contexts/AuthContext';
 import { LoadingSpinner } from './ui/LoadingSpinner';
 import { StaggeredTransition } from './ui/SmoothTransition';
 import { ChessPlayer } from '../types';
+import TradeModal from './TradeModal';
+import TradeNotificationPopup from './TradeNotificationPopup';
+import TradingTab from './TradingTab';
+import { getTradeNotifications, markNotificationSeen } from '../lib/supabase';
+import { TradeNotificationWithDetails } from '../types';
 
 interface MarketplaceProps {
   leagueId: string;
@@ -21,7 +26,7 @@ interface League {
 export default function Marketplace({ leagueId }: MarketplaceProps) {
   const { user } = useAuth();
   const [league, setLeague] = useState<League | null>(null);
-  const [activeTab, setActiveTab] = useState<'marketplace' | 'owned' | 'transactions'>('marketplace');
+  const [activeTab, setActiveTab] = useState<'marketplace' | 'owned' | 'transactions' | 'trading'>('marketplace');
   const [allPlayers, setAllPlayers] = useState<ChessPlayer[]>([]);
   const [marketplaceListings, setMarketplaceListings] = useState<ChessPlayer[]>([]);
   const [ownedPlayers, setOwnedPlayers] = useState<ChessPlayer[]>([]);
@@ -34,6 +39,14 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
   const [sellingToMarketplace, setSellingToMarketplace] = useState<{ player: ChessPlayer; price: number } | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [showAllPlayers, setShowAllPlayers] = useState(false);
+  
+  // Trading state
+  const [showTradeModal, setShowTradeModal] = useState(false);
+  const [tradePlayer, setTradePlayer] = useState<ChessPlayer | null>(null);
+  const [tradeNotifications, setTradeNotifications] = useState<TradeNotificationWithDetails[]>([]);
+  const [showNotificationPopup, setShowNotificationPopup] = useState(false);
+  const [currentNotification, setCurrentNotification] = useState<TradeNotificationWithDetails | null>(null);
+  const [playerTradeStatus, setPlayerTradeStatus] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (user && leagueId) {
@@ -90,6 +103,32 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
   useEffect(() => {
     filterMarketplaceListings();
   }, [searchTerm, allPlayers, showAllPlayers, leagueId]);
+
+  const loadPlayerTradeStatus = async () => {
+    try {
+      const { data: trades, error } = await supabase
+        .from('trades')
+        .select('player_id')
+        .eq('league_id', leagueId)
+        .eq('seller_id', user?.id)
+        .eq('status', 'pending');
+      
+      if (error) {
+        console.error('Failed to load trade status:', error);
+        return;
+      }
+      
+      // Create a map of player IDs that are currently listed for trade
+      const tradeStatusMap: Record<string, boolean> = {};
+      trades?.forEach(trade => {
+        tradeStatusMap[trade.player_id] = true;
+      });
+      
+      setPlayerTradeStatus(tradeStatusMap);
+    } catch (err) {
+      console.error('Error loading trade status:', err);
+    }
+  };
 
   const loadData = async () => {
     try {
@@ -164,6 +203,7 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
       
       await loadTransactions();
       await loadUserCoinBalance();
+      await loadPlayerTradeStatus();
     } catch (err) {
       setError('Failed to load marketplace data');
       console.error(err);
@@ -538,6 +578,81 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
     }
   };
 
+  // Trading functions
+  const loadTradeNotifications = async () => {
+    if (!user?.id || !leagueId) return;
+    
+    try {
+      const result = await getTradeNotifications(user.id, leagueId);
+      if (result.success && result.notifications) {
+        setTradeNotifications(result.notifications);
+        
+        // Show popup for unseen notifications
+        const unseenNotifications = result.notifications.filter((n: any) => !n.seen);
+        if (unseenNotifications.length > 0 && !showNotificationPopup) {
+          setCurrentNotification(unseenNotifications[0]);
+          setShowNotificationPopup(true);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading trade notifications:', error);
+    }
+  };
+
+  const handleCreateTrade = (player: ChessPlayer) => {
+    setTradePlayer(player);
+    setShowTradeModal(true);
+  };
+
+  const handleTradeSuccess = () => {
+    setShowTradeModal(false);
+    setTradePlayer(null);
+    // Refresh all data comprehensively
+    loadData(); // Refresh the data
+    loadTradeNotifications(); // Refresh notifications
+    loadPlayerTradeStatus(); // Refresh trade status
+    // Force a small delay to ensure database updates are complete
+    setTimeout(() => {
+      loadData();
+      loadPlayerTradeStatus();
+    }, 500);
+  };
+
+  const handleNotificationAccept = async (_notification: TradeNotificationWithDetails) => {
+    try {
+      // This would be handled by the TradingTab component
+      await loadTradeNotifications();
+      await loadData();
+    } catch (error) {
+      console.error('Error accepting trade:', error);
+    }
+  };
+
+  const handleNotificationClose = () => {
+    setShowNotificationPopup(false);
+    setCurrentNotification(null);
+  };
+
+  const handleMarkNotificationSeen = async (notificationId: string) => {
+    try {
+      await markNotificationSeen(notificationId);
+      await loadTradeNotifications();
+    } catch (error) {
+      console.error('Error marking notification as seen:', error);
+    }
+  };
+
+  // Load trade notifications on component mount
+  useEffect(() => {
+    if (user?.id && leagueId) {
+      loadTradeNotifications();
+      
+      // Poll for new notifications every 30 seconds
+      const interval = setInterval(loadTradeNotifications, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [user?.id, leagueId]);
+
   const getTransactionColor = (amount: number) => {
     return amount > 0 ? 'text-green-600' : 'text-red-600';
   };
@@ -573,7 +688,7 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
           <div className="text-6xl mb-4">⏳</div>
           <h2 className="text-2xl font-bold text-gray-700 mb-2">Marketplace Not Available</h2>
           <p className="text-gray-600 mb-4">
-            The marketplace will be available once the draft has started.
+            The marketplace will be available once the turn-based marketplace has started.
           </p>
         </div>
       </div>
@@ -632,6 +747,21 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
           }`}
         >
           My Players ({ownedPlayers.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('trading')}
+          className={`flex-1 py-2 px-4 rounded-md font-medium transition-colors ${
+            activeTab === 'trading'
+              ? 'bg-white text-blue-600 shadow-sm'
+              : 'text-gray-600 hover:text-gray-800'
+          }`}
+        >
+          Trading
+          {tradeNotifications.length > 0 && (
+            <span className="ml-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
+              {tradeNotifications.length}
+            </span>
+          )}
         </button>
         <button
           onClick={() => setActiveTab('transactions')}
@@ -763,6 +893,11 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
                               {details.country}
                             </span>
                           )}
+                          {playerTradeStatus[player.id] && (
+                            <span className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded font-medium">
+                              🔄 Listed for Trade
+                            </span>
+                          )}
                         </div>
                         <div className="space-y-1 text-sm text-gray-600">
                           <p>ELO: {player.elo} • {getPlayerTier(player.elo)}</p>
@@ -784,6 +919,13 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
                         </div>
                       </div>
                       <div className="flex flex-col space-y-2 ml-4">
+                        {/* Trade Button */}
+                        <button
+                          onClick={() => handleCreateTrade(player)}
+                          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                        >
+                          🔄 Trade Player
+                        </button>
                         {/* Sell to Marketplace (80%) */}
                         <button
                           onClick={async () => {
@@ -809,6 +951,15 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
             </div>
           )}
         </div>
+      )}
+
+      {/* Trading Tab */}
+      {activeTab === 'trading' && (
+        <TradingTab
+          leagueId={leagueId}
+          userId={user?.id || ''}
+          onTradeUpdate={handleTradeSuccess}
+        />
       )}
 
       {activeTab === 'transactions' && (
@@ -974,6 +1125,30 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Trade Modal */}
+      {showTradeModal && tradePlayer && (
+        <TradeModal
+          player={tradePlayer}
+          onClose={() => {
+            setShowTradeModal(false);
+            setTradePlayer(null);
+          }}
+          onSuccess={handleTradeSuccess}
+          leagueId={leagueId}
+          userId={user?.id || ''}
+        />
+      )}
+
+      {/* Trade Notification Popup */}
+      {showNotificationPopup && currentNotification && (
+        <TradeNotificationPopup
+          notification={currentNotification}
+          onAccept={handleNotificationAccept}
+          onClose={handleNotificationClose}
+          onMarkSeen={handleMarkNotificationSeen}
+        />
       )}
     </div>
   );
