@@ -46,6 +46,9 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
   const [showCompletionPopup, setShowCompletionPopup] = useState(false);
   const [completionMessage, setCompletionMessage] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [showEndMarketplaceButton, setShowEndMarketplaceButton] = useState(false);
+  const [isCurrentTurnBot, setIsCurrentTurnBot] = useState(false);
+  const [currentPlayerName, setCurrentPlayerName] = useState<string>('');
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
   const [lastActionTime, setLastActionTime] = useState(0);
   
@@ -221,6 +224,62 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
     );
   }, [league.marketplace_completed, league.draft_completed, league.marketplace_order]);
 
+  // Check if only one human player remains
+  useEffect(() => {
+    const checkIfOnlyHumanRemains = async () => {
+      if (!league?.member_ids || league.marketplace_completed) {
+        setShowEndMarketplaceButton(false);
+        return;
+      }
+
+      const memberIds = league.member_ids || [];
+      if (memberIds.length <= 1) {
+        const remainingMember = memberIds[0];
+        if (remainingMember && remainingMember === user?.id) {
+          // Check if this is a human user (not a bot)
+          const { data: botData } = await supabase
+            .from('bots')
+            .select('id')
+            .eq('id', remainingMember)
+            .maybeSingle();
+          
+          if (!botData) {
+            // Only human player remains
+            setShowEndMarketplaceButton(true);
+          } else {
+            setShowEndMarketplaceButton(false);
+          }
+        } else {
+          setShowEndMarketplaceButton(false);
+        }
+      } else {
+        setShowEndMarketplaceButton(false);
+      }
+    };
+
+    checkIfOnlyHumanRemains();
+  }, [league?.member_ids, league?.marketplace_completed, user?.id]);
+
+  // Check if current turn is a bot's turn
+  useEffect(() => {
+    const checkIfCurrentTurnIsBot = async () => {
+      if (!currentTurn?.current_user_id) {
+        setIsCurrentTurnBot(false);
+        return;
+      }
+
+      const { data: botData } = await supabase
+        .from('bots')
+        .select('id')
+        .eq('id', currentTurn.current_user_id)
+        .maybeSingle();
+
+      setIsCurrentTurnBot(!!botData);
+    };
+
+    checkIfCurrentTurnIsBot();
+  }, [currentTurn?.current_user_id]);
+
   // Auto-fix marketplace order when it's wrong
   useEffect(() => {
     if (league?.id && league.marketplace_started && league.marketplace_order && league.member_ids && !syncInProgressRef.current) {
@@ -351,6 +410,8 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
 
   const loadCurrentTurn = async () => {
     try {
+      console.log('🔄 Loading current turn...');
+      
       // Fetch the latest league data to get current turn info
       const { data: latestLeague, error: leagueError } = await supabase
         .from('leagues')
@@ -363,8 +424,15 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
         return;
       }
 
+      console.log('📊 Latest league data:', {
+        marketplace_completed: latestLeague.marketplace_completed,
+        current_marketplace_turn: latestLeague.current_marketplace_turn,
+        marketplace_order_length: latestLeague.marketplace_order?.length
+      });
+
       // Don't process if marketplace is already completed
       if (latestLeague.marketplace_completed) {
+        console.log('✅ Marketplace completed, not loading turn');
         return;
       }
       
@@ -372,6 +440,12 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
       if (latestLeague.marketplace_order && latestLeague.marketplace_order.length > 0) {
         const currentTurnIndex = latestLeague.current_marketplace_turn || 0;
         const currentUserId = latestLeague.marketplace_order[currentTurnIndex];
+        
+        console.log('🎯 Setting current turn:', {
+          currentUserId,
+          turnIndex: currentTurnIndex,
+          totalTurns: latestLeague.marketplace_order.length
+        });
         
         if (currentUserId) {
           setCurrentTurn({
@@ -381,10 +455,38 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
             is_completed: false,
             user_team_size: 0 // Will be calculated separately
           });
+          
+          // Fetch the current player's name
+          try {
+            const { data: botData } = await supabase
+              .from('bots')
+              .select('name')
+              .eq('id', currentUserId)
+              .maybeSingle();
+            
+            if (botData) {
+              setCurrentPlayerName(botData.name);
+            } else {
+              // It's a human user, get their username
+              const { data: userData } = await supabase
+                .from('users')
+                .select('username')
+                .eq('id', currentUserId)
+                .maybeSingle();
+              
+              setCurrentPlayerName(userData?.username || 'Unknown Player');
+            }
+          } catch (error) {
+            console.error('Error fetching current player name:', error);
+            setCurrentPlayerName('Unknown Player');
+          }
         } else {
+          console.log('❌ No current user ID found, setting turn to null');
           setCurrentTurn(null);
+          setCurrentPlayerName('');
         }
       } else {
+        console.log('❌ No marketplace order found, setting turn to null');
         setCurrentTurn(null);
       }
     } catch (err) {
@@ -527,6 +629,10 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
         // Remove user from draft entirely
         console.log('💰 User has 0 coins, removing from draft...');
         await removeUserFromDraft(user.id);
+        
+        // Update turn state after user removal
+        await loadCurrentTurn();
+        onUpdate();
         return;
       }
       
@@ -545,13 +651,57 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
 
       console.log('✅ Turn advanced to next player');
 
+      // Update currentTurn state immediately to reflect the change
+      const newTurnIndex = (league.current_marketplace_turn || 0) + 1;
+      const nextUserId = league.marketplace_order?.[newTurnIndex];
+      
+      if (nextUserId) {
+        setCurrentTurn({
+          current_user_id: nextUserId,
+          turn_number: newTurnIndex,
+          total_turns: league.marketplace_order?.length || 0,
+          is_completed: false,
+          user_team_size: 0
+        });
+        
+        // Fetch the next player's name immediately
+        try {
+          const { data: botData } = await supabase
+            .from('bots')
+            .select('name')
+            .eq('id', nextUserId)
+            .maybeSingle();
+          
+          if (botData) {
+            setCurrentPlayerName(botData.name);
+          } else {
+            // It's a human user, get their username
+            const { data: userData } = await supabase
+              .from('users')
+              .select('username')
+              .eq('id', nextUserId)
+              .maybeSingle();
+            
+            setCurrentPlayerName(userData?.username || 'Unknown Player');
+          }
+        } catch (error) {
+          console.error('Error fetching next player name:', error);
+          setCurrentPlayerName('Unknown Player');
+        }
+      } else {
+        setCurrentTurn(null);
+        setCurrentPlayerName('');
+      }
+
       // Immediate UI update to show turn change
       invalidateCache(league.id);
       if (user?.id) invalidateCache(user.id);
       refreshData();
       
-      // Update the current turn state immediately
-      await loadCurrentTurn();
+      // Also call loadCurrentTurn to ensure consistency (with small delay for DB replication)
+      setTimeout(async () => {
+        await loadCurrentTurn();
+      }, 100);
       
       onUpdate();
 
@@ -643,6 +793,47 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
       }
       
       console.log('✅ Turn advanced from', currentTurnIndex, 'to', nextTurnIndex);
+      
+      // Update currentTurn state immediately to reflect the change
+      const nextUserId = marketplaceOrder[nextTurnIndex];
+      if (nextUserId) {
+        setCurrentTurn({
+          current_user_id: nextUserId,
+          turn_number: nextTurnIndex,
+          total_turns: marketplaceOrder.length,
+          is_completed: false,
+          user_team_size: 0
+        });
+        
+        // Fetch the next player's name immediately
+        try {
+          const { data: botData } = await supabase
+            .from('bots')
+            .select('name')
+            .eq('id', nextUserId)
+            .maybeSingle();
+          
+          if (botData) {
+            setCurrentPlayerName(botData.name);
+          } else {
+            // It's a human user, get their username
+            const { data: userData } = await supabase
+              .from('users')
+              .select('username')
+              .eq('id', nextUserId)
+              .maybeSingle();
+            
+            setCurrentPlayerName(userData?.username || 'Unknown Player');
+          }
+        } catch (error) {
+          console.error('Error fetching next player name:', error);
+          setCurrentPlayerName('Unknown Player');
+        }
+      } else {
+        setCurrentTurn(null);
+        setCurrentPlayerName('');
+      }
+      
       // Single smooth update
       invalidateCache(league.id);
       if (user?.id) invalidateCache(user.id);
@@ -706,12 +897,8 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
             console.log('🤖 Only bot remains, letting bot finish turn before ending marketplace...');
             await finishBotTurnAndCloseMarketplace(remainingMember);
           } else {
-            // Only human player remains, end marketplace
-            console.log('🏁 Marketplace ending - only human player remains');
-            await supabase
-              .from('leagues')
-              .update({ marketplace_completed: true })
-              .eq('id', league.id);
+            // Only human player remains - don't auto-close, let them decide when to end
+            console.log('👤 Only human player remains - marketplace stays open for them to decide when to end');
           }
         } else {
           // No members left, end marketplace
@@ -784,12 +971,8 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
             console.log('🤖 Only bot remains, letting bot finish turn before ending marketplace...');
             await finishBotTurnAndCloseMarketplace(remainingMember);
           } else {
-            // Only human player remains, end marketplace
-            console.log('🏁 Marketplace ending - only human player remains');
-            await supabase
-              .from('leagues')
-              .update({ marketplace_completed: true })
-              .eq('id', league.id);
+            // Only human player remains - don't auto-close, let them decide when to end
+            console.log('👤 Only human player remains - marketplace stays open for them to decide when to end');
           }
         } else {
           // No members left, end marketplace
@@ -910,6 +1093,36 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
       }
     } catch (err) {
       console.error('Error processing bot turn immediately:', err);
+    }
+  };
+
+  // Function to manually end marketplace (for last human player)
+  const endMarketplaceManually = async () => {
+    try {
+      setLoading(true);
+      
+      const { error: updateError } = await supabase
+        .from('leagues')
+        .update({ marketplace_completed: true })
+        .eq('id', league.id);
+      
+      if (updateError) {
+        console.error('Error ending marketplace:', updateError);
+        throw updateError;
+      }
+
+      console.log('✅ Marketplace ended manually by last human player');
+      
+      // Show completion popup
+      showMarketplaceCompletionPopup();
+      
+      // Refresh data
+      onUpdate();
+    } catch (err) {
+      console.error('Error ending marketplace manually:', err);
+      setError('Failed to end marketplace');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -1091,7 +1304,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
           </div>
             )}
             {/* Bot turn indicator */}
-            {currentTurn && !isUserTurn && (
+            {currentTurn && !isUserTurn && isCurrentTurnBot && (
               <div className="mt-2 p-2 bg-purple-50 border border-purple-200 rounded">
                 <p className="text-purple-700 text-sm">
                   🤖 Bot's turn - Processing automatically...
@@ -1120,6 +1333,15 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
                    Manual Trigger Bot Action
             </button>
               </div>
+          )}
+
+          {/* Human player turn indicator */}
+          {currentTurn && !isUserTurn && !isCurrentTurnBot && (
+            <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded">
+              <p className="text-blue-700 text-sm">
+                👤 {currentPlayerName}'s turn - Waiting...
+              </p>
+            </div>
           )}
         </div>
         ) : (
@@ -1288,6 +1510,22 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
       {/* Hide buy/skip/end UI if user has no coins or draft is completed */}
       {(userCoinBalance === 0 || userCoinBalance === null || marketplaceDraftCompleted) && isUserTurn && (
         <div className="text-gray-500 italic">You have no coins remaining or the turn-based marketplace is completed.</div>
+      )}
+
+      {/* End Marketplace Button - Show when only human player remains */}
+      {showEndMarketplaceButton && isUserTurn && (
+        <div className="mt-4 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+          <p className="text-orange-800 text-sm mb-3">
+            🏁 You're the only player remaining in the marketplace. You can end it whenever you're ready.
+          </p>
+          <button
+            onClick={endMarketplaceManually}
+            disabled={loading}
+            className="w-full bg-orange-600 hover:bg-orange-700 disabled:bg-orange-400 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
+          >
+            {loading ? 'Ending...' : 'End Marketplace'}
+          </button>
+        </div>
       )}
 
       {/* Marketplace Completion Modal */}
