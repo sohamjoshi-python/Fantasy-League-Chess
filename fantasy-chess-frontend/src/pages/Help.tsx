@@ -162,12 +162,18 @@ const Help: React.FC = () => {
                 <ArrowRight className="w-5 h-5 text-purple mt-0.5 mr-3 flex-shrink-0" />
                 <div>
                   <h3 className="font-semibold text-neutral-900">Snake Draft Format</h3>
-                  <p className="text-neutral-700">Draft players in a snake format - the order reverses each round:</p>
-                  <ul className="list-disc list-inside text-neutral-700 mt-2 space-y-1">
-                    <li>Round 1: Player 1, Player 2, Player 3, Player 4</li>
-                    <li>Round 2: Player 4, Player 3, Player 2, Player 1</li>
-                    <li>And so on for 10 rounds total</li>
-                  </ul>
+                  <p className="text-neutral-700 mb-2">The snake draft ensures fair player selection by reversing the order each round. This gives everyone equal opportunity to get top players:</p>
+                  <div className="bg-neutral-50 p-3 rounded border text-sm text-neutral-700 mb-2">
+                    <div className="font-semibold mb-1">Example with 4 players:</div>
+                    <div>Round 1: Player 1 → Player 2 → Player 3 → Player 4</div>
+                    <div>Round 2: Player 4 → Player 3 → Player 2 → Player 1</div>
+                    <div>Round 3: Player 1 → Player 2 → Player 3 → Player 4</div>
+                    <div>Round 4: Player 4 → Player 3 → Player 2 → Player 1</div>
+                    <div className="mt-1 text-xs text-neutral-600">...continues for 10 rounds total</div>
+                  </div>
+                  <p className="text-neutral-700 text-sm">
+                    <strong>Why Snake Draft?</strong> This format ensures fairness - Player 1 gets first pick in odd rounds, but Player 4 gets first pick in even rounds. Everyone gets equal access to top talent!
+                  </p>
                 </div>
               </div>
               <div className="flex items-start">
@@ -309,10 +315,73 @@ const Help: React.FC = () => {
                 </div>
               </div>
               <div className="bg-neutral-50 p-4 rounded-lg border border-royalBlue mb-4">
-                <h4 className="font-semibold text-neutral-900 mb-1">What is Average Centipawn Loss (ACL)?</h4>
-                <p className="text-sm text-neutral-700">
-                  <strong>Average Centipawn Loss (ACL)</strong> is a chess metric that measures how well a player performed compared to the best possible moves (as determined by a chess engine). Lower ACL means more precise play. In {getBrandName()}, we use ACL to better reflect a player's consistency and skill.
+                <h4 className="font-semibold text-neutral-900 mb-2">What is Average Centipawn Loss (ACL)?</h4>
+                <p className="text-sm text-neutral-700 mb-3">
+                  <strong>Average Centipawn Loss (ACL)</strong> is a chess accuracy metric that measures how precisely a player moves compared to the best possible moves (as determined by chess engines). Think of it as a "chess accuracy score" where:
                 </p>
+                <ul className="text-sm text-neutral-700 mb-3 space-y-1">
+                  <li>• <strong>Lower ACL = Better Play</strong> (more accurate moves)</li>
+                  <li>• <strong>Higher ACL = Worse Play</strong> (more mistakes)</li>
+                  <li>• <strong>0 ACL = Perfect Play</strong> (played the best move every time)</li>
+                  <li>• <strong>100 ACL = Poor Play</strong> (made significant mistakes)</li>
+                </ul>
+                <p className="text-sm text-neutral-700">
+                  In {getBrandName()}, ACL is the primary factor in scoring because it rewards consistent, high-quality play rather than just winning games. A player who loses but plays accurately will score better than a player who wins but makes many mistakes.
+                </p>
+              </div>
+              <div className="bg-neutral-50 p-4 rounded-lg border border-royalBlue mb-4">
+                <h4 className="font-semibold text-neutral-900 mb-2">Complete Scoring Formula</h4>
+                <p className="text-sm text-neutral-700 mb-3">
+                  Fantasy points are calculated using this sophisticated formula that rewards both winning and playing quality:
+                </p>
+                <div className="bg-white p-3 rounded border text-sm font-mono text-neutral-800 mb-3">
+                  <div className="mb-2"><strong>Raw Points =</strong></div>
+                  <div className="ml-4 mb-1">0.5 × Game Result</div>
+                  <div className="ml-4 mb-1">+ 2.0 × (Result - Expected Score)</div>
+                  <div className="ml-4 mb-1">+ 8.0 × (Average ACL - Player ACL)</div>
+                  <div className="ml-4 mb-1">+ 3.0 × Consistency Bonus</div>
+                  <div className="mt-2"><strong>Final Points =</strong> Raw Points (capped between -8 and +15)</div>
+                </div>
+                <div className="text-sm text-neutral-700 space-y-2">
+                  <div><strong>• Game Result:</strong> 1.0 for win, 0.5 for draw, 0.0 for loss</div>
+                  <div><strong>• Expected Score:</strong> Calculated based on ELO ratings (1/(1+10^((opponent_elo-player_elo)/400)))</div>
+                  <div><strong>• ACL Delta:</strong> How much better/worse the player performed vs average</div>
+                  <div><strong>• Consistency Bonus:</strong> Extra points for playing better than expected for their rating</div>
+                </div>
+              </div>
+              <div className="bg-neutral-50 p-4 rounded-lg border border-royalBlue mb-4">
+                <h4 className="font-semibold text-neutral-900 mb-2">Two Types of Currency</h4>
+                <p className="text-sm text-neutral-700 mb-3">
+                  Fantasy Chess uses two different currencies to avoid confusion between draft and trading phases:
+                </p>
+                <div className="space-y-3">
+                  <div className="bg-blue-50 p-3 rounded border">
+                    <div className="flex items-center mb-2">
+                      <span className="text-2xl mr-2">💎</span>
+                      <h5 className="font-semibold text-blue-900">GEMS - Draft Currency</h5>
+                    </div>
+                    <ul className="text-sm text-blue-800 space-y-1">
+                      <li>• Used ONLY during the turn-based marketplace (draft phase)</li>
+                      <li>• Everyone starts with 50 gems</li>
+                      <li>• High-rated players cost more gems (Magnus Carlsen = 50 gems)</li>
+                      <li>• Once spent, gems are gone forever</li>
+                      <li>• Purpose: Fair team building during draft</li>
+                    </ul>
+                  </div>
+                  <div className="bg-green-50 p-3 rounded border">
+                    <div className="flex items-center mb-2">
+                      <span className="text-2xl mr-2">🪙</span>
+                      <h5 className="font-semibold text-green-900">COINS - Trading Currency</h5>
+                    </div>
+                    <ul className="text-sm text-green-800 space-y-1">
+                      <li>• Used for all trading after the draft</li>
+                      <li>• Earn 50 coins weekly throughout the season</li>
+                      <li>• Buy/sell/trade players with other league members</li>
+                      <li>• Prices fluctuate based on performance and demand</li>
+                      <li>• Purpose: Ongoing team management and strategy</li>
+                    </ul>
+                  </div>
+                </div>
               </div>
               <div className="bg-neutral-50 p-4 rounded-lg border border-royalBlue">
                 <p className="text-sm text-neutral-700">

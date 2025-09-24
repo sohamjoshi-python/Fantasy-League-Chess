@@ -110,7 +110,7 @@ const ComprehensiveTutorial: React.FC = () => {
     {
       id: 'marketplace-start',
       title: 'Turn-Based Marketplace Begins!',
-      description: 'This is Phase 1 - the Turn-Based Marketplace! You start with 50 coins and take turns selecting players. High-rated players like Magnus Carlsen cost 50 coins. After the turn-based marketplace, you\'ll get 50 coins per week for trading.',
+      description: 'This is Phase 1 - the Turn-Based Marketplace! You start with 50 GEMS and take turns selecting players. High-rated players like Magnus Carlsen cost 50 GEMS. After the turn-based marketplace, you\'ll get 50 coins per week for trading.',
       action: 'Click "Buy Player" on Magnus Carlsen',
       target: 'buy-magnus',
       page: 'league'
@@ -118,7 +118,7 @@ const ComprehensiveTutorial: React.FC = () => {
     {
       id: 'team-building',
       title: 'Building Your Team',
-      description: 'Great choice! You now have Magnus Carlsen and 0 coins remaining. The draft continues until all players are taken or everyone runs out of coins. Then Phase 2 begins with weekly trading.',
+      description: 'Great choice! You now have Magnus Carlsen and 0 GEMS remaining. The draft continues until all players are taken or everyone runs out of GEMS. Then Phase 2 begins with weekly trading.',
       action: 'Click "Buy Player" on Ding Liren',
       target: 'buy-ding',
       page: 'league'
@@ -182,7 +182,7 @@ const ComprehensiveTutorial: React.FC = () => {
     {
       id: 'game-timing',
       title: 'Game Schedule & Scoring',
-      description: 'Games are based on real titled tournaments every Tuesday. Your players earn points based on their actual tournament performance. Points are calculated using ACL (Average Centipawn Loss) - lower is better!',
+      description: 'Games are based on real titled tournaments every Tuesday. Your players earn points based on their actual tournament performance. Points are calculated using ACL (Average Centipawn Loss) - a measure of chess accuracy where lower values mean more precise play!',
       action: 'Click "Next" to learn about marketplace trading',
       target: 'next-step-button',
       page: 'leaderboard'
@@ -191,6 +191,30 @@ const ComprehensiveTutorial: React.FC = () => {
       id: 'normal-marketplace',
       title: 'Normal Marketplace Trading',
       description: 'After the draft, you get 50 coins weekly for trading. You can buy new players, sell current ones, or trade with other league members. Prices fluctuate based on player performance and demand!',
+      action: 'Click "Next" to learn about currency types',
+      target: 'next-step-button',
+      page: 'leaderboard'
+    },
+    {
+      id: 'currency-explanation',
+      title: 'Two Types of Currency',
+      description: 'Fantasy Chess uses two different currencies: GEMS (💎) for the turn-based marketplace draft phase, and COINS (🪙) for regular trading. GEMS are only used during team building, while coins are your main currency for buying/selling players throughout the season.',
+      action: 'Click "Next" to learn about scoring formulas',
+      target: 'next-step-button',
+      page: 'leaderboard'
+    },
+    {
+      id: 'scoring-formulas',
+      title: 'Complete Scoring System',
+      description: 'Fantasy points are calculated using a sophisticated formula that rewards both winning and playing quality. The main components are: Base Win Bonus (0.5 points), Surprise Bonus (2.0x multiplier), ACL Quality Bonus (8.0x multiplier), and Consistency Bonus (3.0x multiplier). Points are capped between -8 and +15.',
+      action: 'Click "Next" to learn about snake draft',
+      target: 'next-step-button',
+      page: 'leaderboard'
+    },
+    {
+      id: 'snake-draft-explanation',
+      title: 'Snake Draft System',
+      description: 'The snake draft ensures fair player selection by reversing the order each round. Round 1: Players pick 1→2→3→4. Round 2: Players pick 4→3→2→1. This continues for 10 rounds, giving everyone equal opportunity to get top players!',
       action: 'Click "Next" to complete the tutorial',
       target: 'next-step-button',
       page: 'leaderboard'
@@ -434,7 +458,7 @@ const ComprehensiveTutorial: React.FC = () => {
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-bold text-gray-900">Turn-Based Marketplace</h3>
               <div className="text-lg font-semibold text-amber-700 bg-amber-100 px-4 py-2 rounded">
-                Coins: {currentStepData.target === 'buy-ding' ? '0' : '50'} 🪙
+                GEMS: {currentStepData.target === 'buy-ding' ? '0' : '50'} 💎
               </div>
             </div>
             
@@ -458,7 +482,7 @@ const ComprehensiveTutorial: React.FC = () => {
             <div className="bg-yellow-50 p-4 rounded-lg mb-6 border border-yellow-200">
               <h4 className="font-semibold text-yellow-900 mb-2">📚 How the Marketplace Works</h4>
               <div className="text-sm text-yellow-800 space-y-2">
-                <p><strong>Phase 1 - Turn-Based Marketplace:</strong> You start with 50 coins and take turns selecting players. High-rated players like Magnus Carlsen cost 50 coins.</p>
+                <p><strong>Phase 1 - Turn-Based Marketplace:</strong> You start with 50 GEMS and take turns selecting players. High-rated players like Magnus Carlsen cost 50 GEMS.</p>
                 <p><strong>Phase 2 - Trading:</strong> After the turn-based marketplace, you get 50 coins per week to buy/sell/trade players in the regular marketplace.</p>
               </div>
             </div>
@@ -511,7 +535,7 @@ const ComprehensiveTutorial: React.FC = () => {
                         <span className="text-gray-500 ml-2">ELO: 2850</span>
                       </div>
                       <div className="text-right relative">
-                        <div className="text-lg font-bold text-green-600">50 coins</div>
+                        <div className="text-lg font-bold text-green-600">50 GEMS</div>
                         <button 
                           id="buy-magnus"
                           onClick={() => handleTargetClick('buy-magnus')}
@@ -535,7 +559,7 @@ const ComprehensiveTutorial: React.FC = () => {
                       <span className="text-gray-500 ml-2">ELO: 2780</span>
                     </div>
                     <div className="text-right">
-                      <div className="text-lg font-bold text-green-600">45 coins</div>
+                      <div className="text-lg font-bold text-green-600">45 GEMS</div>
                       <button className="mt-2 bg-gray-300 text-gray-500 px-4 py-2 rounded-lg text-sm font-semibold cursor-not-allowed">
                         Click to select
                       </button>
@@ -570,7 +594,7 @@ const ComprehensiveTutorial: React.FC = () => {
                         currentStepData.target === 'buy-magnus'
                           ? 'text-gray-400'
                           : 'text-green-600'
-                      }`}>40 coins</div>
+                      }`}>40 GEMS</div>
                       <button 
                         id="buy-ding"
                         onClick={() => currentStepData.target === 'buy-ding' && handleTargetClick('buy-ding')}
@@ -611,7 +635,7 @@ const ComprehensiveTutorial: React.FC = () => {
             {/* Auto-remove info */}
             <div className="mt-2 p-2 bg-orange-50 border border-orange-200 rounded text-xs">
               <p className="text-orange-700 font-semibold">💡 Auto-Remove Feature</p>
-              <p className="text-orange-600">Users with 0 coins are automatically removed from the draft entirely</p>
+              <p className="text-orange-600">Users with 0 GEMS are automatically removed from the draft entirely</p>
             </div>
           </div>
         )}
@@ -983,7 +1007,7 @@ const ComprehensiveTutorial: React.FC = () => {
       </div>
 
       {/* Next Step Button for Tutorial Steps */}
-      {['bots-explanation', 'league-mechanics', 'game-timing', 'normal-marketplace'].includes(currentStepData.id) && (
+      {['bots-explanation', 'league-mechanics', 'game-timing', 'normal-marketplace', 'currency-explanation', 'scoring-formulas', 'snake-draft-explanation'].includes(currentStepData.id) && (
         <div className="bg-white border border-gray-300 rounded-lg shadow-lg p-6 text-center mb-4">
           <div className="relative">
             <button

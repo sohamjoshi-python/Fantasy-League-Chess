@@ -357,8 +357,8 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
         const botCoinBalance = botCoinData?.coin_balance || 0;
         
         if (botCoinBalance <= 0) {
-          // Bot has 0 coins, remove from draft
-          console.log('🤖 Bot has 0 coins, removing from draft...');
+          // Bot has 0 GEMS, remove from draft
+          console.log('🤖 Bot has 0 GEMS, removing from draft...');
           await removeBotFromDraft(currentTurn.current_user_id);
           botProcessingRef.current = false;
           return;
@@ -369,22 +369,22 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
           if (result.success) {
             console.log('🤖 Bot turn completed successfully:', result.data);
             
-            // Check if bot has 0 coins after purchase
-            const { data: updatedBotCoinData } = await supabase
+            // Check if bot has 0 GEMS after purchase
+            const { data: updatedbotCoinData } = await supabase
               .from('league_coin_balances')
               .select('coin_balance')
               .eq('bot_id', currentTurn.current_user_id)
               .eq('league_id', league.id)
               .single();
             
-            const updatedBotCoinBalance = updatedBotCoinData?.coin_balance || 0;
+            const updatedbotCoinBalance = updatedbotCoinData?.coin_balance || 0;
             
-            if (updatedBotCoinBalance <= 0) {
-              // Bot has 0 coins after purchase, remove from draft
-              console.log('🤖 Bot has 0 coins after purchase, removing from draft...');
+            if (updatedbotCoinBalance <= 0) {
+              // Bot has 0 GEMS after purchase, remove from draft
+              console.log('🤖 Bot has 0 GEMS after purchase, removing from draft...');
               await removeBotFromDraft(currentTurn.current_user_id);
             } else {
-              // Bot still has coins, advance turn
+              // Bot still has GEMS, advance turn
               await advanceTurn();
             }
             
@@ -603,8 +603,8 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
         throw updateError;
       }
 
-      // Deduct coins from user's balance
-      const { error: coinError } = await supabase
+      // Deduct GEMS from user's balance
+      const { error: gemError } = await supabase
         .from('league_coin_balances')
         .update({ 
           coin_balance: userCoinBalance - price,
@@ -613,21 +613,21 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
         .eq('user_id', user.id)
         .eq('league_id', league.id);
 
-      if (coinError) {
-        console.error('❌ Coin deduction error:', coinError);
-        throw coinError;
+      if (gemError) {
+        console.error('❌ gem deduction error:', gemError);
+        throw gemError;
       }
 
       // Close the confirmation modal immediately
       setShowBuyConfirmation(false);
       setSelectedPlayer(null);
       
-      // Check if user has 0 coins after purchase
-      const newCoinBalance = userCoinBalance - price;
+      // Check if user has 0 GEMS after purchase
+      const newgemBalance = userCoinBalance - price;
       
-      if (newCoinBalance <= 0) {
+      if (newgemBalance <= 0) {
         // Remove user from draft entirely
-        console.log('💰 User has 0 coins, removing from draft...');
+        console.log('💰 User has 0 GEMS, removing from draft...');
         await removeUserFromDraft(user.id);
         
         // Update turn state after user removal
@@ -1064,7 +1064,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
       if (result.success) {
         console.log('🤖 Bot chose immediately:', result.data);
         
-        // Check if bot has 0 coins after purchase
+        // Check if bot has 0 GEMS after purchase
         const { data: botCoinData } = await supabase
           .from('league_coin_balances')
           .select('coin_balance')
@@ -1075,11 +1075,11 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
         const botCoinBalance = botCoinData?.coin_balance || 0;
         
         if (botCoinBalance <= 0) {
-          // Bot has 0 coins, remove from draft
-          console.log('🤖 Bot has 0 coins, removing from draft...');
+          // Bot has 0 GEMS, remove from draft
+          console.log('🤖 Bot has 0 GEMS, removing from draft...');
           await removeBotFromDraft(botId);
         } else {
-          // Bot still has coins, advance turn
+          // Bot still has GEMS, advance turn
           await advanceTurn();
         }
         
@@ -1228,7 +1228,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
         </h3>
         <p className="text-gray-600 mb-4">
           {league.marketplace_completed 
-            ? 'The turn-based marketplace phase is complete! All players have used their coins to build their teams. You can now set your weekly lineups for the season.'
+            ? 'The turn-based marketplace phase is complete! All players have used their GEMS to build their teams. You can now set your weekly lineups for the season.'
             : 'All players have completed their turns. The turn-based marketplace is now finished, but the regular marketplace remains open for trading.'
           }
         </p>
@@ -1265,7 +1265,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-xl font-bold text-gray-900">Turn-Based Marketplace</h3>
         <div className="text-lg font-semibold text-amber-700 bg-amber-100 px-4 py-2 rounded">
-          Coins: {userCoinBalance !== null ? userCoinBalance : '...'} 🪙
+          GEMS: {userCoinBalance !== null ? userCoinBalance : '...'} 💎
         </div>
       </div>
 
@@ -1275,7 +1275,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
         {league.marketplace_completed ? (
           <div className="space-y-2">
             <p className="text-sm text-green-600 font-semibold">✅ Marketplace Complete!</p>
-            <p className="text-sm text-gray-600">All players have run out of coins. The marketplace is now closed.</p>
+            <p className="text-sm text-gray-600">All players have run out of GEMS. The marketplace is now closed.</p>
           </div>
         ) : currentTurn ? (
           <div className="space-y-2">
@@ -1297,7 +1297,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
                 {userCoinBalance === 0 && (
                   <div className="p-2 bg-red-50 border border-red-200 rounded">
                     <p className="text-red-700 text-sm font-semibold">
-                      ⚠️ You have 0 coins! You will be automatically removed from the draft.
+                      ⚠️ You have 0 GEMS! You will be automatically removed from the draft.
                     </p>
                   </div>
             )}
@@ -1353,7 +1353,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
         {/* Auto-remove info */}
         <div className="mt-2 p-2 bg-orange-50 border border-orange-200 rounded text-xs">
           <p className="text-orange-700 font-semibold">💡 Auto-Remove Feature</p>
-          <p className="text-orange-600">Users with 0 coins are automatically removed from the draft entirely</p>
+          <p className="text-orange-600">Users with 0 GEMS are automatically removed from the draft entirely</p>
           </div>
         </div>
 
@@ -1401,6 +1401,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
                   userCoinBalance={userCoinBalance}
                   canBuy={canBuy}
                   isUserTurn={isUserTurn}
+                  currencyType="gems"
                   onBuyClick={(player) => {
                           setSelectedPlayer(player);
                           setShowBuyConfirmation(true);
@@ -1447,7 +1448,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
           {turnHistory.map(turn => (
             <div key={turn.id} className="text-sm p-2 bg-gray-50 rounded">
               <span className="font-medium">Turn {turn.turn_number + 1}:</span>{' '}
-              <span>{turn.action_type === 'buy' ? `Bought ${turn.player_id ? 'a player' : 'player'} for ${turn.price} coins` : 'Skipped turn'}</span>
+              <span>{turn.action_type === 'buy' ? `Bought ${turn.player_id ? 'a player' : 'player'} for ${turn.price} GEMS` : 'Skipped turn'}</span>
             </div>
           ))}
         </div>
@@ -1461,8 +1462,8 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
             <div className="mb-4">
               <p className="text-sm text-gray-600">Player: {selectedPlayer.name}</p>
               <p className="text-sm text-gray-600 mb-2">ELO: {selectedPlayer.elo}</p>
-              <p className="text-sm text-gray-600 mb-2">Price: {calculatePlayerPrice(selectedPlayer.elo)} 🪙</p>
-              <p className="text-sm text-gray-600 mb-4">Your balance: {userCoinBalance} 🪙</p>
+                <p className="text-sm text-gray-600 mb-2">Price: {calculatePlayerPrice(selectedPlayer.elo)} 💎</p>
+                <p className="text-sm text-gray-600 mb-4">Your balance: {userCoinBalance} 💎</p>
               
               {/* Chess.com Profile Link */}
               <div className="mb-4 p-3 bg-gray-50 rounded-lg">
@@ -1507,9 +1508,9 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
         </div>
       )}
 
-      {/* Hide buy/skip/end UI if user has no coins or draft is completed */}
+      {/* Hide buy/skip/end UI if user has no GEMS or draft is completed */}
       {(userCoinBalance === 0 || userCoinBalance === null || marketplaceDraftCompleted) && isUserTurn && (
-        <div className="text-gray-500 italic">You have no coins remaining or the turn-based marketplace is completed.</div>
+        <div className="text-gray-500 italic">You have no GEMS remaining or the turn-based marketplace is completed.</div>
       )}
 
       {/* End Marketplace Button - Show when only human player remains */}

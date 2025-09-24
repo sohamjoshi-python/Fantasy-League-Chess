@@ -8,6 +8,7 @@ interface PlayerCardProps {
   canBuy: boolean;
   isUserTurn: boolean;
   onBuyClick: (player: ChessPlayer) => void;
+  currencyType?: 'gems' | 'coins'; // New prop to specify currency type
 }
 
 const PlayerCard = memo<PlayerCardProps>(({ 
@@ -15,7 +16,8 @@ const PlayerCard = memo<PlayerCardProps>(({
   userCoinBalance, 
   canBuy, 
   isUserTurn, 
-  onBuyClick 
+  onBuyClick,
+  currencyType = 'coins' // Default to coins for backward compatibility
 }) => {
   const price = calculatePlayerPrice(player.elo);
   const details = getPlayerDetails(player.name);
@@ -67,7 +69,9 @@ const PlayerCard = memo<PlayerCardProps>(({
           </div>
         </div>
         <div className="text-right ml-4">
-          <div className="text-2xl font-bold text-amber-600">{price} 🪙</div>
+          <div className="text-2xl font-bold text-amber-600">
+            {price} {currencyType === 'gems' ? '💎' : '🪙'}
+          </div>
           {isUserTurn && canBuy && (
             <button
               onClick={handleBuyClick}
@@ -78,7 +82,10 @@ const PlayerCard = memo<PlayerCardProps>(({
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
             >
-              {userCoinBalance && userCoinBalance >= price ? 'Buy Player' : 'Insufficient Coins'}
+              {userCoinBalance && userCoinBalance >= price 
+                ? 'Buy Player' 
+                : `Insufficient ${currencyType === 'gems' ? 'GEMS' : 'Coins'}`
+              }
             </button>
           )}
         </div>
