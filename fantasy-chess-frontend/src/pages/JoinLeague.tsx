@@ -72,14 +72,21 @@ const JoinLeague: React.FC = () => {
 
   const loadPublicLeagues = async () => {
     try {
+      // Get today's date in YYYY-MM-DD format (local timezone)
+      const today = new Date()
+      const todayString = today.getFullYear() + '-' + 
+        String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+        String(today.getDate()).padStart(2, '0')
+      
       const { data: leagues } = await supabase
         .from('leagues')
         .select('*')
         .eq('is_public', true)
-        .gte('start_date', new Date().toISOString().split('T')[0])
+        .gt('start_date', todayString) // Only show leagues that haven't started yet
         .order('created_at', { ascending: false })
 
       if (leagues) {
+        console.log(`Found ${leagues.length} public leagues starting after ${todayString}`)
         setPublicLeagues(leagues)
       }
     } catch (error) {
@@ -609,11 +616,14 @@ const JoinLeague: React.FC = () => {
       {/* Public Leagues Tab */}
       {activeTab === 'public' && (
         <div className="space-y-4 lg:space-y-6">
-          <h2 className="text-xl lg:text-2xl font-bold text-neutral-900">Public Leagues</h2>
+          <div>
+            <h2 className="text-xl lg:text-2xl font-bold text-neutral-900">Public Leagues</h2>
+            <p className="text-sm text-neutral-600 mt-1">Showing leagues that start tomorrow or later</p>
+          </div>
           {publicLeagues.length === 0 ? (
             <div className="text-center py-8 lg:py-12 bg-white rounded-lg shadow-lg border-2 border-royalBlue">
               <Search className="h-8 w-8 lg:h-12 lg:w-12 text-neutral-400 mx-auto mb-4" />
-              <p className="text-neutral-600 text-sm lg:text-base">No public leagues available at the moment.</p>
+              <p className="text-neutral-600 text-sm lg:text-base">No upcoming public leagues available. Check back later or create your own league!</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
