@@ -350,37 +350,44 @@ const Help: React.FC = () => {
                 </div>
               </div>
               <div className="bg-neutral-50 p-4 rounded-lg border border-royalBlue mb-4">
-                <h4 className="font-semibold text-neutral-900 mb-2">Two Types of Currency</h4>
+                <h4 className="font-semibold text-neutral-900 mb-2">Two Completely Different Currencies</h4>
                 <p className="text-sm text-neutral-700 mb-3">
-                  Fantasy Chess uses two different currencies to avoid confusion between draft and trading phases:
+                  Fantasy Chess uses TWO separate currencies to avoid confusion between the draft phase and trading phase:
                 </p>
                 <div className="space-y-3">
                   <div className="bg-blue-50 p-3 rounded border">
                     <div className="flex items-center mb-2">
                       <span className="text-2xl mr-2">💎</span>
-                      <h5 className="font-semibold text-blue-900">GEMS - Draft Currency</h5>
+                      <h5 className="font-semibold text-blue-900">GEMS - Draft-Only Currency</h5>
                     </div>
                     <ul className="text-sm text-blue-800 space-y-1">
-                      <li>• Used ONLY during the turn-based marketplace (draft phase)</li>
-                      <li>• Everyone starts with 50 gems</li>
-                      <li>• High-rated players cost more gems (Magnus Carlsen = 50 gems)</li>
-                      <li>• Once spent, gems are gone forever</li>
-                      <li>• Purpose: Fair team building during draft</li>
+                      <li>• <strong>ONLY used during turn-based marketplace (draft phase)</strong></li>
+                      <li>• <strong>Everyone gets exactly 50 GEMS when draft starts</strong></li>
+                      <li>• <strong>High-rated players cost more GEMS (Magnus Carlsen = 50 GEMS)</strong></li>
+                      <li>• <strong>Once spent, GEMS are gone forever - they don't regenerate</strong></li>
+                      <li>• <strong>When draft ends, all remaining GEMS disappear</strong></li>
+                      <li>• Purpose: Fair team building during initial draft only</li>
                     </ul>
                   </div>
                   <div className="bg-green-50 p-3 rounded border">
                     <div className="flex items-center mb-2">
                       <span className="text-2xl mr-2">🪙</span>
-                      <h5 className="font-semibold text-green-900">COINS - Trading Currency</h5>
+                      <h5 className="font-semibold text-green-900">COINS - Season Trading Currency</h5>
                     </div>
                     <ul className="text-sm text-green-800 space-y-1">
-                      <li>• Used for all trading after the draft</li>
-                      <li>• Earn 50 coins weekly throughout the season</li>
-                      <li>• Buy/sell/trade players with other league members</li>
-                      <li>• Prices fluctuate based on performance and demand</li>
-                      <li>• Purpose: Ongoing team management and strategy</li>
+                      <li>• <strong>Used for ALL trading after the draft ends</strong></li>
+                      <li>• <strong>You earn 50 COINS every week throughout the season</strong></li>
+                      <li>• <strong>Buy/sell/trade players with other league members</strong></li>
+                      <li>• <strong>Prices fluctuate based on player performance and demand</strong></li>
+                      <li>• <strong>COINS accumulate - you keep them week to week</strong></li>
+                      <li>• Purpose: Ongoing team management and strategy throughout the season</li>
                     </ul>
                   </div>
+                </div>
+                <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
+                  <p className="text-sm text-yellow-800">
+                    <strong>Key Difference:</strong> GEMS are a one-time draft currency that disappears forever. COINS are your permanent trading currency that you earn weekly and use throughout the entire season.
+                  </p>
                 </div>
               </div>
               <div className="bg-neutral-50 p-4 rounded-lg border border-royalBlue">

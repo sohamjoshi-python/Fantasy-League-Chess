@@ -11,6 +11,7 @@ import fantasyLeagueChessLogo from '../assets/fantasy-league-chess-logo-updated.
 
 import Marketplace from '../components/Marketplace';
 import TurnBasedMarketplace from '../components/TurnBasedMarketplace';
+import PlayerDetailModal from '../components/PlayerDetailModal';
 
 // Remove: import { useQuery } from '@tanstack/react-query';
 // Remove: fetchLeague function
@@ -214,6 +215,7 @@ const LeaguePage: React.FC = () => {
   const [standings, setStandings] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [selectedPlayerForModal, setSelectedPlayerForModal] = useState<ChessPlayer | null>(null)
 
   // Lineup editing state
   const [isEditingLineup, setIsEditingLineup] = useState(false)
@@ -1499,12 +1501,14 @@ const LeaguePage: React.FC = () => {
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {teamPlayers.map((player) => (
-                      <div key={player.id} className="bg-neutral-50 rounded-lg p-4 text-center border border-gold min-h-[80px] flex flex-col justify-center">
-                        <ExpandablePlayerName 
-                          playerName={player.name}
-                          href={`https://www.chess.com/member/${player.name}/`}
-                          className="text-sm font-medium mb-1"
-                        />
+                      <div 
+                        key={player.id} 
+                        onClick={() => setSelectedPlayerForModal(player)}
+                        className="bg-neutral-50 rounded-lg p-4 text-center border border-gold min-h-[80px] flex flex-col justify-center cursor-pointer hover:border-royalBlue hover:shadow-lg transition-all"
+                      >
+                        <div className="text-sm font-medium mb-1 text-gold">
+                          {player.name}
+                        </div>
                         <div className="text-xs text-neutral-600">ELO: {player.elo}</div>
                         {(player.average_centipawn_loss !== undefined && player.average_centipawn_loss !== null) ? (
                           <div className="text-xs text-neutral-500">ACL: {player.average_centipawn_loss.toFixed(2)}</div>
@@ -1609,12 +1613,14 @@ const LeaguePage: React.FC = () => {
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {lineupPlayers.map((player) => (
-                      <div key={player.id} className="bg-neutral-50 rounded-lg p-4 text-center border border-gold min-h-[80px] flex flex-col justify-center">
-                        <ExpandablePlayerName 
-                          playerName={player.name}
-                          href={`https://www.chess.com/member/${player.name}/`}
-                          className="text-sm font-medium mb-1"
-                        />
+                      <div 
+                        key={player.id} 
+                        onClick={() => setSelectedPlayerForModal(player)}
+                        className="bg-neutral-50 rounded-lg p-4 text-center border border-gold min-h-[80px] flex flex-col justify-center cursor-pointer hover:border-royalBlue hover:shadow-lg transition-all"
+                      >
+                        <div className="text-sm font-medium mb-1 text-gold">
+                          {player.name}
+                        </div>
                         <div className="text-xs text-neutral-600">ELO: {player.elo}</div>
                         {(player.average_centipawn_loss !== undefined && player.average_centipawn_loss !== null) ? (
                           <div className="text-xs text-neutral-500">ACL: {player.average_centipawn_loss.toFixed(2)}</div>
@@ -1784,12 +1790,14 @@ const LeaguePage: React.FC = () => {
                     ) : (
                       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                         {selectedUserTeam.map((player) => (
-                          <div key={player.id} className="bg-neutral-50 rounded-lg p-3 text-center border border-gold">
-                            <ExpandablePlayerName 
-                              playerName={player.name}
-                              href={`https://www.chess.com/member/${player.name}/`}
-                              className="text-sm"
-                            />
+                          <div 
+                            key={player.id} 
+                            onClick={() => setSelectedPlayerForModal(player)}
+                            className="bg-neutral-50 rounded-lg p-3 text-center border border-gold cursor-pointer hover:border-royalBlue hover:shadow-lg transition-all"
+                          >
+                            <div className="text-sm font-medium text-gold mb-1">
+                              {player.name}
+                            </div>
                             <div className="text-xs text-neutral-600">ELO: {player.elo}</div>
                             {(player.average_centipawn_loss !== undefined && player.average_centipawn_loss !== null) ? (
                               <div className="text-xs text-neutral-500">ACL: {player.average_centipawn_loss.toFixed(2)}</div>
@@ -1808,12 +1816,14 @@ const LeaguePage: React.FC = () => {
                     ) : (
                       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                         {selectedUserLineup.map((player) => (
-                          <div key={player.id} className="bg-royalBlue bg-opacity-10 rounded-lg p-3 text-center border border-royalBlue">
-                            <ExpandablePlayerName 
-                              playerName={player.name}
-                              href={`https://www.chess.com/member/${player.name}/`}
-                              className="text-sm"
-                            />
+                          <div 
+                            key={player.id} 
+                            onClick={() => setSelectedPlayerForModal(player)}
+                            className="bg-royalBlue bg-opacity-10 rounded-lg p-3 text-center border border-royalBlue cursor-pointer hover:bg-opacity-20 hover:shadow-lg transition-all"
+                          >
+                            <div className="text-sm font-medium text-royalBlue mb-1">
+                              {player.name}
+                            </div>
                             <div className="text-xs text-neutral-600">ELO: {player.elo}</div>
                           </div>
                         ))}
@@ -1909,6 +1919,14 @@ const LeaguePage: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Player Detail Modal */}
+      {selectedPlayerForModal && (
+        <PlayerDetailModal
+          player={selectedPlayerForModal}
+          onClose={() => setSelectedPlayerForModal(null)}
+        />
+      )}
     </>
   )
 }

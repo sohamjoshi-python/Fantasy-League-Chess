@@ -11,9 +11,12 @@ import Profile from './pages/Profile'
 import Help from './pages/Help'
 import Onboarding from './pages/Onboarding'
 import SignUp from './pages/SignUp'
+import SignIn from './pages/SignIn'
+import ResetPassword from './pages/ResetPassword'
 import Tutorial from './pages/Tutorial'
 import EmailConfirmationSuccess from './pages/EmailConfirmationSuccess'
 import Leaderboard from './pages/Leaderboard';
+import PlayerHistory from './pages/PlayerHistory';
 import Tos from './pages/tos';
 import Privacy from './pages/privacy';
 import { useAuth } from './contexts/AuthContext'
@@ -50,10 +53,13 @@ function App() {
             <Route path="/email-confirmed" element={<EmailConfirmationSuccess />} />
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/signup" element={<SignUp />} />
+            <Route path="/signin" element={<SignIn />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
             <Route path="/avatar-shop" element={<ProtectedRoute><AvatarShopPage /></ProtectedRoute>} />
             <Route path="/tos" element={<Tos />} />
             <Route path="/privacy" element={<Privacy />} />
+            <Route path="/player/:playerName" element={<ProtectedRoute><PlayerHistory /></ProtectedRoute>} />
           </Routes>
         </main>
         <Footer />

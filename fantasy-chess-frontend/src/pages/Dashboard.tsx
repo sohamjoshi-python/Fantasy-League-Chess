@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase'
 import { League, Team, Lineup, ChessPlayer } from '../types'
 import { Crown, Users, Trophy, Calendar, Plus, ExternalLink } from 'lucide-react'
 import { fetchLineupPlayerBreakdownByRounds } from '../lib/supabase'
+import PlayerDetailModal from '../components/PlayerDetailModal'
 
 function getCurrentWeekStart() {
   const now = new Date();
@@ -37,6 +38,7 @@ const Dashboard: React.FC = () => {
   const [availableWeeks, setAvailableWeeks] = useState<string[]>([]);
   const [selectedWeek, setSelectedWeek] = useState<string | null>(null);
   const [activeLeagues, setActiveLeagues] = useState<League[]>([]);
+  const [selectedPlayerForModal, setSelectedPlayerForModal] = useState<ChessPlayer | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -367,7 +369,11 @@ const Dashboard: React.FC = () => {
               {currentLineup && lineupPlayers.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                   {lineupPlayers.map((player) => (
-                    <div key={player.id} className="bg-neutral-50 rounded-lg p-4 text-center border border-royalBlue">
+                    <div 
+                      key={player.id} 
+                      onClick={() => setSelectedPlayerForModal(player)}
+                      className="bg-neutral-50 rounded-lg p-4 text-center border border-royalBlue cursor-pointer hover:border-blue-700 hover:shadow-lg transition-all"
+                    >
                       <h4 className="font-semibold text-sm text-neutral-900">{player.name}</h4>
                       <p className="text-xs text-neutral-500">ELO: {player.elo}</p>
                     </div>
@@ -603,6 +609,14 @@ const Dashboard: React.FC = () => {
             ))}
           </div>
         </div>
+      )}
+
+      {/* Player Detail Modal */}
+      {selectedPlayerForModal && (
+        <PlayerDetailModal
+          player={selectedPlayerForModal}
+          onClose={() => setSelectedPlayerForModal(null)}
+        />
       )}
     </div>
   )

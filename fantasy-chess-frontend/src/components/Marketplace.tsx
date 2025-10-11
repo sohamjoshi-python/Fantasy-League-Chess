@@ -10,6 +10,7 @@ import TradeNotificationPopup from './TradeNotificationPopup';
 import TradingTab from './TradingTab';
 import { getTradeNotifications, markNotificationSeen } from '../lib/supabase';
 import { TradeNotificationWithDetails } from '../types';
+import PlayerDetailModal from './PlayerDetailModal';
 
 interface MarketplaceProps {
   leagueId: string;
@@ -47,6 +48,7 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
   const [showNotificationPopup, setShowNotificationPopup] = useState(false);
   const [currentNotification, setCurrentNotification] = useState<TradeNotificationWithDetails | null>(null);
   const [playerTradeStatus, setPlayerTradeStatus] = useState<Record<string, boolean>>({});
+  const [selectedPlayerForModal, setSelectedPlayerForModal] = useState<ChessPlayer | null>(null);
 
   useEffect(() => {
     if (user && leagueId) {
@@ -828,7 +830,12 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
                         <div className="flex items-center space-x-2 mb-2">
-                          <h3 className="font-semibold text-lg">{listing.name}</h3>
+                          <h3 
+                            className="font-semibold text-lg cursor-pointer hover:text-royalBlue transition-colors"
+                            onClick={() => setSelectedPlayerForModal(listing)}
+                          >
+                            {listing.name}
+                          </h3>
                           {details?.country && (
                             <span className="text-xs bg-gray-100 px-2 py-1 rounded">
                               {details.country}
@@ -887,7 +894,12 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
                         <div className="flex items-center space-x-2 mb-2">
-                          <h3 className="font-semibold text-lg">{player.name}</h3>
+                          <h3 
+                            className="font-semibold text-lg cursor-pointer hover:text-royalBlue transition-colors"
+                            onClick={() => setSelectedPlayerForModal(player)}
+                          >
+                            {player.name}
+                          </h3>
                           {details?.country && (
                             <span className="text-xs bg-gray-100 px-2 py-1 rounded">
                               {details.country}
@@ -1148,6 +1160,14 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
           onAccept={handleNotificationAccept}
           onClose={handleNotificationClose}
           onMarkSeen={handleMarkNotificationSeen}
+        />
+      )}
+
+      {/* Player Detail Modal */}
+      {selectedPlayerForModal && (
+        <PlayerDetailModal
+          player={selectedPlayerForModal}
+          onClose={() => setSelectedPlayerForModal(null)}
         />
       )}
     </div>

@@ -35,23 +35,23 @@ const Onboarding: React.FC = () => {
           <h1 className="text-3xl font-extrabold text-neutral-900 mb-4 font-serif drop-shadow">Welcome to {brandName}</h1>
           <p className="text-lg text-neutral-700">Your complete guide to mastering {brandName}</p>
           
-          {/* Quick Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mt-6">
+          {/* Quick Action Button */}
+          <div className="flex justify-center mt-6">
             <button
               onClick={handleSkipToSignup}
               className="px-8 py-3 bg-royalBlue hover:bg-blue-700 text-white font-bold rounded-lg shadow-lg transition-all duration-200 text-lg flex items-center justify-center"
             >
-              🚀 Start Playing Now
-            </button>
-            <button
-              onClick={() => navigate('/signin')}
-              className="px-8 py-3 border-2 border-royalBlue text-royalBlue hover:bg-royalBlue hover:text-white font-semibold rounded-lg transition-all duration-200 text-lg"
-            >
-              Sign In
+              🚀 Create Account & Start Playing
             </button>
           </div>
           <p className="text-sm text-gray-600 mt-3">
-            👆 Click above to create your account in under 2 minutes!
+            Already have an account?{' '}
+            <button
+              onClick={() => navigate('/signin')}
+              className="text-royalBlue hover:text-blue-700 font-semibold underline"
+            >
+              Sign In
+            </button>
           </p>
         </div>
 
@@ -123,19 +123,6 @@ const Onboarding: React.FC = () => {
         {/* Step-by-Step Instructions */}
         <div className="space-y-8 mb-8">
           
-          {/* Call-to-Action Break */}
-          <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-xl p-6 border-2 border-green-200 text-center">
-            <h2 className="text-2xl font-bold text-green-800 mb-3">🎯 Ready to Jump In?</h2>
-            <p className="text-green-700 mb-4">
-              Don't wait! Create your account now and start drafting players while you learn the game.
-            </p>
-            <button
-              onClick={handleSkipToSignup}
-              className="px-8 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg shadow-lg transition-all duration-200 text-lg"
-            >
-              🚀 Create Account & Start Playing
-            </button>
-          </div>
           {/* Step 1: Joining a League */}
           <div className="bg-white rounded-xl shadow-lg p-6 border-2 border-royalBlue">
             <div className="flex items-center mb-4">
@@ -255,61 +242,16 @@ const Onboarding: React.FC = () => {
             Back to Home
           </button>
           
-          <div className="flex gap-4">
-            <button
-              onClick={handleSkipToSignup}
-              className="px-6 py-3 text-gray-600 hover:text-gray-800 transition-colors border border-gray-300 rounded-lg hover:bg-gray-50"
-            >
-              Skip to Sign Up
-            </button>
-            <button
-              onClick={handleNext}
-              className="flex items-center px-8 py-3 bg-royalBlue hover:bg-blue-700 text-white font-semibold rounded-lg shadow-lg transition-all duration-200"
-            >
-              Continue to Sign Up
-              <ArrowRight className="w-5 h-5 ml-2" />
-            </button>
-          </div>
-        </div>
-
-
-
-        {/* Prominent Sign Up Section */}
-        <div className="mt-12 bg-gradient-to-r from-royalBlue to-blue-600 rounded-xl p-8 text-white text-center">
-          <h2 className="text-3xl font-bold mb-4">Ready to Start Playing?</h2>
-          <p className="text-xl mb-6 text-blue-100">
-            Join thousands of players competing in fantasy chess leagues!
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button
-              onClick={handleSkipToSignup}
-              className="px-8 py-4 bg-white text-royalBlue font-bold rounded-lg shadow-lg hover:bg-gray-50 transition-all duration-200 text-lg"
-            >
-              Create Account Now
-            </button>
-            <button
-              onClick={() => navigate('/signin')}
-              className="px-8 py-4 border-2 border-white text-white font-semibold rounded-lg hover:bg-white hover:text-royalBlue transition-all duration-200 text-lg"
-            >
-              Sign In
-            </button>
-          </div>
-          <p className="text-sm text-blue-200 mt-4">
-            It only takes 2 minutes to get started!
-          </p>
+          <button
+            onClick={handleNext}
+            className="flex items-center px-8 py-3 bg-royalBlue hover:bg-blue-700 text-white font-semibold rounded-lg shadow-lg transition-all duration-200"
+          >
+            Create Account
+            <ArrowRight className="w-5 h-5 ml-2" />
+          </button>
         </div>
       </div>
 
-      {/* Floating Action Button - Always Visible */}
-      <div className="fixed bottom-6 right-6 z-50">
-        <button
-          onClick={handleSkipToSignup}
-          className="bg-royalBlue hover:bg-blue-700 text-white px-6 py-4 rounded-full shadow-2xl transition-all duration-200 transform hover:scale-110 flex items-center space-x-2 text-lg font-bold"
-        >
-          <span>🚀</span>
-          <span>Sign Up</span>
-        </button>
-      </div>
     </div>
   )
 }

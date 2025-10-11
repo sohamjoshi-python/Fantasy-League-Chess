@@ -9,6 +9,7 @@ interface PlayerCardProps {
   isUserTurn: boolean;
   onBuyClick: (player: ChessPlayer) => void;
   currencyType?: 'gems' | 'coins'; // New prop to specify currency type
+  onPlayerClick?: (player: ChessPlayer) => void; // Optional click handler for player name
 }
 
 const PlayerCard = memo<PlayerCardProps>(({ 
@@ -17,7 +18,8 @@ const PlayerCard = memo<PlayerCardProps>(({
   canBuy, 
   isUserTurn, 
   onBuyClick,
-  currencyType = 'coins' // Default to coins for backward compatibility
+  currencyType = 'coins', // Default to coins for backward compatibility
+  onPlayerClick
 }) => {
   const price = calculatePlayerPrice(player.elo);
   const details = getPlayerDetails(player.name);
@@ -43,7 +45,12 @@ const PlayerCard = memo<PlayerCardProps>(({
       <div className="flex justify-between items-start">
         <div className="flex-1">
           <div className="flex items-center space-x-2 mb-2">
-            <h5 className="font-semibold text-lg">{player.name}</h5>
+            <h5 
+              className={`font-semibold text-lg ${onPlayerClick ? 'cursor-pointer hover:text-royalBlue transition-colors' : ''}`}
+              onClick={() => onPlayerClick?.(player)}
+            >
+              {player.name}
+            </h5>
             {details?.country && (
               <span className="text-xs bg-gray-100 px-2 py-1 rounded">
                 {details.country}
@@ -56,16 +63,6 @@ const PlayerCard = memo<PlayerCardProps>(({
             {(details?.average_centipawn_loss !== undefined && details?.average_centipawn_loss !== null) ? (
               <p>ACL: {details.average_centipawn_loss.toFixed(1)} ({details.games} games)</p>
             ) : null}
-            <p>
-              <a 
-                href={`https://www.chess.com/member/${player.name.toLowerCase().replace(/\s+/g, '')}`} 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="text-blue-600 hover:underline text-xs"
-              >
-                View on Chess.com
-              </a>
-            </p>
           </div>
         </div>
         <div className="text-right ml-4">

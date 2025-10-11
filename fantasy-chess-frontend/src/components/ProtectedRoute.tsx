@@ -45,16 +45,23 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
             {/* Action Buttons */}
             <div className="space-y-3">
               <Link
-                to="/"
+                to="/signin"
                 className="w-full bg-royalBlue hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors duration-200 flex items-center justify-center group"
               >
                 <LogIn className="w-5 h-5 mr-2 group-hover:translate-x-1 transition-transform duration-200" />
-                Sign In / Sign Up
+                Sign In
+              </Link>
+              
+              <Link
+                to="/signup"
+                className="w-full border-2 border-royalBlue hover:bg-royalBlue text-royalBlue hover:text-white font-medium py-3 px-6 rounded-lg transition-colors duration-200 flex items-center justify-center"
+              >
+                Create Account
               </Link>
               
               <Link
                 to="/"
-                className="w-full border-2 border-gray-300 hover:border-royalBlue text-gray-700 hover:text-royalBlue font-medium py-3 px-6 rounded-lg transition-colors duration-200 flex items-center justify-center"
+                className="w-full border-2 border-gray-300 hover:border-gray-400 text-gray-700 hover:text-gray-900 font-medium py-3 px-6 rounded-lg transition-colors duration-200 flex items-center justify-center"
               >
                 ← Back to Home
               </Link>

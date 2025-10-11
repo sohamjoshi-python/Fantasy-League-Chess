@@ -147,18 +147,15 @@ const Navbar: React.FC = () => {
               </>
             ) : (
               <div className="flex items-center space-x-2">
-                <button
-                  onClick={() => {
-                    setIsSignUp(false)
-                    setShowAuthModal(true)
-                  }}
+                <Link
+                  to="/signin"
                   className="flex items-center space-x-1 bg-[#1e293b] hover:bg-royalBlue text-white px-4 py-2 rounded-md text-sm font-bold shadow-lg transition-colors"
                 >
                   <LogIn className="h-4 w-4" />
                   <span>Sign In</span>
-                </button>
+                </Link>
                 <Link
-                  to="/onboarding"
+                  to="/signup"
                   className="flex items-center space-x-1 bg-white border-2 border-royalBlue text-royalBlue hover:bg-royalBlue hover:text-white px-4 py-2 rounded-md text-sm font-bold shadow-lg transition-colors"
                 >
                   <UserPlus className="h-4 w-4" />

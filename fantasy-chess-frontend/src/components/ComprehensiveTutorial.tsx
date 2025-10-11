@@ -190,7 +190,7 @@ const ComprehensiveTutorial: React.FC = () => {
     {
       id: 'normal-marketplace',
       title: 'Normal Marketplace Trading',
-      description: 'After the draft, you get 50 coins weekly for trading. You can buy new players, sell current ones, or trade with other league members. Prices fluctuate based on player performance and demand!',
+      description: 'After the draft ends, you get 50 COINS (🪙) every week for trading. You can buy new players, sell current ones, or trade with other league members. Prices fluctuate based on player performance and demand!',
       action: 'Click "Next" to learn about currency types',
       target: 'next-step-button',
       page: 'leaderboard'
@@ -198,7 +198,7 @@ const ComprehensiveTutorial: React.FC = () => {
     {
       id: 'currency-explanation',
       title: 'Two Types of Currency',
-      description: 'Fantasy Chess uses two different currencies: GEMS (💎) for the turn-based marketplace draft phase, and COINS (🪙) for regular trading. GEMS are only used during team building, while coins are your main currency for buying/selling players throughout the season.',
+      description: 'Fantasy Chess uses TWO completely different currencies: GEMS (💎) are ONLY used during the turn-based marketplace draft phase - everyone gets exactly 50 GEMS to build their initial team. Once the draft ends, GEMS disappear forever. COINS (🪙) are your main currency for trading players throughout the entire season - you earn 50 COINS every week.',
       action: 'Click "Next" to learn about scoring formulas',
       target: 'next-step-button',
       page: 'leaderboard'

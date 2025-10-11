@@ -1,11 +1,29 @@
 import * as React from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { Trophy, Users, Coins, Store, HelpCircle, Star, Swords, Shield, Calendar } from 'lucide-react'
 import logo from '../assets/fantasy-league-chess-logo-updated.png'
 import { useResponsiveBrandName } from '../utils/browserDetection';
 
 const Home: React.FC = () => {
   const { brandName, brandNameFull } = useResponsiveBrandName();
+  const navigate = useNavigate();
+
+  // Check for auth errors in URL hash (expired reset links, etc.)
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash) {
+      const params = new URLSearchParams(hash.substring(1));
+      const errorParam = params.get('error');
+      const errorCode = params.get('error_code');
+      
+      // If there's an auth error (like expired OTP), redirect to sign-in with error
+      if (errorParam === 'access_denied' && errorCode === 'otp_expired') {
+        console.log('Detected expired reset link, redirecting to sign-in');
+        navigate('/signin' + hash);
+      }
+    }
+  }, [navigate]);
   
   return (
     <div className="w-full min-h-screen bg-white flex flex-col items-center font-sans pt-20">

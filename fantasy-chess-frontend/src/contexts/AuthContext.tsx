@@ -58,8 +58,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
-      // Ignore token refresh and other non-auth transitions to avoid refetch on tab focus
+      console.log('Auth state change event:', event)
+      
+      // Handle different auth events
       if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED') {
+        setUser(session?.user ?? null)
+        setLoading(false)
+      }
+      
+      // Handle password recovery - user clicked reset link from email
+      if (event === 'PASSWORD_RECOVERY') {
+        console.log('Password recovery event detected - user clicked reset link')
+        // User has clicked the reset link and has a valid recovery session
+        // The session is automatically set, just update our state
         setUser(session?.user ?? null)
         setLoading(false)
       }

@@ -20,11 +20,16 @@ export interface ChessPlayer {
   elo: number
   fide_id?: string
   country?: string
-  average_centipawn_loss?: number
+  accuracy?: number // Average Centipawn Loss from database
+  average_centipawn_loss?: number // Legacy field
   games?: number
   created_at: string
   updated_at?: string
   league_owners?: { [leagueId: string]: string } // Map of leagueId to userId
+  username?: string // Chess.com username
+  title?: string // Chess title (GM, IM, etc.)
+  average_acl?: number // Average ACL for quick stats (calculated)
+  total_points?: number // Total fantasy points (calculated)
 }
 
 export interface League {

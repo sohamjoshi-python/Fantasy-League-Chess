@@ -124,11 +124,11 @@ const SignUp: React.FC = () => {
         {/* Back Button */}
         <div className="mb-6">
           <button
-            onClick={() => navigate('/onboarding')}
+            onClick={() => navigate('/')}
             className="flex items-center text-gray-600 hover:text-gray-800 transition-colors"
           >
             <ArrowLeft className="w-5 h-5 mr-2" />
-            Back to How to Play
+            Back to Home
           </button>
         </div>
 

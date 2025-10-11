@@ -9,6 +9,7 @@ import { useDebounce } from '../hooks/useDebounce';
 import { LoadingSpinner } from './ui/LoadingSpinner';
 import { StaggeredTransition } from './ui/SmoothTransition';
 import PlayerCard from './PlayerCard';
+import PlayerDetailModal from './PlayerDetailModal';
 
 interface TurnBasedMarketplaceProps {
   league: League;
@@ -51,6 +52,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
   const [currentPlayerName, setCurrentPlayerName] = useState<string>('');
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
   const [lastActionTime, setLastActionTime] = useState(0);
+  const [selectedPlayerForModal, setSelectedPlayerForModal] = useState<ChessPlayer | null>(null);
   
   
   // Add state for draft completed - check both league state and marketplace order
@@ -1406,6 +1408,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
                           setSelectedPlayer(player);
                           setShowBuyConfirmation(true);
                         }}
+                  onPlayerClick={(player) => setSelectedPlayerForModal(player)}
                 />
               ))}
             </StaggeredTransition>
@@ -1550,6 +1553,14 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
             </div>
           </div>
         </div>
+      )}
+
+      {/* Player Detail Modal */}
+      {selectedPlayerForModal && (
+        <PlayerDetailModal
+          player={selectedPlayerForModal}
+          onClose={() => setSelectedPlayerForModal(null)}
+        />
       )}
 
     </div>

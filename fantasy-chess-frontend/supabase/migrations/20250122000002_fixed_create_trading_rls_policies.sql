@@ -154,7 +154,7 @@ GRANT EXECUTE ON FUNCTION create_trade(UUID, UUID, UUID, INTEGER) TO authenticat
 GRANT EXECUTE ON FUNCTION accept_trade(UUID, UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION cancel_trade(UUID, UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION get_user_trades(UUID, UUID) TO authenticated;
-GRANT EXECUTE ON FUNCTION get_trade_notifications(UUID, UUID) TO authenticated;
+zZzzzzGRANT EXECUTE ON FUNCTION get_trade_notifications(UUID, UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION mark_notification_seen(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION expire_old_trades() TO authenticated;
 GRANT EXECUTE ON FUNCTION cleanup_expired_trades() TO authenticated;
