@@ -40,21 +40,27 @@ const Dashboard: React.FC = () => {
   const [activeLeagues, setActiveLeagues] = useState<League[]>([]);
   const [selectedPlayerForModal, setSelectedPlayerForModal] = useState<ChessPlayer | null>(null);
 
-  useEffect(() => {
-    if (user) {
-      loadDashboardData()
-    } else {
-      setLoading(false)
-    }
-  }, [user])
-
   // Track if initial load is complete to prevent unnecessary refreshes
   const hasCompletedInitialLoad = React.useRef(false);
-  
+  const userIdRef = React.useRef<string | null>(null);
+
   useEffect(() => {
-    // Reset the flag when user changes
-    if (user) {
+    // Only load if user exists and either:
+    // 1. We haven't completed initial load, OR
+    // 2. The user ID actually changed (different user logged in)
+    const userIdChanged = user?.id !== userIdRef.current;
+    
+    if (user && (!hasCompletedInitialLoad.current || userIdChanged)) {
+      if (userIdChanged) {
+        // New user, reset the flag
+        hasCompletedInitialLoad.current = false;
+        userIdRef.current = user.id;
+      }
+      loadDashboardData();
+    } else if (!user) {
+      setLoading(false);
       hasCompletedInitialLoad.current = false;
+      userIdRef.current = null;
     }
   }, [user]);
 
@@ -259,25 +265,40 @@ const Dashboard: React.FC = () => {
 
       // Get past league performance for all past leagues
       if (past.length > 0) {
-        const pastLeagueIds = past.map(l => l.id);
-        const { data: pastLeagueData } = await supabase
-          .from('leagues')
-          .select(`*, lineups!inner(user_id, total_points, week_start_date)`)
-          .in('id', pastLeagueIds)
-          .order('end_date', { ascending: false })
-        if (pastLeagueData) {
-          // Process past league data to get standings
-          const processedPastLeagues = pastLeagueData.map(league => {
-            const userLineups = league.lineups.filter((l: any) => l.user_id === user.id)
-            const totalPoints = userLineups.reduce((sum: number, l: any) => sum + l.total_points, 0)
-            return {
+        try {
+          const pastLeagueIds = past.map(l => l.id);
+          
+          // Get lineups for past leagues separately to avoid complex join
+          const { data: userLineups, error: lineupsError } = await supabase
+            .from('lineups')
+            .select('league_id, total_points, week_start_date')
+            .eq('user_id', user.id)
+            .in('league_id', pastLeagueIds);
+          
+          if (lineupsError) {
+            console.error('Error loading past league lineups:', lineupsError);
+            setPastLeagues([]);
+          } else if (userLineups) {
+            // Group lineups by league and calculate totals
+            const leagueTotals = new Map<string, number>();
+            userLineups.forEach((lineup: any) => {
+              const current = leagueTotals.get(lineup.league_id) || 0;
+              leagueTotals.set(lineup.league_id, current + (lineup.total_points || 0));
+            });
+            
+            // Process past league data
+            const processedPastLeagues = past.map(league => ({
               league_id: league.id,
               league_name: league.name,
-              total_points: totalPoints,
+              total_points: leagueTotals.get(league.id) || 0,
               end_date: league.end_date
-            }
-          })
-          setPastLeagues(processedPastLeagues)
+            })).sort((a, b) => b.end_date.localeCompare(a.end_date));
+            
+            setPastLeagues(processedPastLeagues);
+          }
+        } catch (error) {
+          console.error('Exception loading past leagues:', error);
+          setPastLeagues([]);
         }
       } else {
         setPastLeagues([])
