@@ -48,10 +48,12 @@ const Dashboard: React.FC = () => {
     }
   }, [user])
 
-  // Add a refresh mechanism for intermittent loading issues
+  // Add a refresh mechanism for intermittent loading issues (only once on mount)
+  const hasAttemptedRefresh = React.useRef(false);
   useEffect(() => {
-    if (user && !loading && activeLeagues.length === 0 && futureLeagues.length === 0) {
-      // If user exists but no leagues are loaded, try refreshing after a delay
+    if (user && !loading && activeLeagues.length === 0 && futureLeagues.length === 0 && !hasAttemptedRefresh.current) {
+      // If user exists but no leagues are loaded, try refreshing after a delay (only once)
+      hasAttemptedRefresh.current = true;
       const refreshTimer = setTimeout(() => {
         console.log('No leagues found, attempting refresh...');
         loadDashboardData();
@@ -93,14 +95,28 @@ const Dashboard: React.FC = () => {
     fetchAvailableWeeks();
   }, [currentLeague, user]);
 
+  const lastLoadedBreakdownKey = React.useRef<string>('');
+  
   useEffect(() => {
     async function loadBreakdown() {
-      if (!user || !currentLeague || !selectedWeek) return;
+      if (!user || !currentLeague || !selectedWeek) {
+        return;
+      }
+      
+      // Create a unique key for this breakdown request
+      const breakdownKey = `${user.id}-${currentLeague.id}-${selectedWeek}`;
+      
+      // Skip if we've already loaded this exact breakdown
+      if (lastLoadedBreakdownKey.current === breakdownKey) {
+        return;
+      }
+      
       setBreakdownLoading(true);
       setBreakdownError('');
       try {
         const data = await fetchLineupPlayerBreakdownByRounds(user.id, currentLeague.id, selectedWeek.replace(/\./g, '-'));
         setPlayerBreakdown(data);
+        lastLoadedBreakdownKey.current = breakdownKey;
       } catch (e: any) {
         setBreakdownError('Could not load point breakdown');
       } finally {

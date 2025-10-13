@@ -298,14 +298,28 @@ const LeaguePage: React.FC = () => {
     fetchAvailableWeeks();
   }, [league, user]);
 
+  const lastLoadedBreakdownKey = React.useRef<string>('');
+  
   useEffect(() => {
     async function loadBreakdown() {
-      if (!user || !league || !selectedWeek) return;
+      if (!user || !league || !selectedWeek) {
+        return;
+      }
+      
+      // Create a unique key for this breakdown request
+      const breakdownKey = `${user.id}-${league.id}-${selectedWeek}`;
+      
+      // Skip if we've already loaded this exact breakdown
+      if (lastLoadedBreakdownKey.current === breakdownKey) {
+        return;
+      }
+      
       setBreakdownLoading(true);
       setBreakdownError('');
       try {
         const data = await fetchLineupPlayerBreakdownByRounds(user.id, league?.id, selectedWeek.replace(/\./g, '-'));
         setPlayerBreakdown(data);
+        lastLoadedBreakdownKey.current = breakdownKey;
       } catch (e: any) {
         setBreakdownError('Could not load point breakdown');
       } finally {
