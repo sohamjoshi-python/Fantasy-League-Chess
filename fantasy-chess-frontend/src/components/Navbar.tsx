@@ -3,7 +3,7 @@ import * as ReactDOM from 'react-dom'
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { LogIn, UserPlus, HelpCircle, Bell } from 'lucide-react'
+import { LogIn, UserPlus, HelpCircle, Bell, Menu, X } from 'lucide-react'
 import { getUnreadNotificationCount, supabase } from '../lib/supabase'
 import Inbox from './Inbox'
 import logo from '../assets/fantasy-league-chess-logo-updated.png'
@@ -13,6 +13,7 @@ const Navbar: React.FC = () => {
   const { user, signOut } = useAuth();
   const [showDropdown, setShowDropdown] = useState(false);
   const [showInbox, setShowInbox] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const { brandName } = useResponsiveBrandName();
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [isSignUp, setIsSignUp] = useState(false)
@@ -77,16 +78,18 @@ const Navbar: React.FC = () => {
     <nav className="bg-white shadow-lg sticky top-0 z-50 border-b-2 border-royalBlue">
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex justify-between h-16">
+          {/* Logo Section */}
           <div className="flex items-center">
             <Link to="/" className="flex items-center space-x-2">
-              <div className="h-14 w-14 bg-white rounded-full p-0 shadow-md border border-royalBlue">
+              <div className="h-12 w-12 sm:h-14 sm:w-14 bg-white rounded-full p-0 shadow-md border border-royalBlue">
                 <img src={logo} alt="Fantasy League Chess Logo" className="h-full w-full object-contain" />
               </div>
-              <span className="text-2xl font-extrabold text-royalBlue tracking-wide font-serif drop-shadow">{brandName}</span>
+              <span className="text-lg sm:text-2xl font-extrabold text-royalBlue tracking-wide font-serif drop-shadow">{brandName}</span>
             </Link>
           </div>
 
-          <div className="flex items-center space-x-4">
+          {/* Desktop Navigation */}
+          <div className="hidden lg:flex items-center space-x-4">
             {user ? (
               <>
                 <Link
@@ -101,49 +104,47 @@ const Navbar: React.FC = () => {
                 >
                   Leaderboard
                 </Link>
-                                 <Link
-                   to="/onboarding"
-                   className="text-neutral-700 hover:text-royalBlue hover:underline hover:underline-offset-4 px-3 py-2 rounded-md text-sm font-medium flex items-center transition-colors"
-                 >
-                   <HelpCircle className="h-4 w-4 mr-1" />
-                   Help
-                 </Link>
+                <Link
+                  to="/onboarding"
+                  className="text-neutral-700 hover:text-royalBlue hover:underline hover:underline-offset-4 px-3 py-2 rounded-md text-sm font-medium flex items-center transition-colors"
+                >
+                  <HelpCircle className="h-4 w-4 mr-1" />
+                  Help
+                </Link>
 
-
-                 <button
-                   onClick={() => setShowInbox(true)}
-                   className="relative text-neutral-700 hover:text-royalBlue px-3 py-2 rounded-md text-sm font-medium transition-colors"
-                 >
-                  <Bell className="h-4 w-4" />
+                <button
+                  onClick={() => setShowInbox(true)}
+                  className="relative text-neutral-700 hover:text-royalBlue px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                >
+                  <Bell className="h-5 w-5" />
                   {unreadCount > 0 && (
                     <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[18px] flex items-center justify-center">
                       {unreadCount > 99 ? '99+' : unreadCount}
                     </span>
                   )}
                 </button>
-                {user && (
-                  <div className="relative ml-4">
-                    <button
-                      className="flex items-center gap-2 px-3 py-2 rounded hover:bg-neutral-100 focus:outline-none"
-                      onClick={() => setShowDropdown((prev) => !prev)}
-                      onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
-                    >
-                      <span className="font-semibold text-neutral-900">{displayName}</span>
-                      <svg className="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"/></svg>
-                    </button>
-                    {showDropdown && (
-                      <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
-                        <a href="/profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profile</a>
-                        <a href="/dashboard" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Dashboard</a>
-                        <a href="/join-league" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Join League</a>
-                        <a href="/help" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Help & Tutorial</a>
-                        <a href="https://forms.gle/xDGEcbp5UPuVbJT16" target="_blank" rel="noopener noreferrer" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Feedback</a>
-                        <a href="mailto:support@fantasyleaguechess.com" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Contact Support</a>
-                        <button onClick={handleSignOut} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Sign Out</button>
-                      </div>
-                    )}
-                  </div>
-                )}
+
+                <div className="relative ml-4">
+                  <button
+                    className="flex items-center gap-2 px-3 py-2 rounded hover:bg-neutral-100 focus:outline-none"
+                    onClick={() => setShowDropdown((prev) => !prev)}
+                    onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
+                  >
+                    <span className="font-semibold text-neutral-900">{displayName}</span>
+                    <svg className="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"/></svg>
+                  </button>
+                  {showDropdown && (
+                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
+                      <a href="/profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profile</a>
+                      <a href="/dashboard" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Dashboard</a>
+                      <a href="/join-league" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Join League</a>
+                      <a href="/help" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Help & Tutorial</a>
+                      <a href="https://forms.gle/xDGEcbp5UPuVbJT16" target="_blank" rel="noopener noreferrer" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Feedback</a>
+                      <a href="mailto:support@fantasyleaguechess.com" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Contact Support</a>
+                      <button onClick={handleSignOut} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Sign Out</button>
+                    </div>
+                  )}
+                </div>
               </>
             ) : (
               <div className="flex items-center space-x-2">
@@ -164,7 +165,139 @@ const Navbar: React.FC = () => {
               </div>
             )}
           </div>
+
+          {/* Mobile Menu Button & Notification Bell */}
+          <div className="lg:hidden flex items-center space-x-2">
+            {user && (
+              <button
+                onClick={() => setShowInbox(true)}
+                className="relative text-neutral-700 hover:text-royalBlue p-2 rounded-md transition-colors"
+              >
+                <Bell className="h-6 w-6" />
+                {unreadCount > 0 && (
+                  <span className="absolute top-0 right-0 bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[18px] flex items-center justify-center">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </button>
+            )}
+            <button
+              onClick={() => setShowMobileMenu(!showMobileMenu)}
+              className="text-neutral-700 hover:text-royalBlue p-2 rounded-md transition-colors"
+            >
+              {showMobileMenu ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </button>
+          </div>
         </div>
+
+        {/* Mobile Menu */}
+        {showMobileMenu && (
+          <div className="lg:hidden border-t border-gray-200 py-4 space-y-2">
+            {user ? (
+              <>
+                <div className="px-4 py-2 border-b border-gray-200 mb-2">
+                  <span className="font-semibold text-neutral-900 text-lg">{displayName}</span>
+                </div>
+                <Link
+                  to="/dashboard"
+                  className="block px-4 py-2 text-neutral-700 hover:bg-gray-100 hover:text-royalBlue rounded-md transition-colors"
+                  onClick={() => setShowMobileMenu(false)}
+                >
+                  Dashboard
+                </Link>
+                <Link
+                  to="/join-league"
+                  className="block px-4 py-2 text-neutral-700 hover:bg-gray-100 hover:text-royalBlue rounded-md transition-colors"
+                  onClick={() => setShowMobileMenu(false)}
+                >
+                  Join League
+                </Link>
+                <Link
+                  to="/avatar-shop"
+                  className="block px-4 py-2 text-neutral-700 hover:bg-gray-100 hover:text-royalBlue rounded-md transition-colors"
+                  onClick={() => setShowMobileMenu(false)}
+                >
+                  Avatar Shop
+                </Link>
+                <Link
+                  to="/leaderboard"
+                  className="block px-4 py-2 text-neutral-700 hover:bg-gray-100 hover:text-royalBlue rounded-md transition-colors"
+                  onClick={() => setShowMobileMenu(false)}
+                >
+                  Leaderboard
+                </Link>
+                <Link
+                  to="/onboarding"
+                  className="block px-4 py-2 text-neutral-700 hover:bg-gray-100 hover:text-royalBlue rounded-md transition-colors"
+                  onClick={() => setShowMobileMenu(false)}
+                >
+                  <div className="flex items-center">
+                    <HelpCircle className="h-4 w-4 mr-2" />
+                    Help
+                  </div>
+                </Link>
+                <Link
+                  to="/profile"
+                  className="block px-4 py-2 text-neutral-700 hover:bg-gray-100 hover:text-royalBlue rounded-md transition-colors"
+                  onClick={() => setShowMobileMenu(false)}
+                >
+                  Profile
+                </Link>
+                <Link
+                  to="/help"
+                  className="block px-4 py-2 text-neutral-700 hover:bg-gray-100 hover:text-royalBlue rounded-md transition-colors"
+                  onClick={() => setShowMobileMenu(false)}
+                >
+                  Help & Tutorial
+                </Link>
+                <a
+                  href="https://forms.gle/xDGEcbp5UPuVbJT16"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block px-4 py-2 text-neutral-700 hover:bg-gray-100 hover:text-royalBlue rounded-md transition-colors"
+                  onClick={() => setShowMobileMenu(false)}
+                >
+                  Feedback
+                </a>
+                <a
+                  href="mailto:support@fantasyleaguechess.com"
+                  className="block px-4 py-2 text-neutral-700 hover:bg-gray-100 hover:text-royalBlue rounded-md transition-colors"
+                  onClick={() => setShowMobileMenu(false)}
+                >
+                  Contact Support
+                </a>
+                <button
+                  onClick={() => {
+                    handleSignOut();
+                    setShowMobileMenu(false);
+                  }}
+                  className="block w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 rounded-md transition-colors font-medium"
+                >
+                  Sign Out
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  to="/signin"
+                  className="flex items-center justify-center space-x-2 mx-4 bg-[#1e293b] hover:bg-royalBlue text-white px-4 py-3 rounded-md font-bold shadow-lg transition-colors"
+                  onClick={() => setShowMobileMenu(false)}
+                >
+                  <LogIn className="h-5 w-5" />
+                  <span>Sign In</span>
+                </Link>
+                <Link
+                  to="/signup"
+                  className="flex items-center justify-center space-x-2 mx-4 bg-white border-2 border-royalBlue text-royalBlue hover:bg-royalBlue hover:text-white px-4 py-3 rounded-md font-bold shadow-lg transition-colors"
+                  onClick={() => setShowMobileMenu(false)}
+                >
+                  <UserPlus className="h-5 w-5" />
+                  <span>Sign Up</span>
+                </Link>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {showAuthModal && typeof window !== 'undefined' && ReactDOM.createPortal(
