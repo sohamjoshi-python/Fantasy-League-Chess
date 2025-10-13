@@ -48,20 +48,15 @@ const Dashboard: React.FC = () => {
     }
   }, [user])
 
-  // Add a refresh mechanism for intermittent loading issues (only once on mount)
-  const hasAttemptedRefresh = React.useRef(false);
+  // Track if initial load is complete to prevent unnecessary refreshes
+  const hasCompletedInitialLoad = React.useRef(false);
+  
   useEffect(() => {
-    if (user && !loading && activeLeagues.length === 0 && futureLeagues.length === 0 && !hasAttemptedRefresh.current) {
-      // If user exists but no leagues are loaded, try refreshing after a delay (only once)
-      hasAttemptedRefresh.current = true;
-      const refreshTimer = setTimeout(() => {
-        console.log('No leagues found, attempting refresh...');
-        loadDashboardData();
-      }, 2000);
-      
-      return () => clearTimeout(refreshTimer);
+    // Reset the flag when user changes
+    if (user) {
+      hasCompletedInitialLoad.current = false;
     }
-  }, [user, loading, activeLeagues.length, futureLeagues.length])
+  }, [user]);
 
   useEffect(() => {
     async function fetchAvailableWeeks() {
@@ -159,6 +154,7 @@ const Dashboard: React.FC = () => {
 
       if (!allLeagues) {
         console.error('Failed to load leagues after all retries');
+        hasCompletedInitialLoad.current = true; // Mark as completed even on failure
         return;
       }
 
@@ -290,6 +286,7 @@ const Dashboard: React.FC = () => {
       console.error('Error loading dashboard data:', error)
     } finally {
       setLoading(false)
+      hasCompletedInitialLoad.current = true; // Mark as completed after load attempt
     }
   }
 
