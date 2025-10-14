@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import fantasyLeagueChessLogo from '../assets/fantasy-league-chess-logo-updated.png';
-import { Trophy, Target, Clock, Calendar, Medal, Crown } from 'lucide-react';
+import { Trophy, Target, Clock, Calendar, Medal, Crown, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface LeaderboardEntry {
   user_id: string;
@@ -91,29 +91,35 @@ const Leaderboard: React.FC = () => {
     }
   };
 
-  const getWeekOptions = () => {
-    const options = [];
-    const today = new Date();
+  const navigateWeek = (direction: 'prev' | 'next') => {
+    const currentDate = new Date(selectedWeek);
+    const newDate = new Date(currentDate);
     
-    // Generate options for the last 8 weeks
-    for (let i = 0; i < 8; i++) {
-      const date = new Date(today);
-      date.setDate(today.getDate() - (today.getDay() + 7 * i) + 1);
-      const weekString = date.toISOString().split('T')[0];
-      const weekLabel = `Week of ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
-      options.push({ value: weekString, label: weekLabel });
+    if (direction === 'prev') {
+      newDate.setDate(currentDate.getDate() - 7);
+    } else {
+      newDate.setDate(currentDate.getDate() + 7);
     }
     
-    return options;
+    const newWeekString = newDate.toISOString().split('T')[0];
+    setSelectedWeek(newWeekString);
+  };
+  
+  const canNavigateNext = () => {
+    const currentDate = new Date(selectedWeek);
+    const today = new Date();
+    const nextWeek = new Date(currentDate);
+    nextWeek.setDate(currentDate.getDate() + 7);
+    return nextWeek <= today;
+  };
+  
+  const formatWeekDisplay = (weekDate: string) => {
+    const date = new Date(weekDate);
+    return `Week of ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
+  const formatCoins = (amount: number) => {
+    return `${Math.floor(amount)} 🪙`;
   };
 
   const formatDate = (dateString: string) => {
@@ -240,7 +246,7 @@ const Leaderboard: React.FC = () => {
                       <div className="text-right">
                         <div className="text-2xl font-bold text-gold">{entry.wins} wins</div>
                         <div className="text-sm text-neutral-600">
-                          {formatCurrency(entry.total_prize_money || 0)}
+                          {formatCoins(entry.total_prize_money || 0)}
                         </div>
                       </div>
                     </div>
@@ -324,7 +330,7 @@ const Leaderboard: React.FC = () => {
                         <p className="text-sm text-neutral-600">{winner.league_name}</p>
                       </div>
                       <div className="text-right">
-                        <div className="text-lg font-bold text-gold">{formatCurrency(winner.prize_amount)}</div>
+                        <div className="text-lg font-bold text-gold">{formatCoins(winner.prize_amount)}</div>
                         <div className="text-sm text-neutral-600">
                           {formatDate(winner.won_date)}
                         </div>
@@ -339,22 +345,35 @@ const Leaderboard: React.FC = () => {
           {/* Weekly Top Performers */}
           {activeTab === 'weekly' && (
             <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold flex items-center">
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold flex items-center mb-4">
                   <Calendar className="w-6 h-6 mr-2 text-gold" />
                   Weekly Top Performers
                 </h2>
-                <select
-                  value={selectedWeek}
-                  onChange={(e) => setSelectedWeek(e.target.value)}
-                  className="px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-royalBlue"
-                >
-                  {getWeekOptions().map(option => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
+                <div className="flex items-center justify-center gap-4">
+                  <button
+                    onClick={() => navigateWeek('prev')}
+                    className="px-4 py-2 bg-royalBlue text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                    Previous Week
+                  </button>
+                  <div className="px-6 py-2 bg-neutral-100 rounded-lg font-semibold text-neutral-900">
+                    {formatWeekDisplay(selectedWeek)}
+                  </div>
+                  <button
+                    onClick={() => navigateWeek('next')}
+                    disabled={!canNavigateNext()}
+                    className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
+                      canNavigateNext()
+                        ? 'bg-royalBlue text-white hover:bg-blue-700'
+                        : 'bg-neutral-300 text-neutral-500 cursor-not-allowed'
+                    }`}
+                  >
+                    Next Week
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
               {weeklyPerformers.length === 0 ? (
                 <div className="text-center py-12 text-neutral-500">
