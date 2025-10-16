@@ -2,8 +2,14 @@ import * as React from 'react'
 import { ArrowRight, Trophy, Users, Target, BarChart3, HelpCircle, Play, Coins, Store, MessageCircle } from 'lucide-react'
 import logo from '../assets/fantasy-league-chess-logo-updated.png'
 import { getBrandName, getBrandNameFull } from '../utils/browserDetection';
+import { useAuth } from '../contexts/AuthContext';
 
 const Help: React.FC = () => {
+  const { user, loading } = useAuth();
+  
+  // Debug logging
+  console.log('Help page - user:', user, 'loading:', loading);
+  
   return (
     <div className="min-h-screen bg-white py-10">
       <div className="max-w-4xl mx-auto px-4">
@@ -498,18 +504,45 @@ const Help: React.FC = () => {
             Now that you understand how to play, it's time to join your first league!
           </p>
           <div className="flex flex-col sm:flex-row gap-4">
-            <a
-              href="/join-league"
-              className="bg-white text-neutral-900 px-6 py-3 rounded-lg font-semibold hover:bg-neutral-100 transition-colors text-center border border-white shadow-lg"
-            >
-              Join a League
-            </a>
-            <a
-              href="/dashboard"
-              className="bg-transparent border-2 border-white text-white px-6 py-3 rounded-lg font-semibold hover:bg-white hover:text-neutral-900 transition-colors text-center"
-            >
-              Go to Dashboard
-            </a>
+            {loading ? (
+              // Show loading state
+              <div className="flex items-center justify-center py-3">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white mr-2"></div>
+                <span>Loading...</span>
+              </div>
+            ) : user ? (
+              // Show authenticated user options
+              <>
+                <a
+                  href="/join-league"
+                  className="bg-white text-neutral-900 px-6 py-3 rounded-lg font-semibold hover:bg-neutral-100 transition-colors text-center border border-white shadow-lg"
+                >
+                  Join a League
+                </a>
+                <a
+                  href="/dashboard"
+                  className="bg-transparent border-2 border-white text-white px-6 py-3 rounded-lg font-semibold hover:bg-white hover:text-neutral-900 transition-colors text-center"
+                >
+                  Go to Dashboard
+                </a>
+              </>
+            ) : (
+              // Show unauthenticated user options
+              <>
+                <a
+                  href="/signup"
+                  className="bg-white text-neutral-900 px-6 py-3 rounded-lg font-semibold hover:bg-neutral-100 transition-colors text-center border border-white shadow-lg"
+                >
+                  Create Account & Start Playing
+                </a>
+                <a
+                  href="/signin"
+                  className="bg-transparent border-2 border-white text-white px-6 py-3 rounded-lg font-semibold hover:bg-white hover:text-neutral-900 transition-colors text-center"
+                >
+                  Sign In
+                </a>
+              </>
+            )}
           </div>
         </div>
 
