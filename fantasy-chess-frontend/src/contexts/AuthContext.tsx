@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
+import { sendWelcomeEmail } from '../lib/free-email'
 
 interface AuthContextType {
   user: User | null
@@ -21,21 +22,13 @@ export const useAuth = () => {
   return context
 }
 
-// Helper function to send welcome email
-const sendWelcomeEmail = async (email: string) => {
+// Helper function to send welcome email using free service
+const sendWelcomeEmailFree = async (email: string) => {
   try {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session?.access_token) {
-      console.error('No access token available for email function')
-      return
+    const result = await sendWelcomeEmail(email)
+    if (!result.success) {
+      console.error('Error sending welcome email:', result.error)
     }
-
-    await supabase.functions.invoke('send-email', {
-      body: {
-        to: email,
-        emailType: 'welcome'
-      }
-    })
   } catch (error) {
     console.error('Error sending welcome email:', error)
     // Don't throw error - email failure shouldn't prevent signup
@@ -107,7 +100,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (error) throw error
 
     // Send welcome email after successful signup
-    await sendWelcomeEmail(email)
+        await sendWelcomeEmailFree(email)
   }
 
   const signOut = async () => {

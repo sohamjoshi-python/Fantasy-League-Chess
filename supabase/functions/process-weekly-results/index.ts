@@ -62,11 +62,11 @@ serve(async (req) => {
       } else if (usersWithResults) {
         console.log(`Sending weekly results emails to ${usersWithResults.length} users`)
         
-        // Send weekly results email to each user
+        // Send weekly results email to each user using free service
         for (const userResult of usersWithResults) {
           if (userResult.users?.email) {
             try {
-              await supabase.functions.invoke('send-email', {
+              await supabase.functions.invoke('send-free-email', {
                 body: {
                   emailType: 'weekly_results',
                   userEmail: userResult.users.email
