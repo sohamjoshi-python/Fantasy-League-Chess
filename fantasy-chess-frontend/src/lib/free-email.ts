@@ -97,7 +97,3 @@ export async function sendCustomEmail(
   return { success: result.success, error: result.error };
 }
 
-// Helper function to strip HTML tags for plain text
-function stripHtml(html: string): string {
-  return html.replace(/<[^>]*>/g, '');
-}

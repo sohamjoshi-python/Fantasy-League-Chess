@@ -69,7 +69,7 @@ export async function sendWelcomeEmail(userEmail: string): Promise<{ success: bo
   return { success: result.success, error: result.error };
 }
 
-export async function sendWeeklyResultsEmail(userEmail: string, resultsData?: any): Promise<{ success: boolean; error?: string }> {
+export async function sendWeeklyResultsEmail(userEmail: string): Promise<{ success: boolean; error?: string }> {
   const result = await sendResendEmail({
     to: userEmail,
     subject: 'Your Weekly Fantasy Chess Results',
@@ -97,7 +97,3 @@ export async function sendCustomEmail(
   return { success: result.success, error: result.error };
 }
 
-// Helper function to strip HTML tags for plain text
-function stripHtml(html: string): string {
-  return html.replace(/<[^>]*>/g, '');
-}
