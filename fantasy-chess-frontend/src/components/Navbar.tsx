@@ -46,7 +46,7 @@ const Navbar: React.FC = () => {
         .from('users')
         .select('username')
         .eq('id', user.id)
-        .single();
+        .maybeSingle(); // Use maybeSingle to handle missing users gracefully
       
       if (error) {
         console.error('Error loading username:', error);
@@ -57,8 +57,10 @@ const Navbar: React.FC = () => {
       if (userData?.username) {
         setDisplayName(userData.username);
       } else {
-        // Fallback to truncated ID
-        setDisplayName(`User_${user.id.slice(0, 6)}`);
+        // User doesn't exist in users table yet - this happens during signup
+        // Use display_name from auth metadata as fallback
+        const displayName = user.user_metadata?.display_name || `User_${user.id.slice(0, 6)}`;
+        setDisplayName(displayName);
       }
     } catch (error) {
       console.error('Error loading display name:', error);

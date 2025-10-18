@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
-import { sendWelcomeEmail } from '../lib/free-email'
+import { sendWelcomeEmail } from '../lib/resend-email'
 
 interface AuthContextType {
   user: User | null
@@ -22,16 +22,64 @@ export const useAuth = () => {
   return context
 }
 
-// Helper function to send welcome email using free service
-const sendWelcomeEmailFree = async (email: string) => {
+// Helper function to send welcome email using Resend
+const sendWelcomeEmailFree = async (email: string): Promise<{ success: boolean; error?: string }> => {
   try {
     const result = await sendWelcomeEmail(email)
-    if (!result.success) {
-      console.error('Error sending welcome email:', result.error)
+    return { success: result.success, error: result.error }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
+
+// Helper function to check if welcome email should be sent and send it
+const checkAndSendWelcomeEmail = async (user: User) => {
+  try {
+    // Check if welcome email has already been sent
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('sent_welcome_email')
+      .eq('id', user.id)
+      .single()
+    
+    if (userError) {
+      return
+    }
+    
+    if (userData?.sent_welcome_email) {
+      return
+    }
+    
+    // Check if this is a recent email confirmation (within 1 hour of creation)
+    const createdAt = new Date(user.created_at)
+    const confirmedAt = new Date(user.email_confirmed_at!)
+    const timeDiff = confirmedAt.getTime() - createdAt.getTime()
+    const hoursDiff = timeDiff / (1000 * 3600)
+    
+    if (hoursDiff < 1) {
+      // First, mark welcome email as sent to prevent race conditions
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ sent_welcome_email: true })
+        .eq('id', user.id)
+      
+      if (updateError) {
+        return
+      }
+      
+      // Then send welcome email
+      const result = await sendWelcomeEmailFree(user.email!)
+      
+      if (!result.success) {
+        // Reset flag if email failed
+        await supabase
+          .from('users')
+          .update({ sent_welcome_email: false })
+          .eq('id', user.id)
+      }
     }
   } catch (error) {
-    console.error('Error sending welcome email:', error)
-    // Don't throw error - email failure shouldn't prevent signup
+    // Silent error handling for production
   }
 }
 
@@ -51,17 +99,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('Auth state change event:', event)
-      
       // Handle different auth events
       if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED') {
         setUser(session?.user ?? null)
         setLoading(false)
       }
       
+      // Send welcome email when user confirms their email (SIGNED_IN after email confirmation)
+      if (event === 'SIGNED_IN' && session?.user?.email_confirmed_at) {
+        // Check if welcome email has already been sent for this user
+        checkAndSendWelcomeEmail(session.user)
+      }
+      
       // Handle password recovery - user clicked reset link from email
       if (event === 'PASSWORD_RECOVERY') {
-        console.log('Password recovery event detected - user clicked reset link')
         // User has clicked the reset link and has a valid recovery session
         // The session is automatically set, just update our state
         setUser(session?.user ?? null)
@@ -90,17 +141,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }
 
   const signUp = async (email: string, password: string, displayName: string) => {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { display_name: displayName }
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { display_name: displayName },
+          emailRedirectTo: `${window.location.origin}/dashboard`
+        }
+      })
+      
+      if (error) {
+        throw error
       }
-    })
-    if (error) throw error
 
-    // Send welcome email after successful signup
-        await sendWelcomeEmailFree(email)
+      // Insert user into public.users table immediately after signup
+      if (data.user) {
+        try {
+          const { error: insertError } = await supabase.from('users').upsert({
+            id: data.user.id,
+            username: displayName,
+            email: data.user.email,
+            coins: 1000, // Starting coins
+            sent_welcome_email: false, // Initialize welcome email flag
+            created_at: new Date().toISOString()
+          }, { onConflict: 'id' })
+          
+          if (insertError) {
+            // Don't throw error - user can still use the app
+          }
+        } catch (insertError) {
+          // Don't throw error - user can still use the app
+        }
+      }
+
+    } catch (error) {
+      throw error
+    }
   }
 
   const signOut = async () => {
