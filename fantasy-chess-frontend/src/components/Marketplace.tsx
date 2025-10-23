@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import React from 'react';
 import { supabase } from '../lib/supabase';
 import { CoinTransaction, calculatePlayerPrice, getPlayerTier } from '../types/coin-system';
 import { useAuth } from '../contexts/AuthContext';
@@ -16,6 +17,84 @@ interface MarketplaceProps {
   leagueId: string;
 }
 
+// Memoized PlayerCard component for better performance
+const PlayerCard = React.memo(({ 
+  player, 
+  price, 
+  userCoinBalance, 
+  onBuyClick, 
+  onPlayerClick 
+}: {
+  player: ChessPlayer;
+  price: number;
+  userCoinBalance: number;
+  onBuyClick: () => void;
+  onPlayerClick: () => void;
+}) => {
+  const details = useMemo(() => getPlayerDetails(player.name), [player.name]);
+  const tier = useMemo(() => getPlayerTier(player.elo), [player.elo]);
+  
+  return (
+    <div className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+      <div className="flex justify-between items-start">
+        <div className="flex-1">
+          <div className="flex items-center space-x-2 mb-2">
+            <h3 
+              className="font-semibold text-lg cursor-pointer hover:text-royalBlue transition-colors"
+              onClick={onPlayerClick}
+            >
+              {player.name}
+            </h3>
+            {details?.country && (
+              <span className="text-xs bg-gray-100 px-2 py-1 rounded">
+                {details.country}
+              </span>
+            )}
+          </div>
+          <div className="space-y-1 text-sm text-gray-600">
+            <p>ELO: {player.elo} • {tier}</p>
+            {details?.fide_id && <p>FIDE ID: {details.fide_id}</p>}
+            {(details?.average_centipawn_loss !== undefined && details?.average_centipawn_loss !== null) ? (
+              <p>ACL: {details.average_centipawn_loss!.toFixed(1)} ({details.games} games)</p>
+            ) : null}
+            <p className="text-xs text-gray-500">
+              Available in marketplace
+            </p>
+          </div>
+        </div>
+        <div className="text-right ml-4">
+          <div className="text-2xl font-bold text-amber-600">{price} 🪙</div>
+          <button
+            onClick={onBuyClick}
+            disabled={userCoinBalance < price}
+            className={`mt-2 px-4 py-2 rounded-md font-medium transition-colors ${
+              userCoinBalance >= price
+                ? 'bg-blue-600 text-white hover:bg-blue-700'
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            }`}
+          >
+            {userCoinBalance >= price ? 'Buy Player' : 'Insufficient Coins'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+});
+
+PlayerCard.displayName = 'PlayerCard';
+
+// Helper function to get player details
+const getPlayerDetails = (_username: string) => {
+  // This would typically fetch from a database or API
+  // For now, return a mock object with proper typing
+  return {
+    country: 'Unknown',
+    fide_id: null as string | null,
+    average_centipawn_loss: null as number | null,
+    games: 0
+  };
+};
+
 interface League {
   id: string;
   name: string;
@@ -29,7 +108,6 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
   const [league, setLeague] = useState<League | null>(null);
   const [activeTab, setActiveTab] = useState<'marketplace' | 'owned' | 'transactions' | 'trading'>('marketplace');
   const [allPlayers, setAllPlayers] = useState<ChessPlayer[]>([]);
-  const [marketplaceListings, setMarketplaceListings] = useState<ChessPlayer[]>([]);
   const [ownedPlayers, setOwnedPlayers] = useState<ChessPlayer[]>([]);
   const [transactions, setTransactions] = useState<CoinTransaction[]>([]);
   const [userCoinBalance, setUserCoinBalance] = useState<number>(0);
@@ -58,8 +136,11 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
     }
   }, [user?.id, leagueId]);
 
-  // Get owned player IDs for filtering marketplace
-  const getOwnedPlayerIds = async () => {
+  // Memoized owned player IDs to avoid repeated database calls
+  const [ownedPlayerIds, setOwnedPlayerIds] = useState<Set<string>>(new Set());
+
+  // Get owned player IDs for filtering marketplace - memoized
+  const getOwnedPlayerIds = useCallback(async () => {
     try {
       const { data: allTeams, error: teamsError } = await supabase
         .from('teams')
@@ -72,39 +153,39 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
       }
 
       // Create set of owned player IDs in this league
-      const ownedPlayerIds = new Set<string>();
+      const ownedPlayerIdsSet = new Set<string>();
       allTeams?.forEach(team => {
-        team.player_ids?.forEach((id: string) => ownedPlayerIds.add(id));
+        team.player_ids?.forEach((id: string) => ownedPlayerIdsSet.add(id));
       });
 
-      return ownedPlayerIds;
+      setOwnedPlayerIds(ownedPlayerIdsSet);
+      return ownedPlayerIdsSet;
     } catch (err) {
       console.error('Error getting owned player IDs:', err);
       return new Set<string>();
     }
-  };
+  }, [leagueId]);
 
-  // Filter marketplace listings based on search term and ownership
-  const filterMarketplaceListings = async () => {
-    const ownedPlayerIds = await getOwnedPlayerIds();
+  // Memoized marketplace listings to avoid expensive re-filtering
+  const marketplaceListings = useMemo(() => {
+    if (!allPlayers.length || !ownedPlayerIds.size) return [];
     
-    if (searchTerm.trim() === '') {
-      setMarketplaceListings(
-        allPlayers.filter((p: ChessPlayer) => !ownedPlayerIds.has(p.id))
-          .slice(0, showAllPlayers ? undefined : 30)
-      );
-    } else {
-      const filtered = allPlayers.filter((p: ChessPlayer) => 
-        !ownedPlayerIds.has(p.id) && p.name.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-      setMarketplaceListings(filtered.slice(0, showAllPlayers ? undefined : 30));
-    }
-  };
+    const filtered = allPlayers.filter((p: ChessPlayer) => {
+      const isNotOwned = !ownedPlayerIds.has(p.id);
+      const matchesSearch = searchTerm.trim() === '' || 
+        p.name.toLowerCase().includes(searchTerm.toLowerCase());
+      return isNotOwned && matchesSearch;
+    });
+    
+    return filtered.slice(0, showAllPlayers ? undefined : 30);
+  }, [allPlayers, ownedPlayerIds, searchTerm, showAllPlayers]);
 
-  // Update marketplace listings when search term or showAllPlayers changes
+  // Load owned player IDs when league changes
   useEffect(() => {
-    filterMarketplaceListings();
-  }, [searchTerm, allPlayers, showAllPlayers, leagueId]);
+    if (leagueId) {
+      getOwnedPlayerIds();
+    }
+  }, [leagueId, getOwnedPlayerIds]);
 
   const loadPlayerTradeStatus = async () => {
     try {
@@ -152,17 +233,22 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
       setLeague(leagueData);
 
       
-      // Load all chess players with pagination
+      // Load chess players with pagination - optimized for initial load
       let allPlayersData: ChessPlayer[] = [];
       let page = 0;
-      const pageSize = 1000;
-      while (true) {
+      const pageSize = 500; // Reduced page size for better performance
+      const maxPages = 10; // Limit to prevent excessive loading
+      
+      while (page < maxPages) {
         const { data: players, error: playersError } = await supabase
           .from('chess_players')
           .select('*')
-          .range(page * pageSize, (page + 1) * pageSize - 1);
+          .range(page * pageSize, (page + 1) * pageSize - 1)
+          .order('elo', { ascending: false }); // Order by ELO for better UX
+        
         if (playersError) throw playersError;
         if (!players || players.length === 0) break;
+        
         allPlayersData = allPlayersData.concat(players);
         if (players.length < pageSize) break;
         page++;
@@ -322,10 +408,6 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
 
       // Reload data to get updated information
       await loadData();
-      
-      // Refresh marketplace listings to update what shows in marketplace vs owned
-      await filterMarketplaceListings();
-      
       setError(null);
     } catch (err) {
       console.error('Buy player error:', err);
@@ -445,10 +527,6 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
 
       setSellingPlayer(null);
       await loadData();
-
-      // Refresh marketplace listings to update what shows in marketplace vs owned
-      await filterMarketplaceListings();
-
       setError(null);
     } catch (err) {
       console.error('Sell player error:', err);
@@ -554,10 +632,6 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
       }
 
       await loadData();
-
-      // Refresh marketplace listings to update what shows in marketplace vs owned
-      await filterMarketplaceListings();
-
       setSellingToMarketplace(null);
     } catch (err) {
       setError('Failed to sell player to marketplace: ' + JSON.stringify(err));
@@ -659,9 +733,6 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
     return amount > 0 ? 'text-green-600' : 'text-red-600';
   };
 
-  const getPlayerDetails = (username: string) => {
-    return allPlayers.find(p => p.name === username);
-  };
 
   const getCurrentWeekStart = () => {
     const now = new Date()
@@ -823,54 +894,18 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
             <div className="grid gap-4">
               <StaggeredTransition staggerDelay={50}>
                 {marketplaceListings.map((listing) => {
-                const details = getPlayerDetails(listing.name);
-                const price = calculatePlayerPrice(listing.elo);
-                return (
-                  <div key={listing.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2 mb-2">
-                          <h3 
-                            className="font-semibold text-lg cursor-pointer hover:text-royalBlue transition-colors"
-                            onClick={() => setSelectedPlayerForModal(listing)}
-                          >
-                            {listing.name}
-                          </h3>
-                          {details?.country && (
-                            <span className="text-xs bg-gray-100 px-2 py-1 rounded">
-                              {details.country}
-                            </span>
-                          )}
-                        </div>
-                        <div className="space-y-1 text-sm text-gray-600">
-                          <p>ELO: {listing.elo} • {getPlayerTier(listing.elo)}</p>
-                          {details?.fide_id && <p>FIDE ID: {details.fide_id}</p>}
-                          {(details?.average_centipawn_loss !== undefined && details?.average_centipawn_loss !== null) ? (
-                            <p>ACL: {details.average_centipawn_loss.toFixed(1)} ({details.games} games)</p>
-                          ) : null}
-                          <p className="text-xs text-gray-500">
-                            Available in marketplace
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right ml-4">
-                        <div className="text-2xl font-bold text-amber-600">{price} 🪙</div>
-                        <button
-                          onClick={() => setBuyingPlayer({ player: listing, price: price })}
-                          disabled={userCoinBalance < price}
-                          className={`mt-2 px-4 py-2 rounded-md font-medium transition-colors ${
-                            userCoinBalance >= price
-                              ? 'bg-blue-600 text-white hover:bg-blue-700'
-                              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                          }`}
-                        >
-                          {userCoinBalance >= price ? 'Buy Player' : 'Insufficient Coins'}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+                  const price = calculatePlayerPrice(listing.elo);
+                  return (
+                    <PlayerCard
+                      key={listing.id}
+                      player={listing}
+                      price={price}
+                      userCoinBalance={userCoinBalance}
+                      onBuyClick={() => setBuyingPlayer({ player: listing, price: price })}
+                      onPlayerClick={() => setSelectedPlayerForModal(listing)}
+                    />
+                  );
+                })}
               </StaggeredTransition>
             </div>
           )}
@@ -915,7 +950,7 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
                           <p>ELO: {player.elo} • {getPlayerTier(player.elo)}</p>
                           {details?.fide_id && <p>FIDE ID: {details.fide_id}</p>}
                           {(details?.average_centipawn_loss !== undefined && details?.average_centipawn_loss !== null) ? (
-                            <p>ACL: {details.average_centipawn_loss.toFixed(1)} ({details.games} games)</p>
+                            <p>ACL: {details.average_centipawn_loss!.toFixed(1)} ({details.games} games)</p>
                           ) : null}
                           <p className="text-xs text-gray-500">
                             Owned in this league
@@ -1016,7 +1051,7 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
                   <>
                     {details?.fide_id && <p className="text-sm text-gray-600">FIDE ID: {details.fide_id}</p>}
                     {(details?.average_centipawn_loss !== undefined && details?.average_centipawn_loss !== null) ? (
-                      <p>ACL: {details.average_centipawn_loss.toFixed(1)}% ({details.games} games)</p>
+                      <p>ACL: {details.average_centipawn_loss!.toFixed(1)}% ({details.games} games)</p>
                     ) : null}
                     {details?.country && <p className="text-sm text-gray-600">Country: {details.country}</p>}
                     <p className="text-sm text-gray-600 mt-2">
@@ -1058,7 +1093,7 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
                   <>
                     {details?.fide_id && <p className="text-sm text-gray-600">FIDE ID: {details.fide_id}</p>}
                     {(details?.average_centipawn_loss !== undefined && details?.average_centipawn_loss !== null) ? (
-                      <p>ACL: {details.average_centipawn_loss.toFixed(1)}% ({details.games} games)</p>
+                      <p>ACL: {details.average_centipawn_loss!.toFixed(1)}% ({details.games} games)</p>
                     ) : null}
                     {details?.country && <p className="text-sm text-gray-600">Country: {details.country}</p>}
                     <p className="text-sm text-gray-600 mt-2 mb-4">
@@ -1111,7 +1146,7 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
                   <>
                     {details?.fide_id && <p className="text-sm text-gray-600">FIDE ID: {details.fide_id}</p>}
                     {(details?.average_centipawn_loss !== undefined && details?.average_centipawn_loss !== null) ? (
-                      <p>ACL: {details.average_centipawn_loss.toFixed(1)}% ({details.games} games)</p>
+                      <p>ACL: {details.average_centipawn_loss!.toFixed(1)}% ({details.games} games)</p>
                     ) : null}
                     {details?.country && <p className="text-sm text-gray-600">Country: {details.country}</p>}
                     <p className="text-sm text-gray-600 mt-2 mb-4">

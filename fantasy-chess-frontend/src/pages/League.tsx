@@ -1470,32 +1470,33 @@ const LeaguePage: React.FC = () => {
                       }`}
                       onClick={() => handleUserClick(standing)}
                     >
-                      <div className="flex items-center space-x-3 min-w-0 flex-1">
+                      <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
                         <div className={`w-6 h-6 lg:w-8 lg:h-8 rounded-full flex items-center justify-center text-xs lg:text-sm font-bold flex-shrink-0 ${
                           standing.user_id === user?.id ? 'bg-royalBlue text-white' : 'bg-neutral-300 text-neutral-700'
                         }`}>
                           {standing.rank}
                         </div>
-                        <img src={standing.avatar_url} alt="Avatar" className="w-8 h-8 rounded-full border-2 border-gold" />
+                        <img src={standing.avatar_url} alt="Avatar" className="w-6 h-6 sm:w-8 sm:h-8 rounded-full border-2 border-gold flex-shrink-0" />
                         <div className="min-w-0 flex-1">
                           <ExpandableUsername 
                             username={standing.display_name}
                             isCurrentUser={standing.user_id === user?.id}
+                            maxWidth="120px"
                           />
                         </div>
                       </div>
-                      <div className="flex items-center space-x-2 flex-shrink-0 ml-2">
-                        <p className="font-semibold text-sm lg:text-base text-neutral-900">{standing.total_points} points</p>
+                      <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0 ml-1 sm:ml-2">
+                        <p className="font-semibold text-xs sm:text-sm lg:text-base text-neutral-900 whitespace-nowrap">{standing.total_points} pts</p>
                         {isOwner && standing.user_id !== user?.id && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               removeUserFromLeague(standing.user_id);
                             }}
-                            className="text-red-600 hover:text-red-800 p-1 rounded transition-colors"
+                            className="text-red-600 hover:text-red-800 p-1 rounded transition-colors flex-shrink-0"
                             title="Remove player from league"
                           >
-                            <X className="w-4 h-4" />
+                            <X className="w-3 h-3 sm:w-4 sm:h-4" />
                           </button>
                         )}
                       </div>
