@@ -789,7 +789,7 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
   }
 
   return (
-    <div className="bg-white shadow-md p-6 w-full">
+    <div className="bg-white shadow-md p-4 sm:p-6 w-full max-w-full overflow-hidden">
       {/* Trading Marketplace Header */}
       <div className="mb-6 text-center">
         <h2 className="text-2xl font-bold text-green-600 mb-2">🛒 Trading Marketplace</h2>
@@ -820,30 +820,34 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
       )}
 
       {/* Tabs */}
-      <div className="flex space-x-1 mb-6 bg-gray-100 p-1 rounded-lg">
+      <div className="flex space-x-1 mb-6 bg-gray-100 p-1 rounded-lg overflow-x-auto">
         <button
           onClick={() => setActiveTab('marketplace')}
-          className={`flex-1 py-2 px-4 rounded-md font-medium transition-colors ${
+          className={`flex-shrink-0 py-2 px-2 sm:px-4 rounded-md font-medium transition-colors text-xs sm:text-sm ${
             activeTab === 'marketplace'
               ? 'bg-white text-blue-600 shadow-sm'
               : 'text-gray-600 hover:text-gray-800'
           }`}
         >
-          Marketplace ({allPlayers.length})
+          <span className="hidden sm:inline">Marketplace</span>
+          <span className="sm:hidden">Market</span>
+          <span className="ml-1">({allPlayers.length})</span>
         </button>
         <button
           onClick={() => setActiveTab('owned')}
-          className={`flex-1 py-2 px-4 rounded-md font-medium transition-colors ${
+          className={`flex-shrink-0 py-2 px-2 sm:px-4 rounded-md font-medium transition-colors text-xs sm:text-sm ${
             activeTab === 'owned'
               ? 'bg-white text-blue-600 shadow-sm'
               : 'text-gray-600 hover:text-gray-800'
           }`}
         >
-          My Players ({ownedPlayers.length})
+          <span className="hidden sm:inline">My Players</span>
+          <span className="sm:hidden">Owned</span>
+          <span className="ml-1">({ownedPlayers.length})</span>
         </button>
         <button
           onClick={() => setActiveTab('trading')}
-          className={`flex-1 py-2 px-4 rounded-md font-medium transition-colors ${
+          className={`flex-shrink-0 py-2 px-2 sm:px-4 rounded-md font-medium transition-colors text-xs sm:text-sm ${
             activeTab === 'trading'
               ? 'bg-white text-blue-600 shadow-sm'
               : 'text-gray-600 hover:text-gray-800'
@@ -851,14 +855,14 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
         >
           Trading
           {tradeNotifications.length > 0 && (
-            <span className="ml-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
+            <span className="ml-1 bg-red-500 text-white text-xs px-1 py-0.5 rounded-full">
               {tradeNotifications.length}
             </span>
           )}
         </button>
         <button
           onClick={() => setActiveTab('transactions')}
-          className={`flex-1 py-2 px-4 rounded-md font-medium transition-colors ${
+          className={`flex-shrink-0 py-2 px-2 sm:px-4 rounded-md font-medium transition-colors text-xs sm:text-sm ${
             activeTab === 'transactions'
               ? 'bg-white text-blue-600 shadow-sm'
               : 'text-gray-600 hover:text-gray-800'
@@ -1039,27 +1043,35 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
       )}
 
       {activeTab === 'transactions' && (
-        <div className="space-y-3 overflow-x-auto">
+        <div className="w-full max-w-full">
           {transactions.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               No transaction history in this league
             </div>
           ) : (
-            <div className="min-w-0">
+            <div className="space-y-3 w-full">
               {transactions.map((transaction) => (
-                <div key={transaction.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 border rounded-lg gap-2 sm:gap-0">
-                  <div className="flex items-center space-x-3 min-w-0 flex-1">
-                    <span className="text-xl flex-shrink-0">{getTransactionIcon(transaction.transaction_type)}</span>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium text-sm sm:text-base truncate">{transaction.description}</p>
-                      <p className="text-xs sm:text-sm text-gray-500">
+                <div key={transaction.id} className="w-full border rounded-lg p-3 bg-white shadow-sm">
+                  <div className="flex flex-col gap-2">
+                    {/* Top row: Icon and amount */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-lg flex-shrink-0">{getTransactionIcon(transaction.transaction_type)}</span>
+                        <span className={`font-semibold text-sm sm:text-base ${getTransactionColor(transaction.amount)}`}>
+                          {transaction.amount > 0 ? '+' : ''}{transaction.amount} 🪙
+                        </span>
+                      </div>
+                    </div>
+                    {/* Bottom row: Description and date */}
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2">
+                      <p className="font-medium text-sm sm:text-base text-gray-900 break-words">
+                        {transaction.description}
+                      </p>
+                      <p className="text-xs text-gray-500 flex-shrink-0">
                         {new Date(transaction.created_at).toLocaleDateString()}
                       </p>
                     </div>
                   </div>
-                  <span className={`font-semibold text-sm sm:text-base whitespace-nowrap flex-shrink-0 ${getTransactionColor(transaction.amount)}`}>
-                    {transaction.amount > 0 ? '+' : ''}{transaction.amount} 🪙
-                  </span>
                 </div>
               ))}
             </div>
