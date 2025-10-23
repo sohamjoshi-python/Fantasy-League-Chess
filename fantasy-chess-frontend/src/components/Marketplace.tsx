@@ -35,23 +35,24 @@ const PlayerCard = React.memo(({
   const tier = useMemo(() => getPlayerTier(player.elo), [player.elo]);
   
   return (
-    <div className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-      <div className="flex justify-between items-start">
-        <div className="flex-1">
-          <div className="flex items-center space-x-2 mb-2">
+    <div className="border rounded-lg p-3 sm:p-4 hover:shadow-md transition-shadow">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-wrap items-center gap-2 mb-2">
             <h3 
-              className="font-semibold text-lg cursor-pointer hover:text-royalBlue transition-colors"
+              className="font-semibold text-base sm:text-lg cursor-pointer hover:text-royalBlue transition-colors truncate"
               onClick={onPlayerClick}
+              title={player.name}
             >
               {player.name}
             </h3>
             {details?.country && (
-              <span className="text-xs bg-gray-100 px-2 py-1 rounded">
+              <span className="text-xs bg-gray-100 px-2 py-1 rounded flex-shrink-0">
                 {details.country}
               </span>
             )}
           </div>
-          <div className="space-y-1 text-sm text-gray-600">
+          <div className="space-y-1 text-xs sm:text-sm text-gray-600">
             <p>ELO: {player.elo} • {tier}</p>
             {details?.fide_id && <p>FIDE ID: {details.fide_id}</p>}
             {(details?.average_centipawn_loss !== undefined && details?.average_centipawn_loss !== null) ? (
@@ -62,12 +63,12 @@ const PlayerCard = React.memo(({
             </p>
           </div>
         </div>
-        <div className="text-right ml-4">
-          <div className="text-2xl font-bold text-amber-600">{price} 🪙</div>
+        <div className="flex flex-col sm:items-end gap-2 sm:ml-4 flex-shrink-0">
+          <div className="text-lg sm:text-2xl font-bold text-amber-600 whitespace-nowrap">{price} 🪙</div>
           <button
             onClick={onBuyClick}
             disabled={userCoinBalance < price}
-            className={`mt-2 px-4 py-2 rounded-md font-medium transition-colors ${
+            className={`px-3 py-2 sm:px-4 sm:py-2 rounded-md font-medium transition-colors text-sm sm:text-base whitespace-nowrap ${
               userCoinBalance >= price
                 ? 'bg-blue-600 text-white hover:bg-blue-700'
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
@@ -117,7 +118,18 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
   const [buyingPlayer, setBuyingPlayer] = useState<{ player: ChessPlayer; price: number } | null>(null);
   const [sellingToMarketplace, setSellingToMarketplace] = useState<{ player: ChessPlayer; price: number } | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [showAllPlayers, setShowAllPlayers] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(20);
+  
+  // Debounce search term to improve performance
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
   
   // Trading state
   const [showTradeModal, setShowTradeModal] = useState(false);
@@ -172,13 +184,21 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
     
     const filtered = allPlayers.filter((p: ChessPlayer) => {
       const isNotOwned = !ownedPlayerIds.has(p.id);
-      const matchesSearch = searchTerm.trim() === '' || 
-        p.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = debouncedSearchTerm.trim() === '' || 
+        p.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
       return isNotOwned && matchesSearch;
     });
     
-    return filtered.slice(0, showAllPlayers ? undefined : 30);
-  }, [allPlayers, ownedPlayerIds, searchTerm, showAllPlayers]);
+    if (showAllPlayers) return filtered;
+    
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filtered.slice(startIndex, startIndex + itemsPerPage);
+  }, [allPlayers, ownedPlayerIds, debouncedSearchTerm, showAllPlayers, currentPage, itemsPerPage]);
+
+  // Reset page when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearchTerm]);
 
   // Load owned player IDs when league changes
   useEffect(() => {
@@ -883,6 +903,14 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
                   Show Less
                 </button>
               )}
+              {!showAllPlayers && marketplaceListings.length === itemsPerPage && (
+                <button
+                  onClick={() => setCurrentPage(prev => prev + 1)}
+                  className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+                >
+                  Load More
+                </button>
+              )}
             </div>
           </div>
 
@@ -925,28 +953,29 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
                 const details = getPlayerDetails(player.name);
                 const price = calculatePlayerPrice(player.elo);
                 return (
-                  <div key={player.id} className="border rounded-lg p-4">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2 mb-2">
+                  <div key={player.id} className="border rounded-lg p-3 sm:p-4">
+                    <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-2">
                           <h3 
-                            className="font-semibold text-lg cursor-pointer hover:text-royalBlue transition-colors"
+                            className="font-semibold text-base sm:text-lg cursor-pointer hover:text-royalBlue transition-colors truncate"
                             onClick={() => setSelectedPlayerForModal(player)}
+                            title={player.name}
                           >
                             {player.name}
                           </h3>
                           {details?.country && (
-                            <span className="text-xs bg-gray-100 px-2 py-1 rounded">
+                            <span className="text-xs bg-gray-100 px-2 py-1 rounded flex-shrink-0">
                               {details.country}
                             </span>
                           )}
                           {playerTradeStatus[player.id] && (
-                            <span className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded font-medium">
+                            <span className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded font-medium flex-shrink-0">
                               🔄 Listed for Trade
                             </span>
                           )}
                         </div>
-                        <div className="space-y-1 text-sm text-gray-600">
+                        <div className="space-y-1 text-xs sm:text-sm text-gray-600">
                           <p>ELO: {player.elo} • {getPlayerTier(player.elo)}</p>
                           {details?.fide_id && <p>FIDE ID: {details.fide_id}</p>}
                           {(details?.average_centipawn_loss !== undefined && details?.average_centipawn_loss !== null) ? (
@@ -956,20 +985,20 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
                             Owned in this league
                           </p>
                           <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded">
-                            <p className="text-sm font-medium text-amber-800">
+                            <p className="text-xs sm:text-sm font-medium text-amber-800">
                               💰 Original Price: {price} 🪙
                             </p>
-                            <p className="text-sm text-amber-700">
+                            <p className="text-xs sm:text-sm text-amber-700">
                               💸 Sell Price: {Math.floor(price * 0.8)} 🪙 (80%)
                             </p>
                           </div>
                         </div>
                       </div>
-                      <div className="flex flex-col space-y-2 ml-4">
+                      <div className="flex flex-col sm:flex-row lg:flex-col space-y-2 sm:space-y-0 sm:space-x-2 lg:space-x-0 lg:space-y-2 lg:ml-4 flex-shrink-0">
                         {/* Trade Button */}
                         <button
                           onClick={() => handleCreateTrade(player)}
-                          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                          className="px-3 py-2 sm:px-4 sm:py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm sm:text-base whitespace-nowrap"
                         >
                           🔄 Trade Player
                         </button>
@@ -978,14 +1007,14 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
                           onClick={async () => {
                             setSellingToMarketplace({ player, price: Math.floor(price * 0.8) });
                           }}
-                          className="px-4 py-2 bg-amber-600 text-white rounded-md hover:bg-amber-700 transition-colors"
+                          className="px-3 py-2 sm:px-4 sm:py-2 bg-amber-600 text-white rounded-md hover:bg-amber-700 transition-colors text-sm sm:text-base whitespace-nowrap"
                         >
                           💸 Sell for {Math.floor(price * 0.8)} 🪙
                         </button>
                         {/* List for Sale (custom price) */}
                         <button
                           onClick={() => setSellingPlayer({ player, price: Math.floor(price * 0.8) })}
-                          className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                          className="px-3 py-2 sm:px-4 sm:py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm sm:text-base whitespace-nowrap"
                         >
                           📋 List for Sale
                         </button>
@@ -1010,28 +1039,30 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
       )}
 
       {activeTab === 'transactions' && (
-        <div className="space-y-3">
+        <div className="space-y-3 overflow-x-auto">
           {transactions.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               No transaction history in this league
             </div>
           ) : (
-            transactions.map((transaction) => (
-              <div key={transaction.id} className="flex items-center justify-between p-3 border rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <span className="text-xl">{getTransactionIcon(transaction.transaction_type)}</span>
-                  <div>
-                    <p className="font-medium">{transaction.description}</p>
-                    <p className="text-sm text-gray-500">
-                      {new Date(transaction.created_at).toLocaleDateString()}
-                    </p>
+            <div className="min-w-0">
+              {transactions.map((transaction) => (
+                <div key={transaction.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 border rounded-lg gap-2 sm:gap-0">
+                  <div className="flex items-center space-x-3 min-w-0 flex-1">
+                    <span className="text-xl flex-shrink-0">{getTransactionIcon(transaction.transaction_type)}</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-sm sm:text-base truncate">{transaction.description}</p>
+                      <p className="text-xs sm:text-sm text-gray-500">
+                        {new Date(transaction.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
                   </div>
+                  <span className={`font-semibold text-sm sm:text-base whitespace-nowrap flex-shrink-0 ${getTransactionColor(transaction.amount)}`}>
+                    {transaction.amount > 0 ? '+' : ''}{transaction.amount} 🪙
+                  </span>
                 </div>
-                <span className={`font-semibold ${getTransactionColor(transaction.amount)}`}>
-                  {transaction.amount > 0 ? '+' : ''}{transaction.amount} 🪙
-                </span>
-              </div>
-            ))
+              ))}
+            </div>
           )}
         </div>
       )}
