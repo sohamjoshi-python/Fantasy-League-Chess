@@ -31,7 +31,7 @@ const PlayerCard = React.memo(({
   onBuyClick: () => void;
   onPlayerClick: () => void;
 }) => {
-  const details = useMemo(() => getPlayerDetails(player.name), [player.name]);
+  const details = useMemo(() => getPlayerDetails(player), [player]);
   const tier = useMemo(() => getPlayerTier(player.elo), [player.elo]);
   
   return (
@@ -45,7 +45,7 @@ const PlayerCard = React.memo(({
             >
               {player.name}
             </h3>
-            {details?.country && (
+            {details.country && (
               <span className="text-xs bg-gray-100 px-2 py-1 rounded">
                 {details.country}
               </span>
@@ -84,14 +84,12 @@ const PlayerCard = React.memo(({
 PlayerCard.displayName = 'PlayerCard';
 
 // Helper function to get player details
-const getPlayerDetails = (_username: string) => {
-  // This would typically fetch from a database or API
-  // For now, return a mock object with proper typing
+const getPlayerDetails = (player: ChessPlayer) => {
   return {
-    country: 'Unknown',
-    fide_id: null as string | null,
-    average_centipawn_loss: null as number | null,
-    games: 0
+    country: player.country || null,
+    fide_id: player.fide_id || null,
+    average_centipawn_loss: player.average_centipawn_loss || player.accuracy || null,
+    games: player.games || 0
   };
 };
 
@@ -922,7 +920,7 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
             <div className="grid gap-4">
               <StaggeredTransition staggerDelay={50}>
                 {ownedPlayers.map((player) => {
-                const details = getPlayerDetails(player.name);
+                const details = getPlayerDetails(player);
                 const price = calculatePlayerPrice(player.elo);
                 return (
                   <div key={player.id} className="border rounded-lg p-4">
@@ -1046,7 +1044,7 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
               <p className="text-sm text-gray-600 mb-4">ELO: {buyingPlayer.player.elo}</p>
               <p className="text-sm text-gray-600 mb-4">Price: {buyingPlayer.price} 🪙</p>
               {(() => {
-                const details = getPlayerDetails(buyingPlayer.player.name);
+                const details = getPlayerDetails(buyingPlayer.player);
                 return (
                   <>
                     {details?.fide_id && <p className="text-sm text-gray-600">FIDE ID: {details.fide_id}</p>}
@@ -1088,7 +1086,7 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
               <p className="text-sm text-gray-600">Player: {sellingPlayer.player.name}</p>
               <p className="text-sm text-gray-600 mb-2">ELO: {sellingPlayer.player.elo}</p>
               {(() => {
-                const details = getPlayerDetails(sellingPlayer.player.name);
+                const details = getPlayerDetails(sellingPlayer.player);
                 return (
                   <>
                     {details?.fide_id && <p className="text-sm text-gray-600">FIDE ID: {details.fide_id}</p>}
@@ -1141,7 +1139,7 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
               <p className="text-sm text-gray-600 mb-2">ELO: {sellingToMarketplace.player.elo}</p>
               <p className="text-sm text-gray-600 mb-4">Price: {sellingToMarketplace.price} 🪙</p>
               {(() => {
-                const details = getPlayerDetails(sellingToMarketplace.player.name);
+                const details = getPlayerDetails(sellingToMarketplace.player);
                 return (
                   <>
                     {details?.fide_id && <p className="text-sm text-gray-600">FIDE ID: {details.fide_id}</p>}
