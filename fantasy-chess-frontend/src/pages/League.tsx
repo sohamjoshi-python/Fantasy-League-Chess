@@ -1521,7 +1521,7 @@ const LeaguePage: React.FC = () => {
                         onClick={() => setSelectedPlayerForModal(player)}
                         className="bg-neutral-50 rounded-lg p-4 text-center border border-gold min-h-[80px] flex flex-col justify-center cursor-pointer hover:border-royalBlue hover:shadow-lg transition-all"
                       >
-                        <div className="text-sm font-medium mb-1 text-gold">
+                        <div className="text-sm font-medium mb-1 text-gold truncate px-1" title={player.name}>
                           {player.name}
                         </div>
                         <div className="text-xs text-neutral-600">ELO: {player.elo}</div>
