@@ -83,6 +83,44 @@ const ComprehensiveTutorial: React.FC = () => {
     initializeSampleData();
   }, []);
 
+  // Scroll to top when step changes (but not for marketplace purchases)
+  useEffect(() => {
+    // Skip scroll on initial render
+    if (currentStep === 0) return;
+    
+    const currentStepData = tutorialSteps[currentStep];
+    if (currentStepData && !currentStepData.target.includes('buy-')) {
+      // Use double requestAnimationFrame to ensure DOM has fully updated after state change
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          // Scroll all possible scroll containers to ensure we get to the top
+          window.scrollTo({ top: 0, behavior: 'auto' });
+          if (document.documentElement) {
+            document.documentElement.scrollTop = 0;
+          }
+          if (document.body) {
+            document.body.scrollTop = 0;
+          }
+          // Also try scrolling the main container if it exists
+          const mainContainer = document.querySelector('.max-w-7xl');
+          if (mainContainer) {
+            mainContainer.scrollTop = 0;
+          }
+          // Additional timeout fallback for mobile browsers
+          setTimeout(() => {
+            window.scrollTo({ top: 0, behavior: 'auto' });
+            if (document.documentElement) {
+              document.documentElement.scrollTop = 0;
+            }
+            if (document.body) {
+              document.body.scrollTop = 0;
+            }
+          }, 100);
+        });
+      });
+    }
+  }, [currentStep]);
+
   const tutorialSteps: TutorialStep[] = [
     {
       id: 'welcome',
@@ -248,10 +286,6 @@ const ComprehensiveTutorial: React.FC = () => {
       if (targetId === 'start-playing-button' && currentStep === tutorialSteps.length - 1) {
         navigate('/dashboard');
         return;
-      }
-      // Scroll to top instantly before changing step (so it appears to load from top)
-      if (!targetId.includes('buy-')) {
-        window.scrollTo({ top: 0, behavior: 'auto' });
       }
       
       handleNext();
