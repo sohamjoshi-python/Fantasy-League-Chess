@@ -90,24 +90,65 @@ const ComprehensiveTutorial: React.FC = () => {
     
     const currentStepData = tutorialSteps[currentStep];
     if (currentStepData && !currentStepData.target.includes('buy-')) {
+      // Detect if mobile device
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
+      
       // Use double requestAnimationFrame to ensure DOM has fully updated after state change
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          // Scroll all possible scroll containers to ensure we get to the top
-          window.scrollTo({ top: 0, behavior: 'auto' });
-          if (document.documentElement) {
-            document.documentElement.scrollTop = 0;
-          }
-          if (document.body) {
-            document.body.scrollTop = 0;
-          }
-          // Also try scrolling the main container if it exists
-          const mainContainer = document.querySelector('.max-w-7xl');
-          if (mainContainer) {
-            mainContainer.scrollTop = 0;
-          }
-          // Additional timeout fallback for mobile browsers
-          setTimeout(() => {
+          // For mobile, use more aggressive scrolling
+          if (isMobile) {
+            // Mobile browsers often use different scroll containers
+            // Scroll window first
+            window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+            
+            // Force scroll on all possible containers
+            if (document.documentElement) {
+              document.documentElement.scrollTop = 0;
+              document.documentElement.scrollLeft = 0;
+            }
+            if (document.body) {
+              document.body.scrollTop = 0;
+              document.body.scrollLeft = 0;
+            }
+            
+            // Try scrolling the main content area
+            const mainContent = document.querySelector('.pt-32');
+            if (mainContent) {
+              mainContent.scrollTop = 0;
+              // Also try scrollIntoView for mobile
+              (mainContent as HTMLElement).scrollIntoView({ behavior: 'auto', block: 'start' });
+            }
+            
+            // Scroll the main container div as well
+            const mainContainer = document.querySelector('.max-w-7xl');
+            if (mainContainer) {
+              mainContainer.scrollTop = 0;
+              (mainContainer as HTMLElement).scrollIntoView({ behavior: 'auto', block: 'start' });
+            }
+            
+            // Multiple attempts for mobile browsers that might need retries
+            setTimeout(() => {
+              window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+              if (document.documentElement) {
+                document.documentElement.scrollTop = 0;
+              }
+              if (document.body) {
+                document.body.scrollTop = 0;
+              }
+            }, 50);
+            
+            setTimeout(() => {
+              window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+              if (document.documentElement) {
+                document.documentElement.scrollTop = 0;
+              }
+              if (document.body) {
+                document.body.scrollTop = 0;
+              }
+            }, 150);
+          } else {
+            // Desktop: standard scroll
             window.scrollTo({ top: 0, behavior: 'auto' });
             if (document.documentElement) {
               document.documentElement.scrollTop = 0;
@@ -115,7 +156,7 @@ const ComprehensiveTutorial: React.FC = () => {
             if (document.body) {
               document.body.scrollTop = 0;
             }
-          }, 100);
+          }
         });
       });
     }
