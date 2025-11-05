@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Trophy, Users, Target, Coins, Store, CheckCircle, Crown, Calendar, Plus, Medal, User, Lightbulb } from 'lucide-react';
+import { X, Trophy, Users, Target, Coins, Store, CheckCircle, Crown, Calendar, Plus, Medal, User, Lightbulb, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface TutorialStep {
   id: string;
@@ -17,6 +17,7 @@ const ComprehensiveTutorial: React.FC = () => {
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [showTutorial] = useState(true);
   const [sampleData, setSampleData] = useState<any>(null);
+  const [showStepsDropdown, setShowStepsDropdown] = useState(false);
   
   // Sample data initialization
   const initializeSampleData = () => {
@@ -250,10 +251,19 @@ const ComprehensiveTutorial: React.FC = () => {
       }
       handleNext();
       
-      // Auto-scroll to top when moving to next section (but not for marketplace purchases)
+      // Auto-scroll to furthest point up that changed (main content area) when moving to next section (but not for marketplace purchases)
       if (!targetId.includes('buy-')) {
         setTimeout(() => {
-          window.scrollTo({ top: 0, behavior: 'smooth' });
+          // Find the main content container (furthest point up that changed)
+          const mainContent = document.querySelector('.max-w-7xl');
+          if (mainContent) {
+            const contentTop = mainContent.getBoundingClientRect().top + window.scrollY - 20; // 20px offset for padding
+            window.scrollTo({ top: Math.max(0, contentTop), behavior: 'smooth' });
+          } else {
+            // Fallback: scroll to top of main content area (after header)
+            const headerHeight = 200; // Approximate header height
+            window.scrollTo({ top: headerHeight, behavior: 'smooth' });
+          }
         }, 200);
       }
     }
@@ -374,30 +384,30 @@ const ComprehensiveTutorial: React.FC = () => {
                   : 'border-gray-200 hover:border-gray-300'
               }`}
             >
-              <div className="flex justify-between items-start">
-                <div className="flex-1">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+                <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-gray-900">{league.name}</h3>
                   <p className="text-sm text-gray-600 mt-1">{league.description}</p>
-                  <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500">
+                  <div className="flex flex-wrap items-center gap-3 sm:gap-4 mt-2 text-sm text-gray-500">
                     <div className="flex items-center space-x-1">
-                      <Users className="w-4 h-4" />
+                      <Users className="w-4 h-4 flex-shrink-0" />
                       <span>{league.members}/{league.maxMembers}</span>
                     </div>
                     <div className="flex items-center space-x-1">
-                      <Coins className="w-4 h-4" />
+                      <Coins className="w-4 h-4 flex-shrink-0" />
                       <span>${league.entryFee}</span>
                     </div>
                     <div className="flex items-center space-x-1">
-                      <Trophy className="w-4 h-4" />
+                      <Trophy className="w-4 h-4 flex-shrink-0" />
                       <span>${league.prizePool}</span>
                     </div>
                     <div className="flex items-center space-x-1">
-                      <Calendar className="w-4 h-4" />
+                      <Calendar className="w-4 h-4 flex-shrink-0" />
                       <span>{league.start_date}</span>
                     </div>
                   </div>
                 </div>
-                <div className="relative">
+                <div className="relative flex-shrink-0">
                   <button
                     id={index === 0 ? 'join-tutorial-league' : ''}
                     onClick={() => {
@@ -405,7 +415,7 @@ const ComprehensiveTutorial: React.FC = () => {
                         handleTargetClick('join-tutorial-league');
                       }
                     }}
-                    className={`px-4 py-2 rounded-lg transition-colors ${
+                    className={`px-4 py-2 rounded-lg transition-colors whitespace-nowrap ${
                       index === 0 
                         ? 'bg-blue-600 text-white hover:bg-blue-700' 
                         : 'bg-gray-300 text-gray-500 cursor-not-allowed'
@@ -981,21 +991,21 @@ const ComprehensiveTutorial: React.FC = () => {
                 </h2>
                 <div className="space-y-4">
                   {sampleData.leaderboard.map((entry: any, index: number) => (
-                    <div key={entry.user_id} className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                      <div className="flex items-center justify-center w-8">
-                        {index === 0 ? <Crown className="w-5 h-5 text-yellow-500" /> :
-                         index === 1 ? <Medal className="w-5 h-5 text-gray-400" /> :
-                         index === 2 ? <Medal className="w-5 h-5 text-amber-600" /> :
-                         <span className="text-lg font-bold text-gray-600">{index + 1}</span>}
+                    <div key={entry.user_id} className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                      <div className="flex items-center justify-center w-6 sm:w-8 flex-shrink-0">
+                        {index === 0 ? <Crown className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500" /> :
+                         index === 1 ? <Medal className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" /> :
+                         index === 2 ? <Medal className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600" /> :
+                         <span className="text-base sm:text-lg font-bold text-gray-600">{index + 1}</span>}
                       </div>
-                      <div className="w-12 h-12 rounded-full border-2 border-yellow-500 bg-gray-200"></div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-lg">{entry.username}</h3>
-                        <p className="text-sm text-gray-600">{entry.total_leagues} leagues played</p>
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-yellow-500 bg-gray-200 flex-shrink-0"></div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-base sm:text-lg truncate">{entry.username}</h3>
+                        <p className="text-xs sm:text-sm text-gray-600">{entry.total_leagues} leagues played</p>
                       </div>
-                      <div className="text-right">
-                        <div className="text-2xl font-bold text-yellow-500">{entry.wins} wins</div>
-                        <div className="text-sm text-gray-600">$0</div>
+                      <div className="text-right flex-shrink-0">
+                        <div className="text-lg sm:text-2xl font-bold text-yellow-500 whitespace-nowrap">{entry.wins} wins</div>
+                        <div className="text-xs sm:text-sm text-gray-600">$0</div>
                       </div>
                     </div>
                   ))}
@@ -1141,10 +1151,29 @@ const ComprehensiveTutorial: React.FC = () => {
       <div className="pt-32 pb-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Tutorial Steps */}
-          <div className="lg:col-span-1">
+          {/* Tutorial Steps - Mobile Dropdown / Desktop Sidebar */}
+          <div className="lg:col-span-1 order-2 lg:order-1">
             <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-xl border border-gray-200/50 p-6">
-              <div className="flex items-center mb-6">
+              {/* Mobile: Collapsible Header */}
+              <button
+                onClick={() => setShowStepsDropdown(!showStepsDropdown)}
+                className="lg:hidden w-full flex items-center justify-between mb-6 p-3 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-center">
+                  <Target className="w-5 h-5 text-blue-600 mr-2" />
+                  <h2 className="text-lg font-semibold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+                    Tutorial Progress
+                  </h2>
+                </div>
+                {showStepsDropdown ? (
+                  <ChevronUp className="w-5 h-5 text-gray-600" />
+                ) : (
+                  <ChevronDown className="w-5 h-5 text-gray-600" />
+                )}
+              </button>
+
+              {/* Desktop: Static Header */}
+              <div className="hidden lg:flex items-center mb-6">
                 <Target className="w-5 h-5 text-blue-600 mr-2" />
                 <h2 className="text-lg font-semibold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
                   Tutorial Progress
@@ -1164,50 +1193,60 @@ const ComprehensiveTutorial: React.FC = () => {
                 </p>
               </div>
 
-              <div className="space-y-3">
-                {tutorialSteps.map((step, index) => (
-                  <div
-                    key={step.id}
-                    className={`flex items-center space-x-3 p-4 rounded-xl transition-all duration-200 ${
-                      index === currentStep
-                        ? 'bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-300 shadow-sm'
-                        : index < currentStep
-                        ? 'bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200'
-                        : 'bg-gray-50 border border-gray-200 hover:bg-gray-100'
-                    }`}
-                  >
+              {/* Mobile: Collapsible Content */}
+              <div className={`lg:block ${showStepsDropdown ? 'block' : 'hidden'}`}>
+                <div className="space-y-3 max-h-[60vh] lg:max-h-none overflow-y-auto">
+                  {tutorialSteps.map((step, index) => (
                     <div
-                      className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-medium shadow-sm ${
+                      key={step.id}
+                      onClick={() => {
+                        if (index !== currentStep) {
+                          setCurrentStep(index);
+                          setCurrentPage(step.page);
+                          setShowStepsDropdown(false);
+                        }
+                      }}
+                      className={`flex items-center space-x-3 p-4 rounded-xl transition-all duration-200 cursor-pointer ${
                         index === currentStep
-                          ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white'
+                          ? 'bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-300 shadow-sm'
                           : index < currentStep
-                          ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white'
-                          : 'bg-gray-300 text-gray-600'
+                          ? 'bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200'
+                          : 'bg-gray-50 border border-gray-200 hover:bg-gray-100'
                       }`}
                     >
-                      {index < currentStep ? (
-                        <CheckCircle className="w-4 h-4" />
-                      ) : (
-                        index + 1
-                      )}
+                      <div
+                        className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-medium shadow-sm flex-shrink-0 ${
+                          index === currentStep
+                            ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white'
+                            : index < currentStep
+                            ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white'
+                            : 'bg-gray-300 text-gray-600'
+                        }`}
+                      >
+                        {index < currentStep ? (
+                          <CheckCircle className="w-4 h-4" />
+                        ) : (
+                          index + 1
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm font-medium truncate ${
+                          index === currentStep ? 'text-blue-900' : 
+                          index < currentStep ? 'text-green-900' : 'text-gray-700'
+                        }`}>
+                          {step.title}
+                        </p>
+                        <p className="text-xs text-gray-500 capitalize">{step.page}</p>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <p className={`text-sm font-medium ${
-                        index === currentStep ? 'text-blue-900' : 
-                        index < currentStep ? 'text-green-900' : 'text-gray-700'
-                      }`}>
-                        {step.title}
-                      </p>
-                      <p className="text-xs text-gray-500 capitalize">{step.page}</p>
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
           </div>
 
           {/* Main Content */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 order-1 lg:order-2">
             <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-xl border border-gray-200/50 p-8">
               <div className="text-center mb-8">
                 <h2 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-4">
