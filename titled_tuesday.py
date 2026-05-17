@@ -386,6 +386,5 @@ def convert(target_date, tournament_slug=None, discovery_player="hikaru"):
         return None
 
 if __name__ == "__main__":
-    convert("2026-05-12")
-    # convert("2025-06-24")  # discovers early + late slugs via discovery_player
-    # convert("2026-05-12", tournament_slug="titled-tuesday-blitz-may-12-2026-6431785")
+    from datetime import date as _date
+    convert(_date.today())
