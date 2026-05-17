@@ -6,3 +6,4 @@ asyncio
 brotli
 python-chess 
 requests
+pandas
