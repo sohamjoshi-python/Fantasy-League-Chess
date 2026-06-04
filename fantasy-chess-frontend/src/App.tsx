@@ -19,19 +19,17 @@ import Leaderboard from './pages/Leaderboard';
 import PlayerHistory from './pages/PlayerHistory';
 import Tos from './pages/tos';
 import Privacy from './pages/privacy';
-import { useAuth } from './contexts/AuthContext'
-import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import Footer from './components/Footer';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function AvatarShopPage() {
-  const { user } = useAuth();
-  const [showShop, setShowShop] = React.useState(true);
-  if (!user) return <Profile />;
-  return showShop ? (
-    <Profile showOnlyShop={true} onCloseShop={() => setShowShop(false)} />
-  ) : (
-    <Profile />
+  const navigate = useNavigate();
+  return (
+    <Profile
+      showOnlyShop
+      onCloseShop={() => navigate('/profile')}
+    />
   );
 }
 

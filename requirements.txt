@@ -1,9 +1,8 @@
 requests
 supabase
-python-dotenv 
+python-dotenv
+pandas
 aiohttp==3.9.1
-asyncio
 brotli
-python-chess 
-requests
+python-chess
 pandas

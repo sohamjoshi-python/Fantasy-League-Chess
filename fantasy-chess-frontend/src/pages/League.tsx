@@ -4,6 +4,15 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { League, Lineup, ChessPlayer, Bot } from '../types'
+import { leagueSeasonHasEndedLocal } from '../lib/calendarDate'
+import {
+  formatCalendarDate,
+  getTeamBuildingStatusLabel,
+  isCoinMarketplaceAvailable,
+  isTeamBuildingComplete,
+  leagueSeasonHasStartedLocal,
+} from '../lib/leagueStatus'
+import { isLineupChangeAllowed, lineupChangeBlockedMessage } from '../lib/lineupWindow'
 import { Crown, Trophy, Calendar, Edit, Check, X, RefreshCw, Bot as BotIcon, Plus, Trash2 } from 'lucide-react'
 import { createBot, removeBot, autoSetLineupForBot, fetchLineupPlayerBreakdownByRounds } from '../lib/supabase';
 import Confetti from 'react-confetti';
@@ -110,60 +119,6 @@ const ExpandablePlayerName: React.FC<{
 };
 
 // Remove the fetchLeague function entirely
-
-// Auto-complete teams with random players if league has started and draft is incomplete
-const autoCompleteTeamsIfNeeded = async (leagueData: any) => {
-  const today = new Date().toISOString().split('T')[0];
-  if (
-    leagueData.draft_started &&
-    !leagueData.draft_completed &&
-    leagueData.start_date <= today
-  ) {
-    // Fetch all teams for this league
-    const { data: teams } = await supabase
-      .from('teams')
-      .select('*')
-      .eq('league_id', leagueData.id);
-    // Fetch all chess players
-    const { data: allPlayers } = await supabase
-      .from('chess_players')
-      .select('id');
-    if (!allPlayers) return;
-    // Build set of already drafted player IDs
-    const drafted = new Set();
-    (teams || []).forEach(team => {
-      (team.player_ids || []).forEach((id: string) => drafted.add(id));
-    });
-    // Pool of available players
-    let available = allPlayers.filter(p => !drafted.has(p.id)).map(p => p.id);
-    // For each team, fill up to 1 player (minimum needed to start)
-    for (const team of teams || []) {
-      const current = team.player_ids || [];
-      const needed = 1 - current.length;
-      if (needed > 0) {
-        // Randomly select needed players
-        const chosen: string[] = [];
-        for (let i = 0; i < needed && available.length > 0; i++) {
-          const idx = Math.floor(Math.random() * available.length);
-          chosen.push(available[idx]);
-          available.splice(idx, 1);
-        }
-        const newPlayerIds = [...current, ...chosen];
-        await supabase
-          .from('teams')
-          .update({ player_ids: newPlayerIds })
-          .eq('id', team.id);
-      }
-    }
-    // After all teams have at least 1 player, mark draft as completed
-    await supabase
-      .from('leagues')
-      .update({ draft_completed: true })
-      .eq('id', leagueData.id);
-    // Reload league data to reflect changes
-    // await loadLeagueData(); // This line was removed as per the edit hint
-  }
-};
 
 // Helper function to generate snake draft order
 const generateSnakeDraftOrder = (participants: string[], rounds: number): string[] => {
@@ -333,7 +288,7 @@ const LeaguePage: React.FC = () => {
     async function maybeProcessPayout() {
       if (
         league &&
-        new Date(league?.end_date) < new Date() &&
+        leagueSeasonHasEndedLocal(league?.end_date || '') &&
         !league?.payout_processed
       ) {
         // Call the payout function
@@ -370,14 +325,21 @@ const LeaguePage: React.FC = () => {
         return
       }
 
+      const leagueRow = leagueData as League
+      const memberIds = leagueRow.member_ids || []
+      const isMember =
+        memberIds.includes(user.id) || leagueRow.creator_id === user.id
+      if (!isMember) {
+        setError('You are not a member of this league.')
+        setLeague(null)
+        return
+      }
 
-      
-      setLeague(leagueData);
-      await autoCompleteTeamsIfNeeded(leagueData);
+      setLeague(leagueRow);
       // Combine all relevant user IDs
       const allUserIds = Array.from(new Set([
-        ...(leagueData.member_ids || []),
-        ...(leagueData.draft_order || [])
+        ...(leagueRow.member_ids || []),
+        ...(leagueRow.draft_order || [])
       ]));
       fetchUserMap(allUserIds)
 
@@ -413,7 +375,7 @@ const LeaguePage: React.FC = () => {
       }
 
       // Get available players for draft
-      if (!leagueData.draft_completed) {
+      if (!isTeamBuildingComplete(leagueRow)) {
         const { data: allPlayers } = await supabase
           .from('chess_players')
           .select('*')
@@ -507,19 +469,31 @@ const LeaguePage: React.FC = () => {
         ...(leagueData.member_ids || [])
       ])
 
+      const avatarMap: Record<string, { username: string; avatar_url: string }> = {}
+      Array.from(allUserIds).forEach((userId) => {
+        avatarMap[userId] = {
+          username: `User_${userId.slice(0, 6)}`,
+          avatar_url: fantasyLeagueChessLogo,
+        }
+      })
+
       // Get user details from users table
       const { data: userDetails } = await supabase
         .from('users')
         .select('id, username, selected_avatar_url')
         .in('id', Array.from(allUserIds))
 
-      // Create a map of user details
-      const userMap = userDetails ? Object.fromEntries(
-        userDetails.map(u => [u.id, {
-          username: u.username || `User_${u.id.slice(0, 6)}`,
-          avatar_url: u.selected_avatar_url || fantasyLeagueChessLogo
-        }])
-      ) : {}
+      if (userDetails) {
+        userDetails.forEach((u) => {
+          avatarMap[u.id] = {
+            username: u.username || `User_${u.id.slice(0, 6)}`,
+            avatar_url: u.selected_avatar_url || fantasyLeagueChessLogo,
+          }
+        })
+      }
+
+      // Create a map of user details (for standings)
+      const userMap = avatarMap
 
       // Get lineups to calculate points
       const { data: lineups } = await supabase
@@ -889,33 +863,25 @@ const LeaguePage: React.FC = () => {
     if (!ids.length || !leagueId) return;
     
     try {
-      // Get usernames from users table
+      const map: { [id: string]: string } = {}
+      ids.forEach((id) => {
+        map[id] = `User_${id.slice(0, 6)}`
+      })
+
       const { data: userData, error } = await supabase
         .from('users')
         .select('id, username')
         .in('id', ids);
       
-      if (userData && !error && userData.length > 0) {
-        const map: { [id: string]: string } = {};
+      if (userData && !error) {
         userData.forEach((user) => {
-          // Always use the username field from users table
-          const username = user.username || 'Unknown User';
-          map[user.id] = username;
-        });
-        
-        setUserMap(map);
-      } else {
-        // Fallback: create a simple map with user IDs
-        const fallbackMap: { [id: string]: string } = {};
-        ids.forEach(id => {
-          fallbackMap[id] = `User_${id.slice(0, 6)}`;
-        });
-        
-        setUserMap(fallbackMap);
+          map[user.id] = user.username || 'Unknown User'
+        })
       }
+
+      setUserMap(map)
     } catch (err) {
       console.error('Error in fetchUserMap:', err);
-      // Fallback: create a simple map with user IDs
       const fallbackMap: { [id: string]: string } = {};
       ids.forEach(id => {
         fallbackMap[id] = `User_${id.slice(0, 6)}`;
@@ -930,7 +896,7 @@ const LeaguePage: React.FC = () => {
     async function fetchPayoutAndWinner() {
       if (
         league &&
-        new Date(league?.end_date) < new Date() &&
+        leagueSeasonHasEndedLocal(league?.end_date || '') &&
         league?.payout_processed
       ) {
         const { data: payoutData } = await supabase
@@ -965,7 +931,7 @@ const LeaguePage: React.FC = () => {
 
   // Show confetti for a few seconds when the league is completed and podium is shown
   useEffect(() => {
-    if (league?.end_date && new Date(league.end_date) < new Date() && league?.payout_processed && payout) {
+    if (league?.end_date && leagueSeasonHasEndedLocal(league.end_date) && league?.payout_processed && payout) {
       setShowConfetti(true);
       const timeout = setTimeout(() => setShowConfetti(false), 8000); // 8 seconds for all confetti to fall
       return () => clearTimeout(timeout);
@@ -1079,13 +1045,37 @@ const LeaguePage: React.FC = () => {
     setLoading(true);
     try {
       // First, update the league's member_ids (while user is still a member)
-      const updatedMemberIds = (league.member_ids || []).reduce((acc: string[], id: string | undefined) => {
-        if (typeof id === 'string' && id !== userIdToRemove) acc.push(id);
-        return acc;
-      }, []);
+      const updatedMemberIds = (league.member_ids || []).filter(
+        (id: string) => id !== userIdToRemove
+      );
+      const updatedDraftOrder = (league.draft_order || []).filter(
+        (id: string) => id !== userIdToRemove
+      );
+
+      const leagueUpdate: Record<string, unknown> = {
+        member_ids: updatedMemberIds,
+        draft_order: updatedDraftOrder,
+      };
+
+      if (league.marketplace_started && league.marketplace_order?.length) {
+        const newMarketplaceOrder = league.marketplace_order.filter(
+          (id: string) => id !== userIdToRemove
+        );
+        let newTurn = league.current_marketplace_turn ?? 0;
+        if (newTurn >= newMarketplaceOrder.length) {
+          newTurn = Math.max(0, newMarketplaceOrder.length - 1);
+        }
+        leagueUpdate.marketplace_order = newMarketplaceOrder;
+        leagueUpdate.current_marketplace_turn = newTurn;
+        if (newMarketplaceOrder.length === 0) {
+          leagueUpdate.marketplace_completed = true;
+          leagueUpdate.draft_completed = true;
+        }
+      }
+
       const { error: leaguesError } = await supabase
         .from('leagues')
-        .update({ member_ids: updatedMemberIds })
+        .update(leagueUpdate)
         .eq('id', league.id);
       if (leaguesError) {
         console.error('Error updating leagues.member_ids:', leaguesError);
@@ -1146,17 +1136,6 @@ const LeaguePage: React.FC = () => {
     }
   };
 
-  // Helper to check if lineup changes are allowed (not Tuesday UTC)
-  function isLineupChangeAllowed() {
-    // TEMPORARILY DISABLED: Always allow lineup changes
-    return true;
-    
-    // Original logic (commented out for now):
-    // const now = new Date();
-    // const day = now.getUTCDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
-    // return day !== 2; // Disallow Tuesday (2)
-  }
-
   if (loading && !league) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -1181,6 +1160,10 @@ const LeaguePage: React.FC = () => {
     )
   }
 
+  const teamBuildingComplete = isTeamBuildingComplete(league)
+  const seasonStarted = leagueSeasonHasStartedLocal(league.start_date)
+  const seasonEnded = leagueSeasonHasEndedLocal(league.end_date)
+
   return (
     <>
       {error && (
@@ -1204,7 +1187,7 @@ const LeaguePage: React.FC = () => {
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-4">
               <div className="flex items-center space-x-2">
                 <h1 className="text-2xl lg:text-3xl font-bold text-neutral-900 mb-2 lg:mb-0">{league?.name}</h1>
-                {new Date(league?.end_date) < new Date() && (
+                {seasonEnded && (
                   <span className="ml-2 px-2 py-1 bg-red-200 text-red-800 rounded text-xs font-bold">
                     League Ended
                   </span>
@@ -1227,7 +1210,7 @@ const LeaguePage: React.FC = () => {
               <p className="text-neutral-600 mb-4 text-sm lg:text-base">{league?.description}</p>
             )}
             {/* Winner and payout display */}
-            {new Date(league?.end_date) < new Date() && league?.payout_processed && payout && (
+            {seasonEnded && league?.payout_processed && payout && (
               <div className="bg-green-100 rounded-lg p-4 my-4 border border-green-200">
                 <h3 className="font-bold text-lg text-green-800">🏆 Winner: {winnerName}</h3>
                 <p className="text-green-700">Prize: {payout.amount} coins</p>
@@ -1238,7 +1221,8 @@ const LeaguePage: React.FC = () => {
               <div className="flex items-center space-x-2">
                 <Calendar className="h-4 w-4 lg:h-5 lg:w-5 text-gold" />
                 <span className="text-xs lg:text-sm text-neutral-600">
-                  Starts: {new Date(league?.start_date).toLocaleDateString()}
+                  {seasonStarted ? 'Started: ' : 'Starts: '}
+                  {formatCalendarDate(league.start_date)}
                   <span className="relative group cursor-pointer ml-1">
                     <svg className="w-3 h-3 text-royalBlue inline-block" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
                     <span className="absolute left-1/2 -translate-x-1/2 mt-2 w-64 bg-white text-neutral-900 text-xs rounded shadow-lg border border-royalBlue px-3 py-2 z-50 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
@@ -1256,21 +1240,21 @@ const LeaguePage: React.FC = () => {
               <div className="flex items-center space-x-2">
                 <Crown className="h-4 w-4 lg:h-5 lg:w-5 text-gold" />
                 <span className="text-xs lg:text-sm text-neutral-600">
-                  Draft: {league?.draft_completed ? 'Completed' : 'In Progress'}
+                  Draft: {getTeamBuildingStatusLabel(league)}
                 </span>
               </div>
             </div>
           </div>
 
           {/* Bot Management Section - Only visible to league owner and before draft starts */}
-          {isOwner && !league?.draft_started && !league?.draft_completed && !league?.marketplace_started && (
+          {isOwner && !teamBuildingComplete && !league?.marketplace_started && (
             <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6 mb-6 lg:mb-8 border-2 border-royalBlue">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg lg:text-xl font-bold text-neutral-900 flex items-center">
                   <BotIcon className="w-5 h-5 mr-2 text-royalBlue" />
                   Bot Management
                 </h2>
-                {!bot && league && new Date(league.end_date) >= new Date() && (
+                {!bot && league && !seasonEnded && (
                   <button
                     type="button"
                     onClick={() => setShowAddBotModal(true)}
@@ -1325,7 +1309,7 @@ const LeaguePage: React.FC = () => {
               ) : (
                 <div className="text-center py-6">
                   <BotIcon className="w-12 h-12 mx-auto mb-3 text-neutral-400" />
-                  {league && new Date(league.end_date) < new Date() ? (
+                  {league && seasonEnded ? (
                     <p className="text-neutral-600 text-sm lg:text-base mb-4">
                       This league has ended. Bots cannot be added to completed leagues.
                     </p>
@@ -1376,7 +1360,7 @@ const LeaguePage: React.FC = () => {
             <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6 border-2 border-gold relative">
               {showConfetti && <Confetti className="pointer-events-none" style={{zIndex: 30}} />}
               <h2 className="text-lg lg:text-xl font-bold mb-4 text-neutral-900">Standings</h2>
-              {league?.end_date && new Date(league.end_date) < new Date() && league?.payout_processed && payout ? (
+              {seasonEnded && league?.payout_processed && payout ? (
                 <>
                   {showConfetti && <Confetti className="pointer-events-none" style={{zIndex: 30}} />}
                   {/* Podium for Top 3 */}
@@ -1542,11 +1526,10 @@ const LeaguePage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => {
-                        // Temporarily disabled Tuesday restriction
-                        // if (!isLineupChangeAllowed()) {
-                        //   setError('You cannot edit your lineup on Tuesday (UTC). Please try again on another day.');
-                        //   return;
-                        // }
+                        if (!isLineupChangeAllowed()) {
+                          setError(lineupChangeBlockedMessage());
+                          return;
+                        }
                         setIsEditingLineup(true);
                       }}
                       className="flex items-center space-x-1 text-royalBlue hover:text-purple text-sm lg:text-base transition-colors"
@@ -1611,7 +1594,7 @@ const LeaguePage: React.FC = () => {
                     </div>
                   ) : (
                     <div className="p-4 bg-amber-50 rounded-lg border border-amber-200 text-amber-900 text-center">
-                      <p className="font-semibold">Lineup changes are only allowed on Monday and Tuesday (UTC).</p>
+                      <p className="font-semibold">{lineupChangeBlockedMessage()}</p>
                       <button
                         type="button"
                         onClick={() => {
@@ -1758,7 +1741,7 @@ const LeaguePage: React.FC = () => {
               </div>
 
               {/* Turn-Based Marketplace Section */}
-              {!league.draft_completed && !league.marketplace_completed && (
+              {!teamBuildingComplete && !league.marketplace_completed && (
                 <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6 border-2 border-gold">
                   <TurnBasedMarketplace league={league} onUpdate={loadLeagueData} />
                 </div>
@@ -1769,7 +1752,7 @@ const LeaguePage: React.FC = () => {
 
 
           {/* Coin Marketplace - Show after draft is completed */}
-          {league && (league.draft_completed || league.marketplace_completed || (league.marketplace_order && league.marketplace_order.length === 0)) && (
+          {league && isCoinMarketplaceAvailable(league) && (
             <div className="mt-8 w-full">
               <Marketplace leagueId={leagueId!} />
             </div>

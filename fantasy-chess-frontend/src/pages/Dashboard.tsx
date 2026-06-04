@@ -7,17 +7,11 @@ import { League, Team, Lineup, ChessPlayer } from '../types'
 import { Crown, Users, Trophy, Calendar, Plus, ExternalLink } from 'lucide-react'
 import { fetchLineupPlayerBreakdownByRounds } from '../lib/supabase'
 import PlayerDetailModal from '../components/PlayerDetailModal'
+import { getLocalDateString, getWeekStartMonday } from '../lib/calendarDate'
+import { formatCalendarDate } from '../lib/leagueStatus'
 
 function getCurrentWeekStart() {
-  const now = new Date();
-  const dayOfWeek = now.getDay();
-  const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-  const monday = new Date(now);
-  monday.setDate(now.getDate() - daysToSubtract);
-  const year = monday.getFullYear();
-  const month = String(monday.getMonth() + 1).padStart(2, '0');
-  const day = String(monday.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  return getWeekStartMonday();
 }
 
 const Dashboard: React.FC = () => {
@@ -38,30 +32,29 @@ const Dashboard: React.FC = () => {
   const [availableWeeks, setAvailableWeeks] = useState<string[]>([]);
   const [selectedWeek, setSelectedWeek] = useState<string | null>(null);
   const [activeLeagues, setActiveLeagues] = useState<League[]>([]);
+  const [selectedActiveLeagueId, setSelectedActiveLeagueId] = useState<string | null>(null);
   const [selectedPlayerForModal, setSelectedPlayerForModal] = useState<ChessPlayer | null>(null);
 
-  // Track if initial load is complete to prevent unnecessary refreshes
-  const hasCompletedInitialLoad = React.useRef(false);
-  const userIdRef = React.useRef<string | null>(null);
+  useEffect(() => {
+    if (user) {
+      loadDashboardData();
+    } else {
+      setLoading(false);
+    }
+  }, [user]);
 
   useEffect(() => {
-    // Only load if user exists and either:
-    // 1. We haven't completed initial load, OR
-    // 2. The user ID actually changed (different user logged in)
-    const userIdChanged = user?.id !== userIdRef.current;
-    
-    if (user && (!hasCompletedInitialLoad.current || userIdChanged)) {
-      if (userIdChanged) {
-        // New user, reset the flag
-        hasCompletedInitialLoad.current = false;
-        userIdRef.current = user.id;
+    const refreshOnFocus = () => {
+      if (user && document.visibilityState === 'visible') {
+        loadDashboardData();
       }
-      loadDashboardData();
-    } else if (!user) {
-      setLoading(false);
-      hasCompletedInitialLoad.current = false;
-      userIdRef.current = null;
-    }
+    };
+    window.addEventListener('focus', refreshOnFocus);
+    document.addEventListener('visibilitychange', refreshOnFocus);
+    return () => {
+      window.removeEventListener('focus', refreshOnFocus);
+      document.removeEventListener('visibilitychange', refreshOnFocus);
+    };
   }, [user]);
 
   useEffect(() => {
@@ -127,7 +120,7 @@ const Dashboard: React.FC = () => {
     loadBreakdown();
   }, [user, currentLeague, selectedWeek]);
 
-  const loadDashboardData = async () => {
+  const loadDashboardData = async (preferredActiveLeagueId?: string | null) => {
     if (!user) return
 
     try {
@@ -142,6 +135,7 @@ const Dashboard: React.FC = () => {
         const { data, error } = await supabase
           .from('leagues')
           .select('*')
+          .contains('member_ids', [user.id])
           .order('start_date', { ascending: true })
 
         if (error) {
@@ -160,39 +154,36 @@ const Dashboard: React.FC = () => {
 
       if (!allLeagues) {
         console.error('Failed to load leagues after all retries');
-        hasCompletedInitialLoad.current = true; // Mark as completed even on failure
         return;
       }
 
-      // Filter leagues where user is a member with more robust checking
-      const leagues = allLeagues.filter(league => {
-        if (!league.member_ids || !Array.isArray(league.member_ids)) {
-          console.warn('League has invalid member_ids:', league.id, league.member_ids);
-          return false;
-        }
-        const isMember = league.member_ids.includes(user.id);
-        if (!isMember) {
-          console.log('User not found in league members:', user.id, league.member_ids);
-        }
-        return isMember;
-      });
+      const leagues = (allLeagues || []).filter(
+        (league) => league.member_ids && Array.isArray(league.member_ids)
+      );
 
-      console.log('User leagues found:', leagues.length, 'out of', allLeagues.length);
-
-      // Split into active, future, and past leagues
-      const todayStr = new Date().toISOString().split('T')[0];
+      // Split into active, future, and past leagues (use local calendar dates; DB stores YYYY-MM-DD)
+      const todayStr = getLocalDateString();
       const active = leagues.filter(l => l.end_date >= todayStr && l.start_date <= todayStr);
       const future = leagues.filter(l => l.start_date > todayStr);
       const past = leagues.filter(l => l.end_date < todayStr);
       setActiveLeagues(active);
       setFutureLeagues(future);
 
-      // Set currentLeague to the first active league (if any)
-      setCurrentLeague(active.length > 0 ? active[0] : null);
+      const pickId = preferredActiveLeagueId ?? selectedActiveLeagueId;
+      const activeLeague =
+        active.find((l) => l.id === pickId) || active[0] || null;
+      if (activeLeague) {
+        setSelectedActiveLeagueId(activeLeague.id);
+      } else {
+        setSelectedActiveLeagueId(null);
+        setUserTeam(null);
+        setCurrentLineup(null);
+        setLineupPlayers([]);
+      }
+      setCurrentLeague(activeLeague);
 
-      // Get user's team for the current league (if any) with better error handling
-      if (active.length > 0) {
-        const league = active[0];
+      if (activeLeague) {
+        const league = activeLeague;
         try {
           const { data: teams, error: teamError } = await supabase
             .from('teams')
@@ -307,7 +298,6 @@ const Dashboard: React.FC = () => {
       console.error('Error loading dashboard data:', error)
     } finally {
       setLoading(false)
-      hasCompletedInitialLoad.current = true; // Mark as completed after load attempt
     }
   }
 
@@ -344,9 +334,13 @@ const Dashboard: React.FC = () => {
         <div className="text-center py-12 lg:py-16">
           <div className="bg-white rounded-lg shadow-lg p-6 lg:p-8 max-w-md mx-auto border-2 border-royalBlue">
             <Crown className="h-12 w-12 lg:h-16 lg:w-16 text-royalBlue mx-auto mb-4" />
-            <h2 className="text-xl lg:text-2xl font-bold mb-4 text-neutral-900">No Active League</h2>
+            <h2 className="text-xl lg:text-2xl font-bold mb-4 text-neutral-900">
+              {futureLeagues.length > 0 ? 'No League In Progress' : 'No Active League'}
+            </h2>
             <p className="text-neutral-700 mb-6 text-sm lg:text-base">
-              You're not currently in any active league. Join or create one to start playing!
+              {futureLeagues.length > 0
+                ? 'Your upcoming leagues are listed below. You can open one anytime to prep for the draft.'
+                : "You're not currently in any active league. Join or create one to start playing!"}
             </p>
             <Link
               to="/join-league"
@@ -359,7 +353,23 @@ const Dashboard: React.FC = () => {
         </div>
       ) : (
         <div className="space-y-6 lg:space-y-8">
-          {/* Current League Info */}
+          {activeLeagues.length > 1 && (
+            <div className="bg-white rounded-lg shadow-lg p-4 border-2 border-royalBlue">
+              <label htmlFor="active-league-select" className="block text-sm font-medium text-neutral-700 mb-2">
+                Active league
+              </label>
+              <select
+                id="active-league-select"
+                className="w-full border border-royalBlue rounded-lg px-3 py-2 text-neutral-900 focus:outline-none focus:ring-2 focus:ring-royalBlue"
+                value={selectedActiveLeagueId || currentLeague?.id || ''}
+                onChange={(e) => loadDashboardData(e.target.value)}
+              >
+                {activeLeagues.map((l) => (
+                  <option key={l.id} value={l.id}>{l.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
           {currentLeague && (
             <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6 border-2 border-royalBlue">
               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-4">
@@ -390,7 +400,7 @@ const Dashboard: React.FC = () => {
                   <Calendar className="h-5 w-5 lg:h-6 lg:w-6 text-royalBlue" />
                   <div>
                     <p className="text-xs lg:text-sm text-neutral-500">End Date</p>
-                    <p className="font-semibold text-sm lg:text-base text-neutral-900">{new Date(currentLeague.end_date).toLocaleDateString()}</p>
+                    <p className="font-semibold text-sm lg:text-base text-neutral-900">{formatCalendarDate(currentLeague.end_date)}</p>
                   </div>
                 </div>
               </div>
@@ -562,7 +572,7 @@ const Dashboard: React.FC = () => {
           </div>
 
           {/* Past Performance */}
-          {pastLeagues.length > 0 && (
+          {false && pastLeagues.length > 0 && (
             <div className="bg-white rounded-lg shadow-lg p-6 border-2 border-royalBlue">
               <h3 className="text-xl font-bold mb-4 text-neutral-900">Past League Performance</h3>
               <div className="space-y-3">
@@ -571,12 +581,11 @@ const Dashboard: React.FC = () => {
                     <div>
                       <h4 className="font-semibold text-neutral-900">{league.league_name}</h4>
                       <p className="text-sm text-neutral-500">
-                        Ended: {new Date(league.end_date).toLocaleDateString()}
+                        Ended: {formatCalendarDate(league.end_date)}
                       </p>
                     </div>
                     <div className="text-right">
                       <p className="font-semibold text-neutral-900">{league.total_points} points</p>
-                      <p className="text-sm text-neutral-500">Rank: {league.rank}</p>
                     </div>
                   </div>
                 ))}
@@ -596,10 +605,10 @@ const Dashboard: React.FC = () => {
                 <div>
                   <h4 className="font-semibold text-neutral-900">{league.name}</h4>
                   <p className="text-sm text-neutral-500">
-                    Starts: {new Date(league.start_date).toLocaleDateString()}
+                    Starts: {formatCalendarDate(league.start_date)}
                   </p>
                   <p className="text-sm text-neutral-500">
-                    Ends: {new Date(league.end_date).toLocaleDateString()}
+                    Ends: {formatCalendarDate(league.end_date)}
                   </p>
                   <p className="text-sm text-neutral-500">
                     Buy-in: {league.buy_in} coins
@@ -627,7 +636,7 @@ const Dashboard: React.FC = () => {
                 <div>
                   <h4 className="font-semibold text-neutral-900">{league.league_name}</h4>
                   <p className="text-sm text-neutral-500">
-                    Ended: {new Date(league.end_date).toLocaleDateString()}
+                    Ended: {formatCalendarDate(league.end_date)}
                   </p>
                   <p className="text-sm text-neutral-500">
                     Your Points: {league.total_points}

@@ -5,6 +5,8 @@ import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { League } from '../types'
 import { Users, Trophy, Calendar, Search, Copy } from 'lucide-react'
+import { getLocalDateString, getTomorrowDateString } from '../lib/calendarDate'
+import { formatCalendarDate, isLeagueJoinClosed } from '../lib/leagueStatus'
 
 // Helper function to send league joined email
 const sendLeagueJoinedEmail = async (userEmail: string, leagueName: string) => {
@@ -63,31 +65,15 @@ const JoinLeague: React.FC = () => {
     return !(endA < startB || endB < startA);
   }
 
-  // Helper to get tomorrow's date in yyyy-mm-dd format
-  function getTomorrowDate() {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    return tomorrow.toISOString().split('T')[0];
-  }
-
   const loadPublicLeagues = async () => {
     try {
-      // Get today's date in YYYY-MM-DD format (local timezone)
-      const today = new Date()
-      const todayString = today.getFullYear() + '-' + 
-        String(today.getMonth() + 1).padStart(2, '0') + '-' + 
-        String(today.getDate()).padStart(2, '0')
-      
-      const { data: leagues } = await supabase
-        .from('leagues')
-        .select('*')
-        .eq('is_public', true)
-        .gt('start_date', todayString) // Only show leagues that haven't started yet
-        .order('created_at', { ascending: false })
-
+      const { data: leagues, error } = await supabase.rpc('list_joinable_public_leagues')
+      if (error) {
+        console.error('Error loading public leagues:', error)
+        return
+      }
       if (leagues) {
-        console.log(`Found ${leagues.length} public leagues starting after ${todayString}`)
-        setPublicLeagues(leagues)
+        setPublicLeagues((leagues as League[]).filter((l) => !isLeagueJoinClosed(l)))
       }
     } catch (error) {
       console.error('Error loading public leagues:', error)
@@ -113,7 +99,7 @@ const JoinLeague: React.FC = () => {
       }
 
       // Validate start date (must be at least tomorrow)
-      const tomorrowStr = getTomorrowDate();
+      const tomorrowStr = getTomorrowDateString();
       if (!startDate || startDate < tomorrowStr) {
         setError('Start date must be at least tomorrow.')
         return
@@ -124,8 +110,8 @@ const JoinLeague: React.FC = () => {
       const endDateObj = new Date(startDate);
       endDateObj.setMonth(endDateObj.getMonth() + 1);
       endDateObj.setDate(0);
-      const newEnd = endDateObj.toISOString().split('T')[0];
-      const overlap = userLeagues.some(l => hasDateOverlap(newStart, newEnd, l.start_date, l.end_date) && l.end_date >= new Date().toISOString().split('T')[0]);
+      const newEnd = getLocalDateString(endDateObj);
+      const overlap = userLeagues.some(l => hasDateOverlap(newStart, newEnd, l.start_date, l.end_date) && l.end_date >= getLocalDateString());
       if (overlap) {
         setError('You cannot create a league that overlaps with another active league you are in.');
         return;
@@ -172,7 +158,7 @@ const JoinLeague: React.FC = () => {
           buy_in: buyIn,
           max_members: maxMembers,
           start_date: startDate,
-          end_date: endDate.toISOString().split('T')[0],
+          end_date: getLocalDateString(endDate),
           join_code: joinCode,
           creator_id: user.id,
           member_ids: [user.id],
@@ -232,37 +218,42 @@ const JoinLeague: React.FC = () => {
 
       const joinCodeInput = joinCode.trim().toUpperCase();
       
-      // Look up the league by join code
-      const { data: league, error: leagueError } = await supabase
-        .from('leagues')
-        .select('*')
-        .eq('join_code', joinCodeInput)
-        .single();
+      const { data: leagueRows, error: leagueError } = await supabase.rpc(
+        'lookup_league_by_join_code',
+        { p_join_code: joinCodeInput }
+      )
 
       if (leagueError) {
-        setError('Invalid join code');
-        return;
+        setError('Invalid join code')
+        return
       }
 
+      const league = Array.isArray(leagueRows) ? leagueRows[0] : leagueRows
       if (!league) {
-        setError('League not found');
-        return;
+        setError('League not found')
+        return
       }
 
-      if (league.draft_started || new Date(league.start_date) <= new Date()) {
+      if (isLeagueJoinClosed(league)) {
         setError('You cannot join a league that is in progress or has already started.');
         return;
       }
 
       // Check for overlapping active leagues
-      const overlap = userLeagues.some(l => hasDateOverlap(league.start_date, league.end_date, l.start_date, l.end_date) && l.end_date >= new Date().toISOString().split('T')[0]);
+      const overlap = userLeagues.some(l => hasDateOverlap(league.start_date, league.end_date, l.start_date, l.end_date) && l.end_date >= getLocalDateString());
       if (overlap) {
         setError('You cannot join a league that overlaps with another active league you are in.');
         return;
       }
 
-      if (league.member_ids.includes(user.id)) {
+      if ((league.member_ids || []).includes(user.id)) {
         setError('You are already a member of this league')
+        return
+      }
+
+      const maxMembers = league.max_members || 10
+      if ((league.member_ids || []).length >= maxMembers) {
+        setError(`League is full (${league.member_ids.length}/${maxMembers} members)`)
         return
       }
 
@@ -295,53 +286,33 @@ const JoinLeague: React.FC = () => {
         console.error('Error getting user display name:', err);
       }
 
-      // Add user to league
-      const updatedMemberIds = [...league.member_ids, user.id]
-      const updatedDraftOrder = [...league.draft_order, user.id]
-
-      const { error: updateError } = await supabase
-        .from('leagues')
-        .update({
-          member_ids: updatedMemberIds,
-          draft_order: updatedDraftOrder
-        })
-        .eq('id', league.id)
-
-      if (updateError) throw updateError
-
-      // Create league data for the user (teams, coin balance, lineups)
-      try {
-        const { error: createDataError } = await supabase.rpc('create_league_data_for_user', {
-          user_id_input: user.id,
-          league_id_input: league.id
-        });
-        if (createDataError) {
-          // Error creating league data (will be created automatically)
-        }
-      } catch (err) {
-        // League data creation failed (will be created automatically)
-      }
-
-      // Note: User is already added to member_ids array in the league update above
-      // No need to insert into league_members table since it doesn't exist anymore
-
-      // Deduct coins from user
-      await supabase
-        .from('users')
-        .update({ coins: userData.coins - league.buy_in })
-        .eq('id', user.id)
-
-      // Send league joined email
-      if (user.email) {
-        await sendLeagueJoinedEmail(user.email, league.name)
-      }
-
-      navigate(`/league/${league.id}`)
+      await completeLeagueJoin(league)
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to join league')
     } finally {
       setLoading(false)
     }
+  }
+
+  const completeLeagueJoin = async (league: League) => {
+    if (!user) return
+
+    const { data, error: joinError } = await supabase.rpc('join_league_atomic', {
+      p_league_id: league.id,
+    })
+
+    if (joinError) throw joinError
+
+    const result = data as { success?: boolean; error?: string; league_id?: string }
+    if (!result?.success) {
+      throw new Error(result?.error || 'Failed to join league')
+    }
+
+    if (user.email) {
+      await sendLeagueJoinedEmail(user.email, league.name)
+    }
+
+    navigate(`/league/${league.id}`)
   }
 
   const joinPublicLeague = async (league: League) => {
@@ -351,19 +322,19 @@ const JoinLeague: React.FC = () => {
       setLoading(true)
       setError('')
 
-      if (league.draft_started || new Date(league.start_date) <= new Date()) {
+      if (isLeagueJoinClosed(league)) {
         setError('You cannot join a league that is in progress or has already started.');
         return;
       }
 
       // Check for overlapping active leagues
-      const overlap = userLeagues.some(l => hasDateOverlap(league.start_date, league.end_date, l.start_date, l.end_date) && l.end_date >= new Date().toISOString().split('T')[0]);
+      const overlap = userLeagues.some(l => hasDateOverlap(league.start_date, league.end_date, l.start_date, l.end_date) && l.end_date >= getLocalDateString());
       if (overlap) {
         setError('You cannot join a league that overlaps with another active league you are in.');
         return;
       }
 
-      if (league.member_ids.includes(user.id)) {
+      if ((league.member_ids || []).includes(user.id)) {
         setError('You are already a member of this league')
         return
       }
@@ -405,45 +376,7 @@ const JoinLeague: React.FC = () => {
       // Note: User will be added to member_ids array in the league update below
       // No need to insert into league_members table since it doesn't exist anymore
 
-      // Add user to league
-      const updatedMemberIds = [...league.member_ids, user.id]
-      const updatedDraftOrder = [...league.draft_order, user.id]
-
-      const { error: updateError } = await supabase
-        .from('leagues')
-        .update({
-          member_ids: updatedMemberIds,
-          draft_order: updatedDraftOrder
-        })
-        .eq('id', league.id)
-
-      if (updateError) throw updateError
-
-      // Create league data for the user (teams, coin balance, lineups)
-      try {
-        const { error: createDataError } = await supabase.rpc('create_league_data_for_user', {
-          user_id_input: user.id,
-          league_id_input: league.id
-        });
-        if (createDataError) {
-          // Error creating league data (will be created automatically)
-        }
-      } catch (err) {
-        // League data creation failed (will be created automatically)
-      }
-
-      // Deduct coins from user
-      await supabase
-        .from('users')
-        .update({ coins: userData.coins - league.buy_in })
-        .eq('id', user.id)
-
-      // Send league joined email
-      if (user.email) {
-        await sendLeagueJoinedEmail(user.email, league.name)
-      }
-
-      navigate(`/league/${league.id}`)
+      await completeLeagueJoin(league)
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to join league')
     } finally {
@@ -584,7 +517,7 @@ const JoinLeague: React.FC = () => {
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
                   required
-                  min={getTomorrowDate()}
+                  min={getTomorrowDateString()}
                   className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-royalBlue text-neutral-900"
                 />
               </div>
@@ -632,6 +565,7 @@ const JoinLeague: React.FC = () => {
                 const alreadyMember = league.member_ids.includes(user.id);
                 const maxMembers = league.max_members || 10;
                 const isFull = league.member_ids.length >= maxMembers;
+                const joinClosed = isLeagueJoinClosed(league);
                 return (
                   <div key={league.id} className="bg-white rounded-lg shadow-lg p-4 lg:p-6 border-2 border-royalBlue">
                     <div className="flex items-center justify-between mb-4">
@@ -665,20 +599,39 @@ const JoinLeague: React.FC = () => {
                       <div className="flex items-center space-x-2">
                         <Calendar className="h-4 w-4 text-royalBlue" />
                         <span className="text-xs lg:text-sm text-neutral-600">
-                          Starts {new Date(league.start_date).toLocaleDateString()}
+                          Starts {formatCalendarDate(league.start_date)}
                         </span>
                       </div>
                     </div>
                     
                     <button
                       type="button"
-                      className={`w-full bg-[#1e293b] hover:bg-royalBlue disabled:bg-neutral-400 text-white py-2 px-4 rounded-lg font-medium text-sm lg:text-base shadow-lg transition-colors ${alreadyMember || isFull ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      disabled={alreadyMember || isFull}
-                      title={alreadyMember ? 'You are already a member of this league' : isFull ? 'League is full' : 'Join this league'}
-                      onClick={() => !alreadyMember && !isFull && joinPublicLeague(league)}
+                      className={`w-full bg-[#1e293b] hover:bg-royalBlue disabled:bg-neutral-400 text-white py-2 px-4 rounded-lg font-medium text-sm lg:text-base shadow-lg transition-colors ${alreadyMember || isFull || joinClosed ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      disabled={alreadyMember || isFull || joinClosed}
+                      title={
+                        alreadyMember
+                          ? 'You are already a member of this league'
+                          : isFull
+                            ? 'League is full'
+                            : joinClosed
+                              ? 'This league is no longer accepting new members'
+                              : 'Join this league'
+                      }
+                      onClick={() => !alreadyMember && !isFull && !joinClosed && joinPublicLeague(league)}
                     >
-                      {loading ? 'Joining...' : alreadyMember ? 'Already Member' : isFull ? 'League Full' : 'Join League'}
+                      {loading
+                        ? 'Joining...'
+                        : alreadyMember
+                          ? 'Already Member'
+                          : isFull
+                            ? 'League Full'
+                            : joinClosed
+                              ? 'Closed'
+                              : 'Join League'}
                     </button>
+                    {joinClosed && !alreadyMember && !isFull && (
+                      <div className="text-xs text-neutral-500 mt-1">Draft started or the league season has begun</div>
+                    )}
                     {alreadyMember && (
                       <div className="text-xs text-neutral-500 mt-1">You are already a member of this league</div>
                     )}

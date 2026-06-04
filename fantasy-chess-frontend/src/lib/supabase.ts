@@ -513,9 +513,12 @@ export async function autoDraftForBot(botId: string, leagueId: string): Promise<
     // --- Enforce max team size ---
     if ((team.player_ids?.length || 0) >= 10) {
       // Advance draft turn and check for completion
-      const totalDraftParticipants = league.member_ids.length + (league.bot_id ? 1 : 0);
+      const participantCount = Math.max(
+        league.draft_order?.length ?? 0,
+        league.member_ids?.length ?? 0
+      );
       const newDraftTurn = league.current_draft_turn + 1;
-      const isDraftComplete = newDraftTurn >= totalDraftParticipants * 10;
+      const isDraftComplete = participantCount > 0 && newDraftTurn >= participantCount * 10;
       const { error: leagueUpdateError } = await supabase
         .from('leagues')
         .update({
@@ -546,9 +549,12 @@ export async function autoDraftForBot(botId: string, leagueId: string): Promise<
     }
 
     // --- Advance draft turn and check for completion ---
-    const totalDraftParticipants = league.member_ids.length + (league.bot_id ? 1 : 0);
+    const participantCount = Math.max(
+      league.draft_order?.length ?? 0,
+      league.member_ids?.length ?? 0
+    );
     const newDraftTurn = league.current_draft_turn + 1;
-    const isDraftComplete = newDraftTurn >= totalDraftParticipants * 10;
+    const isDraftComplete = participantCount > 0 && newDraftTurn >= participantCount * 10;
     const { error: leagueUpdateError } = await supabase
       .from('leagues')
       .update({

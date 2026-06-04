@@ -85,7 +85,7 @@ const checkAndSendWelcomeEmail = async (user: User) => {
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [isNewUser, setIsNewUser] = useState(false)
 
   useEffect(() => {

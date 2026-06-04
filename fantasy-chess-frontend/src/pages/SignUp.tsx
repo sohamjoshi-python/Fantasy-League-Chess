@@ -23,12 +23,12 @@ const SignUp: React.FC = () => {
   const { signUp, user } = useAuth()
   const navigate = useNavigate()
 
-  // Redirect authenticated users to dashboard
+  // Redirect authenticated users only when not showing signup success
   useEffect(() => {
-    if (user) {
-      navigate('/dashboard')
+    if (user && !success) {
+      navigate('/join-league')
     }
-  }, [user, navigate])
+  }, [user, navigate, success])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { autoMarketplaceForBot } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { ChessPlayer, League, CurrentMarketplaceTurn, MarketplaceTurn } from '../types';
+import { isTeamBuildingComplete, preserveMarketplaceTurn } from '../lib/leagueStatus';
 import { calculatePlayerPrice } from '../types/coin-system';
 import { useMarketplaceData } from '../hooks/useMarketplaceData';
 import { useDebounce } from '../hooks/useDebounce';
@@ -57,8 +58,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
   
   // Add state for draft completed - check both league state and marketplace order
   const [marketplaceDraftCompleted, setMarketplaceDraftCompleted] = useState(
-    league.draft_completed || 
-    (league.marketplace_order && league.marketplace_order.length === 0)
+    isTeamBuildingComplete(league)
   );
 
   // Use the new data hook
@@ -144,13 +144,17 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
           
           // Regenerate marketplace order using current member_ids
           const newMarketplaceOrder = generateSnakeDraftOrder(memberIds, 10);
+          const preservedTurn = preserveMarketplaceTurn(
+            currentOrder,
+            league.current_marketplace_turn ?? 0,
+            newMarketplaceOrder
+          );
           
-          // Update the league with the new marketplace order
           supabase
             .from('leagues')
             .update({
               marketplace_order: newMarketplaceOrder,
-              current_marketplace_turn: 0 // Reset to beginning
+              current_marketplace_turn: preservedTurn,
             })
             .eq('id', league.id)
             .then(({ error: updateError }) => {
@@ -178,12 +182,11 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
         // Regenerate marketplace order using current member_ids
         const newMarketplaceOrder = generateSnakeDraftOrder(memberIds, 10);
         
-        // Update the league with the new marketplace order
         supabase
           .from('leagues')
           .update({
             marketplace_order: newMarketplaceOrder,
-            current_marketplace_turn: 0 // Reset to beginning
+            current_marketplace_turn: 0,
           })
           .eq('id', league.id)
           .then(({ error: updateError }) => {
@@ -219,12 +222,8 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
 
   // Separate useEffect for marketplace completion state
   useEffect(() => {
-    setMarketplaceDraftCompleted(
-      league.marketplace_completed || 
-      league.draft_completed || 
-      (league.marketplace_order && league.marketplace_order.length === 0)
-    );
-  }, [league.marketplace_completed, league.draft_completed, league.marketplace_order]);
+    setMarketplaceDraftCompleted(isTeamBuildingComplete(league));
+  }, [league]);
 
   // Check if only one human player remains
   useEffect(() => {
@@ -306,13 +305,17 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
         
         // Regenerate marketplace order using current member_ids
         const newMarketplaceOrder = generateSnakeDraftOrder(memberIds, 10);
+        const preservedTurn = preserveMarketplaceTurn(
+          currentOrder,
+          league.current_marketplace_turn ?? 0,
+          newMarketplaceOrder
+        );
         
-        // Update the league with the new marketplace order
         supabase
           .from('leagues')
           .update({
             marketplace_order: newMarketplaceOrder,
-            current_marketplace_turn: 0 // Reset to beginning
+            current_marketplace_turn: preservedTurn,
           })
           .eq('id', league.id)
           .then(({ error: updateError }) => {
@@ -907,7 +910,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
           console.log('🏁 Marketplace ending - no participants');
           await supabase
             .from('leagues')
-            .update({ marketplace_completed: true })
+            .update({ marketplace_completed: true, draft_completed: true })
             .eq('id', league.id);
         }
       }
@@ -931,14 +934,18 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
       
       // Regenerate marketplace order without the bot
       const newMarketplaceOrder = generateSnakeDraftOrder(updatedMemberIds, 10);
+      const preservedTurn = preserveMarketplaceTurn(
+        league.marketplace_order || [],
+        league.current_marketplace_turn ?? 0,
+        newMarketplaceOrder
+      );
       
-      // Update the league to remove the bot and regenerate the marketplace order
       const { error: updateError } = await supabase
         .from('leagues')
         .update({
           member_ids: updatedMemberIds,
           marketplace_order: newMarketplaceOrder,
-          current_marketplace_turn: 0 // Reset to beginning since order changed
+          current_marketplace_turn: preservedTurn,
         })
         .eq('id', league.id);
       
@@ -981,7 +988,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
           console.log('🏁 Marketplace ending - no participants');
           await supabase
             .from('leagues')
-            .update({ marketplace_completed: true })
+            .update({ marketplace_completed: true, draft_completed: true })
             .eq('id', league.id);
         }
       }
@@ -1037,7 +1044,8 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
       const { error: updateError } = await supabase
         .from('leagues')
         .update({
-          marketplace_completed: true
+          marketplace_completed: true,
+          draft_completed: true,
         })
         .eq('id', league.id);
       
@@ -1105,7 +1113,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
       
       const { error: updateError } = await supabase
         .from('leagues')
-        .update({ marketplace_completed: true })
+        .update({ marketplace_completed: true, draft_completed: true })
         .eq('id', league.id);
       
       if (updateError) {
@@ -1222,7 +1230,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
     );
   }
 
-  if (league.marketplace_completed || league.draft_completed || (league.marketplace_order && league.marketplace_order.length === 0)) {
+  if (isTeamBuildingComplete(league)) {
     return (
       <div className="bg-white rounded-lg shadow-lg p-6 border-2 border-green-200">
         <h3 className="text-xl font-bold mb-4 text-gray-900">

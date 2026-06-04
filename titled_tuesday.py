@@ -2,6 +2,7 @@ import chess.engine
 import chess.pgn
 from engine_accuracy import acl_from_pgn, find_stockfish
 import io
+import re
 import pandas as pd
 import requests
 from datetime import date, datetime
@@ -54,8 +55,15 @@ def parse_date(value):
     raise TypeError(f"Unsupported date type: {type(value)}")
 
 
-def date_slug_fragment(target_date):
-    return f"{MONTH_NAMES[target_date.month - 1]}-{target_date.day}-{target_date.year}"
+def date_slug_fragments(target_date):
+    """Chess.com slugs may use june-2-2026 or june-02-2026."""
+    month = MONTH_NAMES[target_date.month - 1]
+    year = target_date.year
+    day = target_date.day
+    return [
+        f"{month}-{day}-{year}",
+        f"{month}-{day:02d}-{year}",
+    ]
 
 
 def api_get(url):
@@ -73,8 +81,40 @@ def is_main_titled_tuesday_slug(slug):
     return not any(token in slug for token in excluded)
 
 
-def find_tournament_slugs(target_date, discovery_player="hikaru"):
-    fragment = date_slug_fragment(target_date)
+def _slug_matches_date(slug, fragments):
+    slug_lower = slug.lower()
+    return any(fragment in slug_lower for fragment in fragments)
+
+
+def find_slugs_from_titled_tuesdays_page(target_date):
+    """Scrape the official Titled Tuesdays index (most reliable for recent events)."""
+    fragments = date_slug_fragments(target_date)
+    response = requests.get(
+        "https://www.chess.com/tournament/live/titled-tuesdays",
+        headers=API_HEADERS,
+        timeout=30,
+    )
+    response.raise_for_status()
+
+    slugs = []
+    seen = set()
+    for match in re.findall(
+        r"/tournament/live/([a-z0-9-]+titled-tuesday[a-z0-9-]+)",
+        response.text,
+        re.IGNORECASE,
+    ):
+        slug = match.lower()
+        if not _slug_matches_date(slug, fragments) or not is_main_titled_tuesday_slug(slug):
+            continue
+        if slug not in seen:
+            seen.add(slug)
+            slugs.append(slug)
+
+    return slugs
+
+
+def find_slugs_from_player_tournaments(target_date, discovery_player):
+    fragments = date_slug_fragments(target_date)
     data = api_get(f"{CHESS_COM_API}/player/{discovery_player}/tournaments")
     slugs = []
     seen = set()
@@ -85,11 +125,46 @@ def find_tournament_slugs(target_date, discovery_player="hikaru"):
             if not api_url:
                 continue
             slug = api_url.rstrip("/").split("/")[-1]
-            if fragment not in slug or not is_main_titled_tuesday_slug(slug):
+            if not _slug_matches_date(slug, fragments) or not is_main_titled_tuesday_slug(slug):
                 continue
             if slug not in seen:
                 seen.add(slug)
                 slugs.append(slug)
+
+    return slugs
+
+
+def find_tournament_slugs(target_date, discovery_players=None):
+    if discovery_players is None:
+        discovery_players = [
+            "hikaru",
+            "fabianocaruana",
+            "nihalsarin",
+            "oleksandr_bortnyk",
+            "denlaz",
+        ]
+
+    slugs = []
+    seen = set()
+
+    def add_slugs(found):
+        for slug in found:
+            if slug not in seen:
+                seen.add(slug)
+                slugs.append(slug)
+
+    try:
+        add_slugs(find_slugs_from_titled_tuesdays_page(target_date))
+    except Exception as e:
+        print(f"Warning: Could not scrape Titled Tuesdays page: {e}")
+
+    for player in discovery_players:
+        try:
+            add_slugs(find_slugs_from_player_tournaments(target_date, player))
+        except Exception as e:
+            print(f"Warning: Could not load tournaments for {player}: {e}")
+        if slugs:
+            break
 
     return slugs
 
@@ -177,17 +252,26 @@ def iter_tournament_games(tournament_slug):
                     yield game
 
 
-def convert(target_date, tournament_slug=None, discovery_player="hikaru"):
+def convert(target_date, tournament_slug=None, tournament_slugs=None, discovery_players=None):
     parsed_date = parse_date(target_date)
     if tournament_slug:
         slugs = [tournament_slug]
+    elif tournament_slugs:
+        slugs = list(tournament_slugs)
     else:
-        slugs = find_tournament_slugs(parsed_date, discovery_player=discovery_player)
+        env_slugs = os.getenv("TT_TOURNAMENT_SLUGS", "").strip()
+        if env_slugs:
+            slugs = [s.strip() for s in env_slugs.split(",") if s.strip()]
+        else:
+            slugs = find_tournament_slugs(parsed_date, discovery_players=discovery_players)
 
     if not slugs:
+        fragments = ", ".join(date_slug_fragments(parsed_date))
         raise ValueError(
-            f"No Titled Tuesday tournaments found for {parsed_date.isoformat()}. "
-            "Pass tournament_slug explicitly (e.g. titled-tuesday-blitz-may-12-2026-6431785)."
+            f"No Titled Tuesday tournaments found for {parsed_date.isoformat()} "
+            f"(tried slug fragments: {fragments}). "
+            "Pass tournament_slug explicitly, set TT_TOURNAMENT_SLUGS, or check "
+            "https://www.chess.com/tournament/live/titled-tuesdays"
         )
 
     game_number = 0

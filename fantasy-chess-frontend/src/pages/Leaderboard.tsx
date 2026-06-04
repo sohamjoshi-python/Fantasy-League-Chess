@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import fantasyLeagueChessLogo from '../assets/fantasy-league-chess-logo-updated.png';
 import { Trophy, Target, Clock, Calendar, Medal, Crown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { getLocalDateString, getWeekStartMonday, addDaysToYmd } from '../lib/calendarDate';
 
 interface LeaderboardEntry {
   user_id: string;
@@ -68,12 +69,7 @@ const Leaderboard: React.FC = () => {
       const { data: recentData } = await supabase.rpc('get_recent_winners');
       setRecentWinners(recentData || []);
 
-      // Set default week to current week
-      const today = new Date();
-      const monday = new Date(today);
-      monday.setDate(today.getDate() - today.getDay() + 1);
-      const weekString = monday.toISOString().split('T')[0];
-      setSelectedWeek(weekString);
+      setSelectedWeek(getWeekStartMonday());
 
     } catch (error) {
       console.error('Error fetching leaderboards:', error);
@@ -92,29 +88,20 @@ const Leaderboard: React.FC = () => {
   };
 
   const navigateWeek = (direction: 'prev' | 'next') => {
-    const currentDate = new Date(selectedWeek);
-    const newDate = new Date(currentDate);
-    
-    if (direction === 'prev') {
-      newDate.setDate(currentDate.getDate() - 7);
-    } else {
-      newDate.setDate(currentDate.getDate() + 7);
-    }
-    
-    const newWeekString = newDate.toISOString().split('T')[0];
-    setSelectedWeek(newWeekString);
+    if (!selectedWeek) return;
+    setSelectedWeek(
+      addDaysToYmd(selectedWeek, direction === 'prev' ? -7 : 7)
+    );
   };
   
   const canNavigateNext = () => {
-    const currentDate = new Date(selectedWeek);
-    const today = new Date();
-    const nextWeek = new Date(currentDate);
-    nextWeek.setDate(currentDate.getDate() + 7);
-    return nextWeek <= today;
+    if (!selectedWeek) return false;
+    const nextWeek = addDaysToYmd(selectedWeek, 7);
+    return nextWeek <= getLocalDateString();
   };
   
   const formatWeekDisplay = (weekDate: string) => {
-    const date = new Date(weekDate);
+    const date = new Date(`${weekDate}T12:00:00`);
     return `Week of ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
   };
 
