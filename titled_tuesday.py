@@ -405,7 +405,7 @@ def convert(target_date, tournament_slug=None, tournament_slugs=None, discovery_
                 print("Black accuracy:", black_accuracy if black_accuracy is not None else "None (no moves played)")
                 
                 # Print fantasy points for each player
-                print(f"🎯 FANTASY POINTS - Game {game_number}:")
+                print(f"FANTASY POINTS - Game {game_number}:")
                 print(f"  {white} (ELO {white_elo_int}): {white_points:.2f} points")
                 print(f"  {black} (ELO {black_elo_int}): {black_points:.2f} points")
                 
@@ -415,11 +415,11 @@ def convert(target_date, tournament_slug=None, tournament_slugs=None, discovery_
                     white_avg_for_fantasy = white_avg_accuracy if white_avg_accuracy is not None else white_accuracy
                     black_avg_for_fantasy = black_avg_accuracy if black_avg_accuracy is not None else black_accuracy
                     
-                    print(f"  📊 Scoring Details:")
+                    print(f"  Scoring Details:")
                     print(f"    {white}: Game ACL {white_accuracy:.1f} vs Avg ACL {white_avg_for_fantasy:.1f} (Δ{white_avg_for_fantasy - white_accuracy:+.1f})")
                     print(f"    {black}: Game ACL {black_accuracy:.1f} vs Avg ACL {black_avg_for_fantasy:.1f} (Δ{black_avg_for_fantasy - black_accuracy:+.1f})")
                 else:
-                    print(f"  📊 Scoring Details: No ACL data available")
+                    print(f"  Scoring Details: No ACL data available")
                 
                 print("-" * 60)
 
