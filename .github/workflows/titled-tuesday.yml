@@ -34,3 +34,11 @@ jobs:
           SB_KEY: ${{ secrets.SB_KEY }}
         run: |
           python -c "from datetime import date; from titled_tuesday import convert; convert(date.today())"
+
+      - name: Score lineups for this week
+        env:
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          curl -sf -X POST \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+            https://wdbwzvnkfbyzazodfhsw.supabase.co/functions/v1/process-weekly-results

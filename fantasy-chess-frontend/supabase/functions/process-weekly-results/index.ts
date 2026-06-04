@@ -26,13 +26,12 @@ serve(async (req) => {
     const lastTuesday = new Date(now)
     lastTuesday.setDate(now.getDate() - daysSinceTuesday)
     
-    // Format as YYYY.MM.DD to match the games table format
-    const year = lastTuesday.getFullYear()
-    const month = String(lastTuesday.getMonth() + 1).padStart(2, '0')
-    const day = String(lastTuesday.getDate()).padStart(2, '0')
-    const tuesdayDate = `${year}.${month}.${day}`
+    // Tuesday = game date (RPC); Monday = lineup week_start_date in the app
+    const tuesdayDate = lastTuesday.toISOString().split('T')[0]
+    const monday = new Date(lastTuesday)
+    monday.setDate(lastTuesday.getDate() - 1)
+    const lineupWeekStart = monday.toISOString().split('T')[0]
 
-    // Call the process_weekly_results function
     const { data, error } = await supabase.rpc('process_weekly_results', {
       week_date: tuesdayDate
     })
@@ -57,7 +56,7 @@ serve(async (req) => {
           user_id,
           users!inner(email)
         `)
-        .eq('week_start_date', tuesdayDate)
+        .eq('week_start_date', lineupWeekStart)
         .not('total_points', 'is', null)
 
       if (usersError) {

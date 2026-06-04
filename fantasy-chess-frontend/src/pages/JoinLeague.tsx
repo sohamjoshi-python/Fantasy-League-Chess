@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { League } from '../types'
 import { Users, Trophy, Calendar, Search, Copy } from 'lucide-react'
-import { getLocalDateString, getTomorrowDateString } from '../lib/calendarDate'
+import { getLeagueEndDateFromStart, getLocalDateString, getTomorrowDateString } from '../lib/calendarDate'
 import { formatCalendarDate, isLeagueJoinClosed } from '../lib/leagueStatus'
 
 // Helper function to send league joined email
@@ -107,10 +107,7 @@ const JoinLeague: React.FC = () => {
 
       // Check for overlapping active leagues
       const newStart = startDate;
-      const endDateObj = new Date(startDate);
-      endDateObj.setMonth(endDateObj.getMonth() + 1);
-      endDateObj.setDate(0);
-      const newEnd = getLocalDateString(endDateObj);
+      const newEnd = getLeagueEndDateFromStart(startDate);
       const overlap = userLeagues.some(l => hasDateOverlap(newStart, newEnd, l.start_date, l.end_date) && l.end_date >= getLocalDateString());
       if (overlap) {
         setError('You cannot create a league that overlaps with another active league you are in.');
@@ -145,9 +142,6 @@ const JoinLeague: React.FC = () => {
       }
 
       const joinCode = generateJoinCode()
-      const endDate = new Date(startDate)
-      endDate.setMonth(endDate.getMonth() + 1)
-      endDate.setDate(0) // Last day of the month
 
       const { data: league, error: leagueError } = await supabase
         .from('leagues')
@@ -158,7 +152,7 @@ const JoinLeague: React.FC = () => {
           buy_in: buyIn,
           max_members: maxMembers,
           start_date: startDate,
-          end_date: getLocalDateString(endDate),
+          end_date: getLeagueEndDateFromStart(startDate),
           join_code: joinCode,
           creator_id: user.id,
           member_ids: [user.id],

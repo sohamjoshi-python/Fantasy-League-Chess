@@ -28,8 +28,10 @@ serve(async (req) => {
     
     // Format as YYYY-MM-DD
     const tuesdayDate = lastTuesday.toISOString().split('T')[0]
+    const monday = new Date(lastTuesday)
+    monday.setDate(lastTuesday.getDate() - 1)
+    const lineupWeekStart = monday.toISOString().split('T')[0]
 
-    // Call the process_weekly_results function
     const { data, error } = await supabase.rpc('process_weekly_results', {
       week_date: tuesdayDate
     })
@@ -54,7 +56,7 @@ serve(async (req) => {
           user_id,
           users!inner(email)
         `)
-        .eq('week_start_date', tuesdayDate)
+        .eq('week_start_date', lineupWeekStart)
         .not('total_points', 'is', null)
 
       if (usersError) {

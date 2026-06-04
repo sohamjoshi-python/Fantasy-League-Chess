@@ -1,5 +1,10 @@
 ﻿import { createClient, SupabaseClient } from '@supabase/supabase-js'
-import { Bot } from '../types'
+import { Bot, League } from '../types'
+import {
+  compareCalendarDates,
+  getLeagueLineupWeekBounds,
+  mondayYmdToTuesdayDot,
+} from './calendarDate'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
@@ -36,7 +41,43 @@ export async function processWeeklyResultsEnhanced(weekDate: string) {
     return { success: false, error };
   }
   return { success: true, data };
-} 
+}
+
+/**
+ * Titled Tuesday dates (YYYY.MM.DD) for weeks the user has scored lineups in,
+ * scoped to the league's start/end season window.
+ */
+export async function fetchUserLeagueDisplayWeeks(
+  userId: string,
+  league: Pick<League, 'id' | 'start_date' | 'end_date'>
+): Promise<string[]> {
+  const { minMonday, maxMonday } = getLeagueLineupWeekBounds(
+    league.start_date,
+    league.end_date
+  )
+  if (compareCalendarDates(minMonday, maxMonday) > 0) {
+    return []
+  }
+
+  const { data, error } = await supabase
+    .from('lineups')
+    .select('week_start_date')
+    .eq('user_id', userId)
+    .eq('league_id', league.id)
+    .gte('week_start_date', minMonday)
+    .lte('week_start_date', maxMonday)
+    .gt('total_points', 0)
+    .order('week_start_date', { ascending: true })
+
+  if (error || !data) {
+    return []
+  }
+
+  const uniqueMondays = Array.from(
+    new Set(data.map((row) => String(row.week_start_date)))
+  )
+  return uniqueMondays.map(mondayYmdToTuesdayDot)
+}
 
 /**
  * Fetch the official per-player breakdown for a lineup using the get_lineup_player_breakdown RPC.

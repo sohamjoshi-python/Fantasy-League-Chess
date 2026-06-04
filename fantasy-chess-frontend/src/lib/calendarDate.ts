@@ -43,7 +43,55 @@ export function getWeekStartMonday(date: Date = new Date()): string {
 }
 
 export function addDaysToYmd(ymd: string, days: number): string {
-  const d = new Date(`${ymd}T12:00:00`)
+  const d = parseCalendarYmd(ymd)
   d.setDate(d.getDate() + days)
   return getLocalDateString(d)
+}
+
+/** Parse YYYY-MM-DD as a local calendar date (noon avoids DST edge cases). */
+export function parseCalendarYmd(ymd: string): Date {
+  return new Date(`${ymd}T12:00:00`)
+}
+
+/**
+ * League end date: last calendar day of the month after the start month.
+ * e.g. start 2026-05-15 → end 2026-06-30
+ */
+export function getLeagueEndDateFromStart(startDateYmd: string): string {
+  const d = parseCalendarYmd(startDateYmd)
+  d.setMonth(d.getMonth() + 2, 0)
+  return getLocalDateString(d)
+}
+
+/** Monday lineup week_start_date → Titled Tuesday display (YYYY.MM.DD). */
+export function mondayYmdToTuesdayDot(mondayYmd: string): string {
+  return addDaysToYmd(mondayYmd, 1).replace(/-/g, '.')
+}
+
+/** First Titled Tuesday (local) on or after a calendar date. */
+export function getFirstTuesdayOnOrAfter(ymd: string): string {
+  let d = ymd
+  while (parseCalendarYmd(d).getDay() !== 2) {
+    d = addDaysToYmd(d, 1)
+  }
+  return d
+}
+
+/** Last Titled Tuesday (local) on or before a calendar date. */
+export function getLastTuesdayOnOrBefore(ymd: string): string {
+  let d = ymd
+  while (parseCalendarYmd(d).getDay() !== 2) {
+    d = addDaysToYmd(d, -1)
+  }
+  return d
+}
+
+/** Monday bounds for lineup queries within a league season. */
+export function getLeagueLineupWeekBounds(startDateYmd: string, endDateYmd: string): {
+  minMonday: string
+  maxMonday: string
+} {
+  const minMonday = addDaysToYmd(getFirstTuesdayOnOrAfter(startDateYmd), -1)
+  const maxMonday = addDaysToYmd(getLastTuesdayOnOrBefore(endDateYmd), -1)
+  return { minMonday, maxMonday }
 }

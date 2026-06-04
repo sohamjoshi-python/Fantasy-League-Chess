@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { League, Team, Lineup, ChessPlayer } from '../types'
 import { Crown, Users, Trophy, Calendar, Plus, ExternalLink } from 'lucide-react'
-import { fetchLineupPlayerBreakdownByRounds } from '../lib/supabase'
+import { fetchLineupPlayerBreakdownByRounds, fetchUserLeagueDisplayWeeks } from '../lib/supabase'
 import PlayerDetailModal from '../components/PlayerDetailModal'
 import { getLocalDateString, getWeekStartMonday } from '../lib/calendarDate'
 import { formatCalendarDate } from '../lib/leagueStatus'
@@ -60,31 +60,9 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     async function fetchAvailableWeeks() {
       if (!currentLeague || !user) return;
-      // Fetch all weeks from lineups table where user has a lineup with points > 0
-      const { data, error } = await supabase
-        .from('lineups')
-        .select('week_start_date')
-        .eq('user_id', user.id)
-        .eq('league_id', currentLeague.id)
-        .gt('total_points', 0)
-        .order('week_start_date', { ascending: true });
-      if (error) {
-        setAvailableWeeks([]);
-        setSelectedWeek(null);
-        
-        return;
-      }
-      // Get unique dates
-      const uniqueDates = Array.from(new Set((data || []).map(l => l.week_start_date.replace(/-/g, '.'))));
-      
-      setAvailableWeeks(uniqueDates);
-      if (uniqueDates.length > 0) {
-        setSelectedWeek(uniqueDates[uniqueDates.length - 1]);
-        
-      } else {
-        setSelectedWeek(null);
-        
-      }
+      const displayWeeks = await fetchUserLeagueDisplayWeeks(user.id, currentLeague);
+      setAvailableWeeks(displayWeeks);
+      setSelectedWeek(displayWeeks.length > 0 ? displayWeeks[displayWeeks.length - 1] : null);
     }
     fetchAvailableWeeks();
   }, [currentLeague, user]);

@@ -14,7 +14,7 @@ import {
 } from '../lib/leagueStatus'
 import { isLineupChangeAllowed, lineupChangeBlockedMessage } from '../lib/lineupWindow'
 import { Crown, Trophy, Calendar, Edit, Check, X, RefreshCw, Bot as BotIcon, Plus, Trash2 } from 'lucide-react'
-import { createBot, removeBot, autoSetLineupForBot, fetchLineupPlayerBreakdownByRounds } from '../lib/supabase';
+import { createBot, removeBot, autoSetLineupForBot, fetchLineupPlayerBreakdownByRounds, fetchUserLeagueDisplayWeeks } from '../lib/supabase';
 import Confetti from 'react-confetti';
 import fantasyLeagueChessLogo from '../assets/fantasy-league-chess-logo-updated.png';
 
@@ -208,41 +208,7 @@ const LeaguePage: React.FC = () => {
     async function fetchAvailableWeeks() {
       if (!league || !user) return;
       try {
-        // Prefer game dates (Tuesdays, dot format). These are the display weeks.
-        const leagueStartDot = String(league.start_date || '').replace(/-/g, '.');
-        const { data: gameDates } = await supabase
-          .from('games')
-          .select('date')
-          .order('date', { ascending: true });
-
-        let displayWeeks: string[] = [];
-        if (gameDates && gameDates.length > 0) {
-          const unique = Array.from(new Set((gameDates as any[]).map(g => String(g.date))));
-          displayWeeks = leagueStartDot ? unique.filter(d => d >= leagueStartDot) : unique;
-        }
-
-        // If no games found, fall back to lineup Mondays and convert to Tuesday display (add +1 day)
-        if (displayWeeks.length === 0) {
-          const { data: lineupWeeks } = await supabase
-            .from('lineups')
-            .select('week_start_date')
-            .eq('user_id', user.id)
-            .eq('league_id', league.id)
-            .order('week_start_date', { ascending: true });
-
-          const uniqueMondays = Array.from(new Set((lineupWeeks || []).map((l: any) => String(l.week_start_date))));
-          // Convert Monday (YYYY-MM-DD) to Tuesday dot format (YYYY.MM.DD)
-          displayWeeks = uniqueMondays.map((mondayStr: string) => {
-            const [y, m, d] = mondayStr.split('-').map(Number);
-            const dt = new Date(Date.UTC(y, m - 1, d));
-            dt.setUTCDate(dt.getUTCDate() + 1); // Monday -> Tuesday
-            const yy = dt.getUTCFullYear();
-            const mm = String(dt.getUTCMonth() + 1).padStart(2, '0');
-            const dd = String(dt.getUTCDate()).padStart(2, '0');
-            return `${yy}.${mm}.${dd}`;
-          });
-        }
-
+        const displayWeeks = await fetchUserLeagueDisplayWeeks(user.id, league);
         setAvailableWeeks(displayWeeks);
         setSelectedWeek(displayWeeks.length > 0 ? displayWeeks[displayWeeks.length - 1] : null);
       } catch (e) {
