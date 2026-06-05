@@ -625,22 +625,11 @@ export async function autoDraftForBot(botId: string, leagueId: string): Promise<
 export async function autoSetLineupForBot(botId: string, leagueId: string, weekStartDate: string): Promise<{ success: boolean, error?: any }> {
   try {
     
-    // Get bot's team
-    const { data: bot, error: botError } = await supabase
-      .from('bots')
-      .select('team_id')
-      .eq('id', botId)
-      .single();
-    
-    if (botError || !bot.team_id) {
-      console.error('Bot team error:', botError);
-      return { success: false, error: botError };
-    }
-    
     const { data: team, error: teamError } = await supabase
       .from('teams')
       .select('player_ids')
-      .eq('id', bot.team_id)
+      .eq('bot_id', botId)
+      .eq('league_id', leagueId)
       .single();
     
     if (teamError || !team.player_ids || team.player_ids.length < 5) {

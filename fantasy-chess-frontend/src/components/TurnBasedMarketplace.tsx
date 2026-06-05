@@ -121,59 +121,14 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
   }, [league?.current_marketplace_turn]);
 
 
-  // Auto-sync marketplace order with member_ids when component first loads
+  // Initialize marketplace order if it is missing. Once the draft starts, marketplace_order
+  // may intentionally be a subset of member_ids because broke players are removed from turns.
   useEffect(() => {
     if (league?.id && league.marketplace_started && league.marketplace_order && league.member_ids && !syncInProgressRef.current) {
       const currentOrder = league.marketplace_order || [];
       const memberIds = league.member_ids || [];
       
-      if (currentOrder.length > 0 && memberIds.length > 0) {
-        const orderSet = new Set(currentOrder);
-        const memberSet = new Set(memberIds);
-        
-        // Check if the sets are different (different participants or different counts)
-        const isOutOfSync = orderSet.size !== memberSet.size || 
-                           !Array.from(orderSet).every(id => memberSet.has(id)) ||
-                           !Array.from(memberSet).every(id => orderSet.has(id));
-
-        if (isOutOfSync) {
-          syncInProgressRef.current = true; // Prevent endless loop
-          console.log('🔄 Marketplace order out of sync with member_ids, regenerating...');
-          console.log('Current marketplace order:', currentOrder);
-          console.log('Current member_ids:', memberIds);
-          
-          // Regenerate marketplace order using current member_ids
-          const newMarketplaceOrder = generateSnakeDraftOrder(memberIds, 10);
-          const preservedTurn = preserveMarketplaceTurn(
-            currentOrder,
-            league.current_marketplace_turn ?? 0,
-            newMarketplaceOrder
-          );
-          
-          supabase
-            .from('leagues')
-            .update({
-              marketplace_order: newMarketplaceOrder,
-              current_marketplace_turn: preservedTurn,
-            })
-            .eq('id', league.id)
-            .then(({ error: updateError }) => {
-              if (updateError) {
-                console.error('Error updating marketplace order:', updateError);
-                syncInProgressRef.current = false; // Reset flag on error
-                return;
-              }
-              
-              console.log('✅ Marketplace order regenerated:', newMarketplaceOrder);
-              // Update local state and refresh data instead of page reload
-              syncInProgressRef.current = false;
-              invalidateCache(league.id);
-              if (user?.id) invalidateCache(user.id);
-              refreshData();
-              onUpdate();
-            });
-        }
-      } else if (currentOrder.length === 0 && memberIds.length > 0) {
+      if (currentOrder.length === 0 && memberIds.length > 0) {
         syncInProgressRef.current = true; // Prevent endless loop
         // Handle case where marketplace order is empty but member_ids has participants
         console.log('🔄 Marketplace order is empty but member_ids has participants, regenerating...');
@@ -281,30 +236,24 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
     checkIfCurrentTurnIsBot();
   }, [currentTurn?.current_user_id]);
 
-  // Auto-fix marketplace order when it's wrong
+  // Auto-fix marketplace order only when it contains IDs that are no longer league members.
+  // Do not add missing member_ids back into the order; those players may be out of GEMS.
   useEffect(() => {
     if (league?.id && league.marketplace_started && league.marketplace_order && league.member_ids && !syncInProgressRef.current) {
       const currentOrder = league.marketplace_order || [];
       const memberIds = league.member_ids || [];
       
-      // Check if marketplace order only contains one user ID repeated (wrong)
-      const uniqueIds = [...new Set(currentOrder)];
-      const isWrongOrder = uniqueIds.length === 1 && memberIds.length > 1;
-      
-      // Also check if marketplace order is missing any member_ids
-      const orderSet = new Set(currentOrder);
       const memberSet = new Set(memberIds);
-      const isMissingMembers = !Array.from(memberSet).every(id => orderSet.has(id));
+      const activeParticipantIds = Array.from(new Set(currentOrder)).filter(id => memberSet.has(id));
+      const hasInvalidMembers = currentOrder.some(id => !memberSet.has(id));
       
-      if (isWrongOrder || isMissingMembers) {
+      if (hasInvalidMembers) {
         syncInProgressRef.current = true; // Prevent endless loop
-        console.log('🔄 Marketplace order is wrong, auto-fixing...');
+        console.log('🔄 Marketplace order contains non-members, auto-fixing...');
         console.log('Current marketplace order:', currentOrder);
         console.log('Current member_ids:', memberIds);
-        console.log('Issue detected:', isWrongOrder ? 'Only one user repeated' : 'Missing members');
         
-        // Regenerate marketplace order using current member_ids
-        const newMarketplaceOrder = generateSnakeDraftOrder(memberIds, 10);
+        const newMarketplaceOrder = generateSnakeDraftOrder(activeParticipantIds, 10);
         const preservedTurn = preserveMarketplaceTurn(
           currentOrder,
           league.current_marketplace_turn ?? 0,
@@ -326,7 +275,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
             }
 
             console.log('✅ Marketplace order auto-fixed:', newMarketplaceOrder);
-            // Use onUpdate for smooth refresh
+            syncInProgressRef.current = false;
             onUpdate();
           });
       }
@@ -641,11 +590,16 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
         return;
       }
       
-      // Advance to next turn immediately
+      // Advance to next turn immediately, or complete if this was the last turn.
+      const newTurnIndex = (league.current_marketplace_turn || 0) + 1;
+      const marketplaceOrderLength = league.marketplace_order?.length || 0;
+      const marketplaceComplete = marketplaceOrderLength > 0 && newTurnIndex >= marketplaceOrderLength;
       const { error: turnError } = await supabase
         .from('leagues')
         .update({ 
-          current_marketplace_turn: (league.current_marketplace_turn || 0) + 1
+          current_marketplace_turn: newTurnIndex,
+          marketplace_completed: marketplaceComplete,
+          draft_completed: marketplaceComplete ? true : league.draft_completed
         })
         .eq('id', league.id);
 
@@ -656,8 +610,6 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
 
       console.log('✅ Turn advanced to next player');
 
-      // Update currentTurn state immediately to reflect the change
-      const newTurnIndex = (league.current_marketplace_turn || 0) + 1;
       const nextUserId = league.marketplace_order?.[newTurnIndex];
       
       if (nextUserId) {
@@ -722,13 +674,17 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
         showMarketplaceCompletionPopup();
       } else {
         // Check if only bot remains
-        const remainingMembers = updatedLeague?.member_ids || [];
-        const remainingBots = remainingMembers.filter((id: string) => {
-          // Check if this ID is a bot
-          return league.bot_id === id;
-        });
+        const remainingMembers = Array.from(
+          new Set((updatedLeague?.marketplace_order || []) as string[])
+        );
+        const { data: remainingBots } = remainingMembers.length > 0
+          ? await supabase
+              .from('bots')
+              .select('id')
+              .in('id', remainingMembers)
+          : { data: [] };
         
-        if (remainingMembers.length === 1 && remainingBots.length === 1) {
+        if (remainingMembers.length === 1 && (remainingBots?.length || 0) === 1) {
           // Only bot remains - make bot finish turn and close marketplace
           console.log('🤖 Only bot remains, finishing bot turn and closing marketplace...');
           await finishBotTurnAndCloseMarketplace();
@@ -783,12 +739,15 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
     try {
       const currentTurnIndex = league.current_marketplace_turn || 0;
       const marketplaceOrder = league.marketplace_order || [];
-      const nextTurnIndex = (currentTurnIndex + 1) % marketplaceOrder.length;
+      const nextTurnIndex = currentTurnIndex + 1;
+      const marketplaceComplete = marketplaceOrder.length > 0 && nextTurnIndex >= marketplaceOrder.length;
       
       const { error: updateError } = await supabase
         .from('leagues')
         .update({
-          current_marketplace_turn: nextTurnIndex
+          current_marketplace_turn: nextTurnIndex,
+          marketplace_completed: marketplaceComplete,
+          draft_completed: marketplaceComplete ? true : league.draft_completed,
         })
         .eq('id', league.id);
       
@@ -1146,21 +1105,30 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
   // Function to show marketplace completion popup
   const showMarketplaceCompletionPopup = async () => {
     try {
-      // Get bot's team and choices
-      const { data: botTeam } = await supabase
-        .from('teams')
-        .select('player_ids')
+      const { data: bots } = await supabase
+        .from('bots')
+        .select('id')
         .eq('league_id', league.id)
-        .eq('user_id', league.bot_id)
-        .single();
-
-      const botPlayerIds = botTeam?.player_ids || [];
       
-      // Get bot's player names
-      const { data: botPlayers } = await supabase
-        .from('chess_players')
-        .select('name, elo')
-        .in('id', botPlayerIds);
+      const botIds = bots?.map(bot => bot.id) || [];
+      let botPlayerIds: string[] = [];
+
+      if (botIds.length > 0) {
+        const { data: botTeams } = await supabase
+          .from('teams')
+          .select('player_ids')
+          .eq('league_id', league.id)
+          .in('bot_id', botIds);
+
+        botPlayerIds = botTeams?.flatMap(team => team.player_ids || []) || [];
+      }
+      
+      const { data: botPlayers } = botPlayerIds.length > 0
+        ? await supabase
+            .from('chess_players')
+            .select('name, elo')
+            .in('id', botPlayerIds)
+        : { data: [] };
 
       const botChoices = botPlayers?.map(p => `${p.name} (${p.elo})`) || [];
 
@@ -1201,7 +1169,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
         // Then sort by ELO (highest first)
         return b.elo - a.elo;
       });
-  }, [availablePlayers, searchTerm, userCoinBalance]);
+  }, [availablePlayers, debouncedSearchTerm, userCoinBalance]);
 
   if (!league.marketplace_started) {
     return (
