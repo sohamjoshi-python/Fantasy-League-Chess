@@ -141,6 +141,22 @@ const generateSnakeDraftOrder = (participants: string[], rounds: number): string
   return draftOrder;
 };
 
+const orderParticipantsWithBotsLast = async (participants: string[]): Promise<string[]> => {
+  const uniqueParticipants = Array.from(new Set(participants));
+  if (uniqueParticipants.length === 0) return [];
+
+  const { data: bots } = await supabase
+    .from('bots')
+    .select('id')
+    .in('id', uniqueParticipants);
+
+  const botIds = new Set((bots || []).map(bot => bot.id));
+  return [
+    ...uniqueParticipants.filter(id => !botIds.has(id)),
+    ...uniqueParticipants.filter(id => botIds.has(id)),
+  ];
+};
+
 const LeaguePage: React.FC = () => {
   const { leagueId } = useParams<{ leagueId: string }>()
   const { user } = useAuth()
@@ -271,6 +287,14 @@ const LeaguePage: React.FC = () => {
       loadLeagueData()
     }
   }, [leagueId, user])
+
+  useEffect(() => {
+    if (isEditingLineup && !isLineupChangeAllowed()) {
+      setIsEditingLineup(false)
+      setSelectedLineupPlayers(currentLineup?.player_ids || [])
+      setError(lineupChangeBlockedMessage())
+    }
+  }, [isEditingLineup, currentLineup])
 
   const loadLeagueData = async () => {
     if (!leagueId || !user) return
@@ -546,6 +570,13 @@ const LeaguePage: React.FC = () => {
   const saveLineup = async () => {
     if (!league || !user || selectedLineupPlayers.length < 1 || selectedLineupPlayers.length > 5) return
 
+    if (!isLineupChangeAllowed()) {
+      setIsEditingLineup(false)
+      setSelectedLineupPlayers(currentLineup?.player_ids || [])
+      setError(lineupChangeBlockedMessage())
+      return
+    }
+
     // Prevent duplicate player IDs in the lineup
     const uniquePlayerIds = Array.from(new Set(selectedLineupPlayers));
     if (uniquePlayerIds.length !== selectedLineupPlayers.length) {
@@ -638,7 +669,7 @@ const LeaguePage: React.FC = () => {
         }
 
         // Update league with bot_id using the latest member_ids so newer joins are preserved.
-        const allDraftParticipants = Array.from(new Set([...(latestLeague.member_ids || []), newBot.id]))
+        const allDraftParticipants = await orderParticipantsWithBotsLast([...(latestLeague.member_ids || []), newBot.id])
         const updatedDraftOrder = generateSnakeDraftOrder(allDraftParticipants, 10)
         
         // Also regenerate marketplace order if marketplace has started
@@ -699,10 +730,11 @@ const LeaguePage: React.FC = () => {
 
         // Update league to remove bot while preserving any members who joined after this page loaded.
         const updatedMemberIds = (latestLeague.member_ids || []).filter((id: string) => id !== bot.id);
-        const updatedDraftOrder = generateSnakeDraftOrder(updatedMemberIds, 10)
+        const orderedParticipants = await orderParticipantsWithBotsLast(updatedMemberIds)
+        const updatedDraftOrder = generateSnakeDraftOrder(orderedParticipants, 10)
         
         // Also regenerate marketplace order if marketplace has started
-        const updatedMarketplaceOrder = latestLeague.marketplace_started ? generateSnakeDraftOrder(updatedMemberIds, 10) : latestLeague.marketplace_order;
+        const updatedMarketplaceOrder = latestLeague.marketplace_started ? generateSnakeDraftOrder(orderedParticipants, 10) : latestLeague.marketplace_order;
         
         // Update the league to remove bot information
         await supabase
@@ -1527,7 +1559,6 @@ const LeaguePage: React.FC = () => {
                 </div>
 
                 {isEditingLineup ? (
-                  isLineupChangeAllowed() ? (
                     <div className="space-y-4">
                       <p className="text-xs lg:text-sm text-neutral-600">Select 1-5 players for your lineup:</p>
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -1578,22 +1609,6 @@ const LeaguePage: React.FC = () => {
                         </button>
                       </div>
                     </div>
-                  ) : (
-                    <div className="p-4 bg-amber-50 rounded-lg border border-amber-200 text-amber-900 text-center">
-                      <p className="font-semibold">{lineupChangeBlockedMessage()}</p>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsEditingLineup(false)
-                          setSelectedLineupPlayers(currentLineup?.player_ids || [])
-                        }}
-                        className="flex items-center space-x-1 bg-neutral-600 hover:bg-neutral-700 text-white px-3 lg:px-4 py-2 rounded-lg text-sm lg:text-base shadow-lg transition-colors mt-4"
-                      >
-                        <X className="h-4 w-4" />
-                        <span>Cancel</span>
-                      </button>
-                    </div>
-                  )
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {lineupPlayers.map((player) => (

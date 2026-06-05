@@ -1,9 +1,9 @@
-/** Lineup edits allowed Monday–Tuesday UTC (matches DB RLS on lineups). */
+/** Lineup edits are locked for the full Titled Tuesday UTC calendar day. */
 export function isLineupChangeAllowed(): boolean {
   const day = new Date().getUTCDay()
-  return day === 1 || day === 2
+  return day !== 2
 }
 
 export function lineupChangeBlockedMessage(): string {
-  return 'Lineup changes are only allowed on Monday and Tuesday (UTC), before Titled Tuesday locks your roster for the week.'
+  return 'Lineup changes are locked on Tuesdays (UTC) while Titled Tuesday rosters are scored. Please try again after Tuesday UTC.'
 }
