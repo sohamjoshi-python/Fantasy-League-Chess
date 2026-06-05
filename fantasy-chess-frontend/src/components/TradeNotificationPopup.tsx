@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { X, CheckCircle, XCircle, Clock, Coins } from 'lucide-react';
 import { acceptTrade, markNotificationSeen } from '../lib/supabase';
 import { TradeNotificationWithDetails } from '../types';
+import { useAuth } from '../contexts/AuthContext';
 
 interface TradeNotificationPopupProps {
   notification: TradeNotificationWithDetails;
@@ -16,6 +17,7 @@ export default function TradeNotificationPopup({
   onClose,
   onMarkSeen
 }: TradeNotificationPopupProps) {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,7 +26,12 @@ export default function TradeNotificationPopup({
     setError(null);
 
     try {
-      const result = await acceptTrade(notification.trade_id, notification.notification_id);
+      if (!user?.id) {
+        setError('You must be signed in to accept a trade');
+        return;
+      }
+
+      const result = await acceptTrade(notification.trade_id, user.id);
       
       if (result.success) {
         onAccept(notification);
