@@ -84,6 +84,25 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
   const userTeamSize = userTeam.length;
   const canBuy = userTeamSize < maxPlayers;
 
+  const getFundedParticipants = async (excludeId?: string): Promise<string[]> => {
+    const memberIds = (league.member_ids || []).filter(id => id !== excludeId);
+
+    const { data: balances, error: balancesError } = await supabase
+      .from('league_coin_balances')
+      .select('user_id, bot_id, coin_balance')
+      .eq('league_id', league.id);
+
+    if (balancesError) {
+      console.error('Error loading league coin balances:', balancesError);
+      return memberIds;
+    }
+
+    return memberIds.filter(memberId => {
+      const balance = balances?.find(row => row.user_id === memberId || row.bot_id === memberId);
+      return !balance || (balance.coin_balance || 0) > 0;
+    });
+  };
+
   // Helper: Check if marketplace is open (Wednesday 1 AM to Monday 11:59 PM PT)
   function isMarketplaceOpen() {
     // TEMPORARILY DISABLED: Always return true to keep marketplace open
@@ -239,21 +258,30 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
   // Auto-fix marketplace order only when it contains IDs that are no longer league members.
   // Do not add missing member_ids back into the order; those players may be out of GEMS.
   useEffect(() => {
-    if (league?.id && league.marketplace_started && league.marketplace_order && league.member_ids && !syncInProgressRef.current) {
+    const repairMarketplaceOrder = async () => {
+      if (!league?.id || !league.marketplace_started || !league.marketplace_order || !league.member_ids || syncInProgressRef.current) {
+        return;
+      }
+
       const currentOrder = league.marketplace_order || [];
       const memberIds = league.member_ids || [];
       
       const memberSet = new Set(memberIds);
-      const activeParticipantIds = Array.from(new Set(currentOrder)).filter(id => memberSet.has(id));
+      const fundedParticipantIds = await getFundedParticipants();
+      const fundedSet = new Set(fundedParticipantIds);
+      const activeParticipantIds = Array.from(new Set(currentOrder));
       const hasInvalidMembers = currentOrder.some(id => !memberSet.has(id));
+      const hasUnfundedParticipants = activeParticipantIds.some(id => !fundedSet.has(id));
+      const isMissingFundedParticipants = fundedParticipantIds.some(id => !activeParticipantIds.includes(id));
       
-      if (hasInvalidMembers) {
+      if (hasInvalidMembers || hasUnfundedParticipants || isMissingFundedParticipants) {
         syncInProgressRef.current = true; // Prevent endless loop
-        console.log('🔄 Marketplace order contains non-members, auto-fixing...');
+        console.log('🔄 Marketplace order active participants need repair...');
         console.log('Current marketplace order:', currentOrder);
         console.log('Current member_ids:', memberIds);
+        console.log('Funded participant IDs:', fundedParticipantIds);
         
-        const newMarketplaceOrder = generateSnakeDraftOrder(activeParticipantIds, 10);
+        const newMarketplaceOrder = generateSnakeDraftOrder(fundedParticipantIds, 10);
         const preservedTurn = preserveMarketplaceTurn(
           currentOrder,
           league.current_marketplace_turn ?? 0,
@@ -279,7 +307,9 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
             onUpdate();
           });
       }
-    }
+    };
+
+    repairMarketplaceOrder();
   }, [league?.id, league?.marketplace_started, league?.marketplace_order, league?.member_ids]); // Run when these change
 
   // Simplified bot processing - only when it's actually a bot's turn
@@ -815,7 +845,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
   const removeUserFromDraft = async (userId: string) => {
     try {
       const currentOrder = league.marketplace_order || [];
-      const activeParticipantIds = Array.from(new Set(currentOrder)).filter(id => id !== userId);
+      const activeParticipantIds = await getFundedParticipants(userId);
       
       // Regenerate marketplace order without the user, but keep permanent member_ids unchanged.
       const newMarketplaceOrder = generateSnakeDraftOrder(activeParticipantIds, 10);
@@ -895,7 +925,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
   const removeBotFromDraft = async (botId: string) => {
     try {
       const currentOrder = league.marketplace_order || [];
-      const activeParticipantIds = Array.from(new Set(currentOrder)).filter(id => id !== botId);
+      const activeParticipantIds = await getFundedParticipants(botId);
       
       // Regenerate marketplace order without the bot
       const newMarketplaceOrder = generateSnakeDraftOrder(activeParticipantIds, 10);
