@@ -627,13 +627,23 @@ const LeaguePage: React.FC = () => {
         setShowAddBotModal(false)
         setBotName('')
         
-        // Update league with bot_id, add bot to member_ids, and regenerate draft order
-        const allDraftParticipants = [...league.member_ids, newBot.id]
+        const { data: latestLeague, error: latestLeagueError } = await supabase
+          .from('leagues')
+          .select('member_ids, marketplace_started, marketplace_order')
+          .eq('id', league.id)
+          .single()
+
+        if (latestLeagueError || !latestLeague) {
+          throw latestLeagueError || new Error('Failed to refresh league members')
+        }
+
+        // Update league with bot_id using the latest member_ids so newer joins are preserved.
+        const allDraftParticipants = Array.from(new Set([...(latestLeague.member_ids || []), newBot.id]))
         const updatedDraftOrder = generateSnakeDraftOrder(allDraftParticipants, 10)
         
         // Also regenerate marketplace order if marketplace has started
         let marketplaceOrderUpdate = {}
-        if (league.marketplace_started && league.marketplace_order) {
+        if (latestLeague.marketplace_started && latestLeague.marketplace_order) {
           const updatedMarketplaceOrder = generateSnakeDraftOrder(allDraftParticipants, 10)
           marketplaceOrderUpdate = {
             marketplace_order: updatedMarketplaceOrder,
@@ -677,12 +687,22 @@ const LeaguePage: React.FC = () => {
       if (success) {
         setBot(null)
         
-        // Update league to remove bot from member_ids, and regenerate draft order
-        const updatedMemberIds = (league.member_ids || []).filter((id: string) => id !== bot.id);
+        const { data: latestLeague, error: latestLeagueError } = await supabase
+          .from('leagues')
+          .select('member_ids, marketplace_started, marketplace_order')
+          .eq('id', league.id)
+          .single()
+
+        if (latestLeagueError || !latestLeague) {
+          throw latestLeagueError || new Error('Failed to refresh league members')
+        }
+
+        // Update league to remove bot while preserving any members who joined after this page loaded.
+        const updatedMemberIds = (latestLeague.member_ids || []).filter((id: string) => id !== bot.id);
         const updatedDraftOrder = generateSnakeDraftOrder(updatedMemberIds, 10)
         
         // Also regenerate marketplace order if marketplace has started
-        const updatedMarketplaceOrder = league.marketplace_started ? generateSnakeDraftOrder(updatedMemberIds, 10) : league.marketplace_order;
+        const updatedMarketplaceOrder = latestLeague.marketplace_started ? generateSnakeDraftOrder(updatedMemberIds, 10) : latestLeague.marketplace_order;
         
         // Update the league to remove bot information
         await supabase

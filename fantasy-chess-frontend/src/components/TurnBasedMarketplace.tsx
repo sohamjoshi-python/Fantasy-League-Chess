@@ -852,22 +852,26 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
     }
   };
 
-  // Function to remove user from draft entirely
+  // Function to remove user from the active marketplace draft without leaving the league.
   const removeUserFromDraft = async (userId: string) => {
     try {
-      // Remove user from member_ids array
-      const updatedMemberIds = league.member_ids.filter(id => id !== userId);
+      const currentOrder = league.marketplace_order || [];
+      const activeParticipantIds = Array.from(new Set(currentOrder)).filter(id => id !== userId);
       
-      // Regenerate marketplace order without the user
-      const newMarketplaceOrder = generateSnakeDraftOrder(updatedMemberIds, 10);
+      // Regenerate marketplace order without the user, but keep permanent member_ids unchanged.
+      const newMarketplaceOrder = generateSnakeDraftOrder(activeParticipantIds, 10);
+      const preservedTurn = preserveMarketplaceTurn(
+        currentOrder,
+        league.current_marketplace_turn ?? 0,
+        newMarketplaceOrder
+      );
       
-      // Update the league to remove the user and regenerate the marketplace order
+      // Update only marketplace state. member_ids is permanent league membership.
       const { error: updateError } = await supabase
         .from('leagues')
         .update({
-          member_ids: updatedMemberIds,
           marketplace_order: newMarketplaceOrder,
-          current_marketplace_turn: 0 // Reset to beginning since order changed
+          current_marketplace_turn: preservedTurn
         })
         .eq('id', league.id);
       
@@ -876,16 +880,18 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
         throw updateError;
       }
 
-      console.log('✅ User removed from draft entirely');
+      console.log('✅ User removed from active draft');
       
       // Check if marketplace should end after user removal
       const { data: updatedLeague } = await supabase
         .from('leagues')
-        .select('marketplace_completed, member_ids')
+        .select('marketplace_completed, marketplace_order')
         .eq('id', league.id)
         .single();
       
-      const remainingMembers = updatedLeague?.member_ids || [];
+      const remainingMembers = Array.from(
+        new Set((updatedLeague?.marketplace_order || []) as string[])
+      );
       
       if (remainingMembers.length <= 1) {
         // Check if the remaining member is a bot
@@ -926,16 +932,16 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
     }
   };
 
-  // Function to remove bot from draft entirely
+  // Function to remove bot from the active marketplace draft without deleting league membership.
   const removeBotFromDraft = async (botId: string) => {
     try {
-      // Remove bot from member_ids array
-      const updatedMemberIds = league.member_ids.filter(id => id !== botId);
+      const currentOrder = league.marketplace_order || [];
+      const activeParticipantIds = Array.from(new Set(currentOrder)).filter(id => id !== botId);
       
       // Regenerate marketplace order without the bot
-      const newMarketplaceOrder = generateSnakeDraftOrder(updatedMemberIds, 10);
+      const newMarketplaceOrder = generateSnakeDraftOrder(activeParticipantIds, 10);
       const preservedTurn = preserveMarketplaceTurn(
-        league.marketplace_order || [],
+        currentOrder,
         league.current_marketplace_turn ?? 0,
         newMarketplaceOrder
       );
@@ -943,7 +949,6 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
       const { error: updateError } = await supabase
         .from('leagues')
         .update({
-          member_ids: updatedMemberIds,
           marketplace_order: newMarketplaceOrder,
           current_marketplace_turn: preservedTurn,
         })
@@ -954,16 +959,18 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
         throw updateError;
       }
 
-      console.log('✅ Bot removed from draft entirely');
+      console.log('✅ Bot removed from active draft');
       
       // Check if marketplace should end after bot removal
       const { data: updatedLeague } = await supabase
         .from('leagues')
-        .select('marketplace_completed, member_ids')
+        .select('marketplace_completed, marketplace_order')
         .eq('id', league.id)
         .single();
       
-      const remainingMembers = updatedLeague?.member_ids || [];
+      const remainingMembers = Array.from(
+        new Set((updatedLeague?.marketplace_order || []) as string[])
+      );
       
       if (remainingMembers.length <= 1) {
         // Check if the remaining member is a bot
