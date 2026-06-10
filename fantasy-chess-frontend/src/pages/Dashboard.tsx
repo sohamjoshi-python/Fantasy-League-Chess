@@ -7,11 +7,20 @@ import { League, Team, Lineup, ChessPlayer } from '../types'
 import { Crown, Users, Trophy, Calendar, Plus, ExternalLink } from 'lucide-react'
 import { fetchLineupPlayerBreakdownByRounds, fetchUserLeagueDisplayWeeks } from '../lib/supabase'
 import PlayerDetailModal from '../components/PlayerDetailModal'
-import { getLocalDateString, getWeekStartMonday } from '../lib/calendarDate'
+import { addDaysToYmd, getLocalDateString, getWeekStartMonday } from '../lib/calendarDate'
 import { formatCalendarDate } from '../lib/leagueStatus'
 
 function getCurrentWeekStart() {
   return getWeekStartMonday();
+}
+
+function getTuesdayDateForWeek(weekStartDate: string) {
+  const [year, month, day] = weekStartDate.split('-').map(Number)
+  const tuesday = new Date(Date.UTC(year, month - 1, day + 1))
+  const yyyy = tuesday.getUTCFullYear()
+  const mm = String(tuesday.getUTCMonth() + 1).padStart(2, '0')
+  const dd = String(tuesday.getUTCDate()).padStart(2, '0')
+  return `${yyyy}.${mm}.${dd}`
 }
 
 const Dashboard: React.FC = () => {
@@ -20,6 +29,7 @@ const Dashboard: React.FC = () => {
   const [userTeam, setUserTeam] = useState<Team | null>(null)
   const [currentLineup, setCurrentLineup] = useState<Lineup | null>(null)
   const [lineupPlayers, setLineupPlayers] = useState<ChessPlayer[]>([])
+  const [editableLineupWeek, setEditableLineupWeek] = useState<string>('')
   const [pastLeagues, setPastLeagues] = useState<any[]>([])
   const [futureLeagues, setFutureLeagues] = useState<League[]>([])
   const [loading, setLoading] = useState(false)
@@ -195,15 +205,18 @@ const Dashboard: React.FC = () => {
           console.error('Exception loading team:', error);
         }
 
-        // Load current week lineup
+        // Load the same editable lineup week as the League page. After this
+        // week's games are imported, edits apply to next week.
         try {
-          const currentWeek = getCurrentWeekStart();
+          const lineupWeek = await getEditableLineupWeekStart();
+          setEditableLineupWeek(lineupWeek);
+
           const { data: lineups, error: lineupError } = await supabase
             .from('lineups')
             .select('*')
             .eq('user_id', user.id)
             .eq('league_id', league.id)
-            .eq('week_start_date', currentWeek)
+            .eq('week_start_date', lineupWeek)
             .maybeSingle();
 
           if (lineupError) {
@@ -225,7 +238,12 @@ const Dashboard: React.FC = () => {
               } catch (error) {
                 console.error('Exception loading lineup players:', error);
               }
+            } else {
+              setLineupPlayers([]);
             }
+          } else {
+            setCurrentLineup(null);
+            setLineupPlayers([]);
           }
         } catch (error) {
           console.error('Exception loading lineup:', error);
@@ -277,6 +295,28 @@ const Dashboard: React.FC = () => {
     } finally {
       setLoading(false)
     }
+  }
+
+  const hasImportedGamesForWeek = async (weekStartDate: string) => {
+    const gameDate = getTuesdayDateForWeek(weekStartDate)
+    const { count, error } = await supabase
+      .from('games')
+      .select('id', { count: 'exact', head: true })
+      .eq('date', gameDate)
+
+    if (error) {
+      console.error('Error checking imported games for dashboard lineup:', error)
+      return false
+    }
+
+    return (count || 0) > 0
+  }
+
+  const getEditableLineupWeekStart = async () => {
+    const currentWeek = getCurrentWeekStart()
+    return (await hasImportedGamesForWeek(currentWeek))
+      ? addDaysToYmd(currentWeek, 7)
+      : currentWeek
   }
 
   const getNextTitledTuesday = () => {
@@ -387,7 +427,14 @@ const Dashboard: React.FC = () => {
           {/* Current Lineup */}
           {userTeam && (
             <div className="bg-white rounded-lg shadow-lg p-6 border-2 border-royalBlue">
-              <h3 className="text-xl font-bold mb-4 text-neutral-900">Current Lineup</h3>
+              <div className="mb-4">
+                <h3 className="text-xl font-bold text-neutral-900">Current Lineup</h3>
+                {editableLineupWeek && (
+                  <p className="text-xs text-neutral-500">
+                    Applies to week of {formatCalendarDate(editableLineupWeek)}
+                  </p>
+                )}
+              </div>
               {currentLineup && lineupPlayers.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                   {lineupPlayers.map((player) => (
