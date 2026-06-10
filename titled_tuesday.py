@@ -334,7 +334,9 @@ def convert(target_date, tournament_slug=None, tournament_slugs=None, discovery_
                 result = game.headers.get('Result', 'N/A')
                 white_accuracy, black_accuracy = acl_from_pgn(game, engine=engine)
                 round = game.headers.get('Round', 'N/A')
-                date = game.headers.get('Date', 'N/A')
+                # Always tag games with the Titled Tuesday we are ingesting (not PGN header),
+                # so process_weekly_results(week_date) matches games.date (YYYY.MM.DD).
+                date = parsed_date.strftime("%Y.%m.%d")
                 early_late = "early" if "early" in event.lower() else "late"
                 
                 # Handle cases where accuracy calculation failed (no moves played, etc.)
