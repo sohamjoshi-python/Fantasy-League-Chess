@@ -735,6 +735,11 @@ const LeaguePage: React.FC = () => {
       return
     }
 
+    if (leagueSeasonHasStartedLocal(league.start_date)) {
+      setBotNameError('Bots cannot be added after the league has started')
+      return
+    }
+
     if (bot) {
       setBotNameError('League already has a bot')
       return
@@ -802,6 +807,10 @@ const LeaguePage: React.FC = () => {
 
   const handleRemoveBot = async () => {
     if (!league || !bot) return
+    if (leagueSeasonHasStartedLocal(league.start_date)) {
+      setError('Bots cannot be removed after the league has started.')
+      return
+    }
 
     try {
       setBotLoading(true)
@@ -1135,6 +1144,10 @@ const LeaguePage: React.FC = () => {
   const handleLeaveLeague = async () => {
     if (!league || !user || isOwner) return;
     if (!user.id) return;
+    if (leagueSeasonHasStartedLocal(league.start_date)) {
+      setError('You cannot leave a league after it has started.');
+      return;
+    }
     if (!window.confirm('Are you sure you want to leave this league?')) return;
     await removeUserFromLeague(user.id);
   };
@@ -1146,6 +1159,15 @@ const LeaguePage: React.FC = () => {
     
     // Only allow if user is the creator or removing themselves
     if (!isOwner && user.id !== userIdToRemove) return;
+
+    if (leagueSeasonHasStartedLocal(league.start_date)) {
+      setError(
+        user.id === userIdToRemove
+          ? 'You cannot leave a league after it has started.'
+          : 'Players cannot be removed after the league has started.'
+      );
+      return;
+    }
     
     const confirmMessage = user.id === userIdToRemove 
       ? 'Are you sure you want to leave this league?' 
@@ -1357,8 +1379,8 @@ const LeaguePage: React.FC = () => {
             </div>
           </div>
 
-          {/* Bot Management Section - Only visible to league owner and before draft starts */}
-          {isOwner && !teamBuildingComplete && !league?.marketplace_started && (
+          {/* Bot Management Section - Only visible to league owner before the league starts */}
+          {isOwner && !seasonStarted && !teamBuildingComplete && !league?.marketplace_started && (
             <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6 mb-6 lg:mb-8 border-2 border-royalBlue">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg lg:text-xl font-bold text-neutral-900 flex items-center">
@@ -1455,7 +1477,7 @@ const LeaguePage: React.FC = () => {
                 Delete League
               </button>
             )}
-            {!isOwner && user?.id && league?.member_ids?.includes(user.id) && (
+            {!isOwner && !seasonStarted && user?.id && league?.member_ids?.includes(user.id) && (
               <button
                 onClick={handleLeaveLeague}
                 className="bg-neutral-300 hover:bg-neutral-400 text-neutral-900 px-4 py-2 rounded font-semibold shadow-lg"
@@ -1536,7 +1558,7 @@ const LeaguePage: React.FC = () => {
                             </div>
                             <div className="flex items-center space-x-2 flex-shrink-0 ml-2">
                               <p className="font-semibold text-sm lg:text-base text-neutral-900">{standing.total_points} points</p>
-                              {isOwner && standing.user_id !== user?.id && (
+                              {isOwner && !seasonStarted && standing.user_id !== user?.id && (
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -1582,7 +1604,7 @@ const LeaguePage: React.FC = () => {
                       </div>
                       <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0 ml-1 sm:ml-2">
                         <p className="font-semibold text-xs sm:text-sm lg:text-base text-neutral-900 whitespace-nowrap">{standing.total_points} pts</p>
-                        {isOwner && standing.user_id !== user?.id && (
+                        {isOwner && !seasonStarted && standing.user_id !== user?.id && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -1985,7 +2007,7 @@ const LeaguePage: React.FC = () => {
                         <li>• Automatically drafts the highest ELO player available</li>
                         <li>• Sets lineups with the 5 highest ELO players from their team</li>
                         <li>• Only one bot allowed per league</li>
-                        <li>• Can be removed at any time by the league owner</li>
+                        <li>• Can be removed by the league owner before the league starts</li>
                       </ul>
                     </div>
 
