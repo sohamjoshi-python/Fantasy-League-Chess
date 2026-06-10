@@ -12,6 +12,7 @@ import TradingTab from './TradingTab';
 import { getTradeNotifications, markNotificationSeen } from '../lib/supabase';
 import { TradeNotificationWithDetails } from '../types';
 import PlayerDetailModal from './PlayerDetailModal';
+import { addDaysToYmd, getWeekStartMonday } from '../lib/calendarDate';
 
 interface MarketplaceProps {
   leagueId: string;
@@ -484,34 +485,7 @@ export default function Marketplace({ leagueId, onTeamUpdate }: MarketplaceProps
         throw updateTeamError;
       }
 
-      // Update lineup to remove the sold player
-      const currentWeek = getCurrentWeekStart();
-      if (!(await hasImportedGamesForWeek(currentWeek))) {
-        const { data: currentLineup, error: lineupError } = await supabase
-          .from('lineups')
-          .select('player_ids')
-          .eq('user_id', user?.id)
-          .eq('league_id', leagueId)
-          .eq('week_start_date', currentWeek)
-          .maybeSingle();
-
-        if (!lineupError && currentLineup && currentLineup.player_ids) {
-          // Remove the sold player from the unscored lineup.
-          const updatedLineupPlayerIds = currentLineup.player_ids.filter((id: string) => id !== sellingPlayer.player.id);
-          
-          const { error: updateLineupError } = await supabase
-            .from('lineups')
-            .update({ player_ids: updatedLineupPlayerIds })
-            .eq('user_id', user?.id)
-            .eq('league_id', leagueId)
-            .eq('week_start_date', currentWeek);
-
-          if (updateLineupError) {
-            console.error('Failed to update lineup:', updateLineupError);
-            // Don't throw error here as the main operation succeeded
-          }
-        }
-      }
+      await removePlayerFromEditableLineup(sellingPlayer.player.id);
 
       const refund = Math.floor(sellingPlayer.price * 0.8);
 
@@ -597,34 +571,7 @@ export default function Marketplace({ leagueId, onTeamUpdate }: MarketplaceProps
         throw updateTeamError;
       }
 
-      // Update lineup to remove the sold player
-      const currentWeek = getCurrentWeekStart();
-      if (!(await hasImportedGamesForWeek(currentWeek))) {
-        const { data: currentLineup, error: lineupError } = await supabase
-          .from('lineups')
-          .select('player_ids')
-          .eq('user_id', user?.id)
-          .eq('league_id', leagueId)
-          .eq('week_start_date', currentWeek)
-          .maybeSingle();
-
-        if (!lineupError && currentLineup && currentLineup.player_ids) {
-          // Remove the sold player from the unscored lineup.
-          const updatedLineupPlayerIds = currentLineup.player_ids.filter((id: string) => id !== sellingToMarketplace.player.id);
-          
-          const { error: updateLineupError } = await supabase
-            .from('lineups')
-            .update({ player_ids: updatedLineupPlayerIds })
-            .eq('user_id', user?.id)
-            .eq('league_id', leagueId)
-            .eq('week_start_date', currentWeek);
-
-          if (updateLineupError) {
-            console.error('Failed to update lineup:', updateLineupError);
-            // Don't throw error here as the main operation succeeded
-          }
-        }
-      }
+      await removePlayerFromEditableLineup(sellingToMarketplace.player.id);
 
       // Add the full sale price as refund (price is already the 80% value)
       const refund = sellingToMarketplace.price;
@@ -764,16 +711,7 @@ export default function Marketplace({ leagueId, onTeamUpdate }: MarketplaceProps
 
 
   const getCurrentWeekStart = () => {
-    const now = new Date()
-    const dayOfWeek = now.getDay()
-    const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1
-    const monday = new Date(now)
-    monday.setDate(now.getDate() - daysToSubtract)
-    // Ensure we get a clean date string without timezone issues
-    const year = monday.getFullYear()
-    const month = String(monday.getMonth() + 1).padStart(2, '0')
-    const day = String(monday.getDate()).padStart(2, '0')
-    return `${year}-${month}-${day}`
+    return getWeekStartMonday()
   }
 
   const hasImportedGamesForWeek = async (weekStartDate: string) => {
@@ -795,6 +733,82 @@ export default function Marketplace({ leagueId, onTeamUpdate }: MarketplaceProps
     }
 
     return (count || 0) > 0
+  }
+
+  const getEditableLineupWeekStart = async () => {
+    const currentWeek = getCurrentWeekStart()
+    return (await hasImportedGamesForWeek(currentWeek))
+      ? addDaysToYmd(currentWeek, 7)
+      : currentWeek
+  }
+
+  const removePlayerFromEditableLineup = async (playerId: string) => {
+    if (!user?.id) return
+
+    const currentWeek = getCurrentWeekStart()
+    const lineupWeek = await getEditableLineupWeekStart()
+    const { data: targetLineup, error: targetLineupError } = await supabase
+      .from('lineups')
+      .select('id, player_ids')
+      .eq('user_id', user.id)
+      .eq('league_id', leagueId)
+      .eq('week_start_date', lineupWeek)
+      .maybeSingle()
+
+    if (targetLineupError) {
+      console.error('Failed to load editable lineup:', targetLineupError)
+      return
+    }
+
+    if (targetLineup) {
+      const updatedPlayerIds = (targetLineup.player_ids || []).filter((id: string) => id !== playerId)
+      const { error: updateLineupError } = await supabase
+        .from('lineups')
+        .update({
+          player_ids: updatedPlayerIds,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', targetLineup.id)
+
+      if (updateLineupError) {
+        console.error('Failed to update editable lineup:', updateLineupError)
+      }
+      return
+    }
+
+    if (lineupWeek === currentWeek) return
+
+    const { data: scoredLineup, error: scoredLineupError } = await supabase
+      .from('lineups')
+      .select('player_ids')
+      .eq('user_id', user.id)
+      .eq('league_id', leagueId)
+      .eq('week_start_date', currentWeek)
+      .maybeSingle()
+
+    if (scoredLineupError || !scoredLineup?.player_ids) {
+      if (scoredLineupError) {
+        console.error('Failed to load scored lineup template:', scoredLineupError)
+      }
+      return
+    }
+
+    const nextLineupPlayerIds = scoredLineup.player_ids.filter((id: string) => id !== playerId)
+    if (nextLineupPlayerIds.length === 0) return
+
+    const { error: insertLineupError } = await supabase
+      .from('lineups')
+      .insert({
+        user_id: user.id,
+        league_id: leagueId,
+        week_start_date: lineupWeek,
+        player_ids: nextLineupPlayerIds,
+        total_points: 0,
+      })
+
+    if (insertLineupError) {
+      console.error('Failed to seed next editable lineup:', insertLineupError)
+    }
   }
 
   if (loading && !league) {

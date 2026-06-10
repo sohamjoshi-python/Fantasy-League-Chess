@@ -4,7 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { League, Lineup, ChessPlayer, Bot } from '../types'
-import { leagueSeasonHasEndedLocal } from '../lib/calendarDate'
+import { addDaysToYmd, getWeekStartMonday, leagueSeasonHasEndedLocal } from '../lib/calendarDate'
 import {
   formatCalendarDate,
   getTeamBuildingStatusLabel,
@@ -183,6 +183,7 @@ const LeaguePage: React.FC = () => {
   const [teamPlayers, setTeamPlayers] = useState<ChessPlayer[]>([])
   const [currentLineup, setCurrentLineup] = useState<Lineup | null>(null)
   const [lineupPlayers, setLineupPlayers] = useState<ChessPlayer[]>([])
+  const [editableLineupWeek, setEditableLineupWeek] = useState<string>('')
   const [standings, setStandings] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -405,25 +406,49 @@ const LeaguePage: React.FC = () => {
         }
       }
 
-      // Get current lineup
+      // Get the lineup users can currently edit. Once this week's games are imported,
+      // lineup changes should apply to next week instead of mutating scored results.
       const currentWeek = getCurrentWeekStart()
+      const lineupWeek = await getEditableLineupWeekStart()
+      setEditableLineupWeek(lineupWeek)
+
       const { data: lineupData, error: lineupError } = await supabase
         .from('lineups')
         .select('*')
         .eq('user_id', user.id)
         .eq('league_id', leagueId)
-        .eq('week_start_date', currentWeek)
+        .eq('week_start_date', lineupWeek)
         .maybeSingle() // Use maybeSingle instead of single to handle no results
 
-      if (lineupData && !lineupError) {
-        setCurrentLineup(lineupData)
-        setSelectedLineupPlayers(lineupData.player_ids)
+      let lineupToDisplay = lineupData
+      if (!lineupToDisplay && !lineupError && lineupWeek !== currentWeek) {
+        const { data: scoredCurrentLineup } = await supabase
+          .from('lineups')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('league_id', leagueId)
+          .eq('week_start_date', currentWeek)
+          .maybeSingle()
+
+        if (scoredCurrentLineup) {
+          lineupToDisplay = {
+            ...scoredCurrentLineup,
+            id: '',
+            week_start_date: lineupWeek,
+            total_points: 0,
+          }
+        }
+      }
+
+      if (lineupToDisplay && !lineupError) {
+        setCurrentLineup(lineupToDisplay)
+        setSelectedLineupPlayers(lineupToDisplay.player_ids)
 
         // Get lineup players
         const { data: lineupPlayers } = await supabase
           .from('chess_players')
           .select('*')
-          .in('id', lineupData.player_ids)
+          .in('id', lineupToDisplay.player_ids)
 
         if (lineupPlayers) {
           setLineupPlayers(lineupPlayers)
@@ -571,16 +596,7 @@ const LeaguePage: React.FC = () => {
   }
 
   const getCurrentWeekStart = () => {
-    const now = new Date()
-    const dayOfWeek = now.getDay()
-    const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1
-    const monday = new Date(now)
-    monday.setDate(now.getDate() - daysToSubtract)
-    // Ensure we get a clean date string without timezone issues
-    const year = monday.getFullYear()
-    const month = String(monday.getMonth() + 1).padStart(2, '0')
-    const day = String(monday.getDate()).padStart(2, '0')
-    return `${year}-${month}-${day}`
+    return getWeekStartMonday()
   }
 
   const getTuesdayDateForWeek = (weekStartDate: string) => {
@@ -610,6 +626,13 @@ const LeaguePage: React.FC = () => {
     return (count || 0) > 0
   }
 
+  const getEditableLineupWeekStart = async () => {
+    const currentWeek = getCurrentWeekStart()
+    return (await hasImportedGamesForWeek(currentWeek))
+      ? addDaysToYmd(currentWeek, 7)
+      : currentWeek
+  }
+
   const saveLineup = async () => {
     if (!league || !user || selectedLineupPlayers.length < 1 || selectedLineupPlayers.length > 5) return
 
@@ -620,30 +643,33 @@ const LeaguePage: React.FC = () => {
       return
     }
 
-    // Prevent duplicate player IDs in the lineup
-    const uniquePlayerIds = Array.from(new Set(selectedLineupPlayers));
-    if (uniquePlayerIds.length !== selectedLineupPlayers.length) {
+    // Prevent duplicate player IDs in the lineup and avoid carrying sold players
+    // forward from a previously scored lineup template.
+    const dedupedPlayerIds = Array.from(new Set(selectedLineupPlayers))
+    if (dedupedPlayerIds.length !== selectedLineupPlayers.length) {
       setError('You cannot select the same player more than once in your lineup.');
+      return;
+    }
+
+    const teamPlayerIds = new Set(teamPlayers.map(player => player.id))
+    const uniquePlayerIds = dedupedPlayerIds.filter(id => teamPlayerIds.has(id));
+    if (uniquePlayerIds.length < 1) {
+      setError('Select at least one player from your current team.');
       return;
     }
 
     try {
       setLoading(true)
 
-      const currentWeek = getCurrentWeekStart()
-      if (await hasImportedGamesForWeek(currentWeek)) {
-        setIsEditingLineup(false)
-        setSelectedLineupPlayers(currentLineup?.player_ids || [])
-        setError('This week has already been scored, so the lineup is locked. Marketplace changes will apply to future lineups.')
-        return
-      }
+      const lineupWeek = await getEditableLineupWeekStart()
+      setEditableLineupWeek(lineupWeek)
 
       const { data: existingLineup, error: existingLineupError } = await supabase
         .from('lineups')
         .select('id')
         .eq('user_id', user.id)
         .eq('league_id', league.id)
-        .eq('week_start_date', currentWeek)
+        .eq('week_start_date', lineupWeek)
         .maybeSingle()
 
       if (existingLineupError) {
@@ -671,7 +697,7 @@ const LeaguePage: React.FC = () => {
             {
               user_id: user.id,
               league_id: league.id,
-              week_start_date: currentWeek,
+              week_start_date: lineupWeek,
               player_ids: uniquePlayerIds,
               total_points: 0
             }
@@ -1606,7 +1632,14 @@ const LeaguePage: React.FC = () => {
               {/* Current Lineup */}
               <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6 border-2 border-gold">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg lg:text-xl font-bold text-neutral-900">Current Lineup</h3>
+                  <div>
+                    <h3 className="text-lg lg:text-xl font-bold text-neutral-900">Current Lineup</h3>
+                    {editableLineupWeek && (
+                      <p className="text-xs text-neutral-500">
+                        Applies to week of {formatCalendarDate(editableLineupWeek)}
+                      </p>
+                    )}
+                  </div>
                   {teamPlayers.length >= 1 && !isEditingLineup && (
                     <button
                       type="button"
