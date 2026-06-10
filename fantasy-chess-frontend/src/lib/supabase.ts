@@ -226,37 +226,31 @@ export async function fetchLineupPlayerBreakdownByRounds(userId: string, leagueI
       return { early: [], late: [] };
     }
     
-    // Get all games for this week. Supabase returns 1,000 rows by default,
-    // while Titled Tuesday can exceed that, so page through the full date.
-    const games: any[] = [];
-    const pageSize = 1000;
-    for (let from = 0; ; from += pageSize) {
-      const { data: page, error: gamesError } = await supabase
-        .from('games')
-        .select('*')
-        .eq('date', formattedDate)
-        .range(from, from + pageSize - 1);
-
-      if (gamesError) {
-        console.error('Error fetching games:', gamesError);
-        return { early: [], late: [] };
-      }
-
-      games.push(...(page || []));
-      if (!page || page.length < pageSize) {
-        break;
-      }
-    }
-    
     // Process each player
     const early: Array<{ player_id: string, player_name: string, player_points: number, wins?: number, total_games?: number }> = [];
     const late: Array<{ player_id: string, player_name: string, player_points: number, wins?: number, total_games?: number }> = [];
     
     for (const player of players) {
-      // Filter games for this player
-      const playerGames = games.filter(game => 
-        game.white === player.name || game.black === player.name
-      );
+      // Query each side separately to avoid PostgREST OR encoding issues with chess.com usernames.
+      const [{ data: whiteGames, error: whiteGamesError }, { data: blackGames, error: blackGamesError }] = await Promise.all([
+        supabase
+          .from('games')
+          .select('*')
+          .eq('date', formattedDate)
+          .eq('white', player.name),
+        supabase
+          .from('games')
+          .select('*')
+          .eq('date', formattedDate)
+          .eq('black', player.name),
+      ]);
+
+      if (whiteGamesError || blackGamesError) {
+        console.error('Error fetching games for player:', player.name, whiteGamesError || blackGamesError);
+        continue;
+      }
+
+      const playerGames = [...(whiteGames || []), ...(blackGames || [])];
       
       // Split games by round
       const earlyGames = playerGames.filter(game => game.early_late === 'early');
