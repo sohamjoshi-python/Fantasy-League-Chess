@@ -109,30 +109,17 @@ export async function fetchLineupPlayerBreakdown(userId: string, leagueId: strin
         let games = null;
         let gamesError = null;
         
-        // First try with the correct date format (YYYY.MM.DD)
+        // First try a targeted query with the correct date format (YYYY.MM.DD).
         const { data: games1, error: error1 } = await supabase
           .from('games')
           .select('*')
           .eq('date', formattedDate)
           .or(`white.eq.${player.player_name},black.eq.${player.player_name}`);
-        
+
         if (error1) {
-          // Try without the OR clause first to see if we get any games
-          const { data: games2, error: error2 } = await supabase
-            .from('games')
-            .select('*')
-            .eq('date', formattedDate);
-          
-          if (error2) {
-            gamesError = error2;
-          } else {
-            // Filter in JavaScript
-            games = games2?.filter(game => 
-              game.white === player.player_name || game.black === player.player_name
-            ) || [];
-          }
+          gamesError = error1;
         } else {
-          games = games1;
+          games = games1 || [];
         }
 
         if (gamesError) {
@@ -239,15 +226,26 @@ export async function fetchLineupPlayerBreakdownByRounds(userId: string, leagueI
       return { early: [], late: [] };
     }
     
-    // Get all games for this week
-    const { data: games, error: gamesError } = await supabase
-      .from('games')
-      .select('*')
-      .eq('date', formattedDate);
-    
-    if (gamesError) {
-      console.error('Error fetching games:', gamesError);
-      return { early: [], late: [] };
+    // Get all games for this week. Supabase returns 1,000 rows by default,
+    // while Titled Tuesday can exceed that, so page through the full date.
+    const games: any[] = [];
+    const pageSize = 1000;
+    for (let from = 0; ; from += pageSize) {
+      const { data: page, error: gamesError } = await supabase
+        .from('games')
+        .select('*')
+        .eq('date', formattedDate)
+        .range(from, from + pageSize - 1);
+
+      if (gamesError) {
+        console.error('Error fetching games:', gamesError);
+        return { early: [], late: [] };
+      }
+
+      games.push(...(page || []));
+      if (!page || page.length < pageSize) {
+        break;
+      }
     }
     
     // Process each player
@@ -256,9 +254,9 @@ export async function fetchLineupPlayerBreakdownByRounds(userId: string, leagueI
     
     for (const player of players) {
       // Filter games for this player
-      const playerGames = games?.filter(game => 
+      const playerGames = games.filter(game => 
         game.white === player.name || game.black === player.name
-      ) || [];
+      );
       
       // Split games by round
       const earlyGames = playerGames.filter(game => game.early_late === 'early');
