@@ -15,6 +15,7 @@ import PlayerDetailModal from './PlayerDetailModal';
 
 interface MarketplaceProps {
   leagueId: string;
+  onTeamUpdate?: () => void | Promise<void>;
 }
 
 // Memoized PlayerCard component for better performance
@@ -102,7 +103,7 @@ interface League {
   creator_id: string;
 }
 
-export default function Marketplace({ leagueId }: MarketplaceProps) {
+export default function Marketplace({ leagueId, onTeamUpdate }: MarketplaceProps) {
   const { user } = useAuth();
   const [league, setLeague] = useState<League | null>(null);
   const [activeTab, setActiveTab] = useState<'marketplace' | 'owned' | 'transactions' | 'trading'>('marketplace');
@@ -424,8 +425,9 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
         // Don't throw error for transaction record failure
       }
 
-      // Reload data to get updated information
+      // Reload marketplace + parent league state so "My Team" updates immediately.
       await loadData();
+      await onTeamUpdate?.();
       setError(null);
     } catch (err) {
       console.error('Buy player error:', err);
@@ -545,6 +547,7 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
 
       setSellingPlayer(null);
       await loadData();
+      await onTeamUpdate?.();
       setError(null);
     } catch (err) {
       console.error('Sell player error:', err);
@@ -650,6 +653,7 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
       }
 
       await loadData();
+      await onTeamUpdate?.();
       setSellingToMarketplace(null);
     } catch (err) {
       setError('Failed to sell player to marketplace: ' + JSON.stringify(err));
@@ -703,12 +707,14 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
     setTradePlayer(null);
     // Refresh all data comprehensively
     loadData(); // Refresh the data
+    onTeamUpdate?.();
     loadTradeNotifications(); // Refresh notifications
     loadPlayerTradeStatus(); // Refresh trade status
     // Force a small delay to ensure database updates are complete
     setTimeout(() => {
       loadData();
       loadPlayerTradeStatus();
+      onTeamUpdate?.();
     }, 500);
   };
 
@@ -717,6 +723,7 @@ export default function Marketplace({ leagueId }: MarketplaceProps) {
       // This would be handled by the TradingTab component
       await loadTradeNotifications();
       await loadData();
+      await onTeamUpdate?.();
     } catch (error) {
       console.error('Error accepting trade:', error);
     }

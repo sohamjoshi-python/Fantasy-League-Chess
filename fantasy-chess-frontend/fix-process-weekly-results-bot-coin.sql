@@ -69,7 +69,7 @@ BEGIN
                 WHERE user_id = member_id
                   AND league_id = league_record.id;
 
-                IF team.player_ids IS NOT NULL AND array_length(team.player_ids, 1) >= 5 THEN
+                IF team.player_ids IS NOT NULL AND array_length(team.player_ids, 1) >= 1 THEN
                     auto_lineup_players := ARRAY(
                         SELECT cp.id
                         FROM public.chess_players cp
@@ -152,7 +152,7 @@ BEGIN
               AND week_start_date = lineup_week_start;
             lineup_found := FOUND;
 
-            IF team.player_ids IS NOT NULL AND array_length(team.player_ids, 1) >= 5 THEN
+            IF team.player_ids IS NOT NULL AND array_length(team.player_ids, 1) >= 1 THEN
                 auto_lineup_players := ARRAY(
                     SELECT cp.id
                     FROM public.chess_players cp

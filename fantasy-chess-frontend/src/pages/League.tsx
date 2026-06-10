@@ -289,6 +289,32 @@ const LeaguePage: React.FC = () => {
   }, [leagueId, user])
 
   useEffect(() => {
+    if (!leagueId || !user) return
+
+    const channel = supabase
+      .channel(`league-roster-${leagueId}-${user.id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'teams', filter: `league_id=eq.${leagueId}` },
+        () => {
+          loadLeagueData()
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'lineups', filter: `league_id=eq.${leagueId}` },
+        () => {
+          loadLeagueData()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [leagueId, user?.id])
+
+  useEffect(() => {
     if (isEditingLineup && !isLineupChangeAllowed()) {
       setIsEditingLineup(false)
       setSelectedLineupPlayers(currentLineup?.player_ids || [])
@@ -1755,7 +1781,7 @@ const LeaguePage: React.FC = () => {
           {/* Coin Marketplace - Show after draft is completed */}
           {league && isCoinMarketplaceAvailable(league) && (
             <div className="mt-8 w-full">
-              <Marketplace leagueId={leagueId!} />
+                  <Marketplace leagueId={leagueId!} onTeamUpdate={loadLeagueData} />
             </div>
           )}
 
