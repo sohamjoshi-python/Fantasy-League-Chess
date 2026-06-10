@@ -1,6 +1,5 @@
--- Fix trading functions for UUID arrays.
--- Older schemas/functions mixed UUID values with TEXT[] arrays, causing
--- "operator does not exist: uuid = text" while creating or accepting trades.
+-- Follow-up migration because an already-applied migration version will not rerun.
+-- This fixes the create_trade path and normalizes legacy TEXT[] UUID arrays.
 
 CREATE OR REPLACE FUNCTION public._player_ref_text_array_to_uuid_array(p_refs TEXT[])
 RETURNS UUID[]

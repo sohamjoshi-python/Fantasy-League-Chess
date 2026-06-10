@@ -33,12 +33,33 @@ jobs:
           SB_URL: ${{ secrets.SB_URL }}
           SB_KEY: ${{ secrets.SB_KEY }}
         run: |
-          python -c "from datetime import date; from titled_tuesday import convert; convert(date.today())"
+          python -c "
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+          from titled_tuesday import convert
 
-      - name: Score lineups for this week
+          tuesday = datetime.now(ZoneInfo('America/New_York')).date()
+          print('Ingesting and scoring Titled Tuesday:', tuesday)
+          convert(tuesday)
+          "
+
+      # Scoring runs inside convert() after games insert. This step is a safety net
+      # using the same SB_KEY secret that ingestion already uses successfully.
+      - name: Score lineups for this week (verify)
         env:
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SB_URL: ${{ secrets.SB_URL }}
+          SB_KEY: ${{ secrets.SB_KEY }}
         run: |
-          curl -sf -X POST \
-            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
-            https://wdbwzvnkfbyzazodfhsw.supabase.co/functions/v1/process-weekly-results
+          python -c "
+          from datetime import date, datetime
+          from zoneinfo import ZoneInfo
+          from supabase import create_client
+          import os
+
+          tuesday = datetime.now(ZoneInfo('America/New_York')).date()
+          tuesday_str = tuesday.isoformat()
+          sb = create_client(os.environ['SB_URL'], os.environ['SB_KEY'])
+          print('Calling process_weekly_results for', tuesday_str)
+          result = sb.rpc('process_weekly_results', {'week_date': tuesday_str}).execute()
+          print('Scoring result:', result)
+          "

@@ -43,6 +43,22 @@ def retry_operation(operation, max_retries=3, delay=1):
             delay *= 2  # Exponential backoff
 
 
+def score_week_lineups(tuesday: date) -> None:
+    """Update lineup totals for this Titled Tuesday (Monday lineups + Tuesday games)."""
+    from datetime import timedelta
+
+    tuesday_str = tuesday.isoformat()
+    monday = tuesday - timedelta(days=1)
+    print(
+        f"Scoring lineups: process_weekly_results({tuesday_str}) "
+        f"[games.date={tuesday.strftime('%Y.%m.%d')}, lineups.week_start_date={monday.isoformat()}]"
+    )
+    response = retry_operation(
+        lambda: supabase.rpc("process_weekly_results", {"week_date": tuesday_str}).execute()
+    )
+    print(f"Lineup scoring completed for {tuesday_str}: {response}")
+
+
 def parse_date(value):
     """Accept date, datetime, or YYYY-MM-DD / YYYY.MM.DD strings."""
     if isinstance(value, datetime):
@@ -460,6 +476,7 @@ def convert(target_date, tournament_slug=None, tournament_slugs=None, discovery_
 
         response = retry_operation(lambda: supabase.table("games").insert(records).execute())
         print(f"Successfully inserted {len(records)} games into Supabase")
+        score_week_lineups(target_date)
         return response
     except Exception as e:
         print(f"Error inserting data into Supabase: {e}")

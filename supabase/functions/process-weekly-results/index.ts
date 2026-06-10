@@ -6,50 +6,76 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+/** Most recent Titled Tuesday (calendar date in US Eastern). */
+function getEasternTuesdayDate(reference = new Date()): string {
+  const easternToday = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/New_York',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(reference)
+
+  const [year, month, day] = easternToday.split('-').map(Number)
+  const cursor = new Date(Date.UTC(year, month - 1, day))
+  const daysSinceTuesday = (cursor.getUTCDay() - 2 + 7) % 7
+  cursor.setUTCDate(cursor.getUTCDate() - daysSinceTuesday)
+  return cursor.toISOString().slice(0, 10)
+}
+
+function parseWeekDate(body: unknown): string | null {
+  if (!body || typeof body !== 'object') return null
+  const weekDate = (body as { week_date?: unknown }).week_date
+  if (typeof weekDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(weekDate)) {
+    return null
+  }
+  return weekDate
+}
+
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    // Get environment variables
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    
+
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    // Get the current date and calculate the most recent Tuesday
-    const now = new Date()
-    const dayOfWeek = now.getDay() // 0 = Sunday, 2 = Tuesday
-    const daysSinceTuesday = (now.getDay() - 2 + 7) % 7
-    const lastTuesday = new Date(now)
-    lastTuesday.setDate(now.getDate() - daysSinceTuesday)
-    
-    // Format as YYYY-MM-DD
-    const tuesdayDate = lastTuesday.toISOString().split('T')[0]
-    const monday = new Date(lastTuesday)
-    monday.setDate(lastTuesday.getDate() - 1)
-    const lineupWeekStart = monday.toISOString().split('T')[0]
+    let tuesdayDate = getEasternTuesdayDate()
+    try {
+      const body = await req.json()
+      const requested = parseWeekDate(body)
+      if (requested) {
+        tuesdayDate = requested
+      }
+    } catch {
+      // No JSON body — use Eastern Tuesday
+    }
 
-    const { data, error } = await supabase.rpc('process_weekly_results', {
-      week_date: tuesdayDate
+    const monday = new Date(`${tuesdayDate}T12:00:00Z`)
+    monday.setUTCDate(monday.getUTCDate() - 1)
+    const lineupWeekStart = monday.toISOString().slice(0, 10)
+
+    console.log(`Scoring lineups for TT ${tuesdayDate} (lineups.week_start_date=${lineupWeekStart})`)
+
+    const { error } = await supabase.rpc('process_weekly_results', {
+      week_date: tuesdayDate,
     })
 
     if (error) {
       console.error('Error processing weekly results:', error)
       return new Response(
         JSON.stringify({ error: error.message }),
-        { 
-          status: 500, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
       )
     }
 
-    // After processing weekly results, send emails to all users with results
+    let emailsSent = 0
     try {
-      // Get all users who have lineup results for this week
       const { data: usersWithResults, error: usersError } = await supabase
         .from('lineups')
         .select(`
@@ -62,17 +88,17 @@ serve(async (req) => {
       if (usersError) {
         console.error('Error fetching users with results:', usersError)
       } else if (usersWithResults) {
-        console.log(`Sending weekly results emails to ${usersWithResults.length} users`)
-        
-        // Send weekly results email to each user using free service
+        emailsSent = usersWithResults.length
+        console.log(`Sending weekly results emails to ${emailsSent} users`)
+
         for (const userResult of usersWithResults) {
           if (userResult.users?.email) {
             try {
               await supabase.functions.invoke('send-free-email', {
                 body: {
                   emailType: 'weekly_results',
-                  userEmail: userResult.users.email
-                }
+                  userEmail: userResult.users.email,
+                },
               })
               console.log(`Weekly results email sent to ${userResult.users.email}`)
             } catch (emailError) {
@@ -83,30 +109,30 @@ serve(async (req) => {
       }
     } catch (emailError) {
       console.error('Error in email sending process:', emailError)
-      // Don't fail the entire process if emails fail
     }
-    
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        date: tuesdayDate,
-        message: `Processed weekly results for ${tuesdayDate}`,
-        emailsSent: usersWithResults?.length || 0
-      }),
-      { 
-        status: 200, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
-    )
 
+    return new Response(
+      JSON.stringify({
+        success: true,
+        date: tuesdayDate,
+        lineup_week_start: lineupWeekStart,
+        message: `Processed weekly results for ${tuesdayDate}`,
+        emailsSent,
+      }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      },
+    )
   } catch (error) {
+    const message = error instanceof Error ? error.message : 'Internal server error'
     console.error('Unexpected error:', error)
     return new Response(
-      JSON.stringify({ error: error.message }),
-      { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
+      JSON.stringify({ error: message }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      },
     )
   }
-}) 
+})
