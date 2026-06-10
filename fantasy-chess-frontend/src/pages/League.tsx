@@ -14,7 +14,15 @@ import {
 } from '../lib/leagueStatus'
 import { isLineupChangeAllowed, lineupChangeBlockedMessage } from '../lib/lineupWindow'
 import { Crown, Trophy, Calendar, Edit, Check, X, RefreshCw, Bot as BotIcon, Plus, Trash2 } from 'lucide-react'
-import { createBot, removeBot, autoSetLineupForBot, fetchLineupPlayerBreakdownByRounds, fetchUserLeagueDisplayWeeks } from '../lib/supabase';
+import {
+  createBot,
+  removeBot,
+  autoSetLineupForBot,
+  fetchLineupPlayerBreakdownByRounds,
+  fetchUserLeagueDisplayWeeks,
+  fetchLineupParticipantBreakdownByRounds,
+  fetchLineupParticipantDisplayWeeks,
+} from '../lib/supabase';
 import Confetti from 'react-confetti';
 import fantasyLeagueChessLogo from '../assets/fantasy-league-chess-logo-updated.png';
 
@@ -157,6 +165,19 @@ const orderParticipantsWithBotsLast = async (participants: string[]): Promise<st
   ];
 };
 
+type PlayerBreakdownRow = {
+  player_id: string
+  player_name: string
+  player_points: number
+  wins?: number
+  total_games?: number
+}
+
+type RoundBreakdown = {
+  early: PlayerBreakdownRow[]
+  late: PlayerBreakdownRow[]
+}
+
 const LeaguePage: React.FC = () => {
   const { leagueId } = useParams<{ leagueId: string }>()
   const { user } = useAuth()
@@ -202,11 +223,13 @@ const LeaguePage: React.FC = () => {
   const [showUserPopup, setShowUserPopup] = useState(false)
   const [selectedUserTeam, setSelectedUserTeam] = useState<ChessPlayer[]>([])
   const [selectedUserLineup, setSelectedUserLineup] = useState<ChessPlayer[]>([])
+  const [selectedUserBreakdown, setSelectedUserBreakdown] = useState<RoundBreakdown>({ early: [], late: [] })
+  const [selectedUserBreakdownWeeks, setSelectedUserBreakdownWeeks] = useState<string[]>([])
+  const [selectedUserBreakdownWeek, setSelectedUserBreakdownWeek] = useState<string | null>(null)
+  const [selectedUserBreakdownLoading, setSelectedUserBreakdownLoading] = useState(false)
+  const [selectedUserBreakdownError, setSelectedUserBreakdownError] = useState('')
 
-  const [playerBreakdown, setPlayerBreakdown] = useState<{ 
-    early: Array<{ player_id: string, player_name: string, player_points: number, wins?: number, total_games?: number }>, 
-    late: Array<{ player_id: string, player_name: string, player_points: number, wins?: number, total_games?: number }> 
-  }>({ early: [], late: [] });
+  const [playerBreakdown, setPlayerBreakdown] = useState<RoundBreakdown>({ early: [], late: [] });
   const [breakdownLoading, setBreakdownLoading] = useState(false);
   const [breakdownError, setBreakdownError] = useState('');
   const [availableWeeks, setAvailableWeeks] = useState<string[]>([]);
@@ -256,6 +279,35 @@ const LeaguePage: React.FC = () => {
     }
     loadBreakdown();
   }, [user?.id, league?.id, selectedWeek, currentLineup?.total_points, currentLineup?.player_ids?.join(',')]);
+
+  useEffect(() => {
+    async function loadSelectedUserBreakdown() {
+      if (!league || !selectedUser || !selectedUserBreakdownWeek) {
+        setSelectedUserBreakdown({ early: [], late: [] })
+        return
+      }
+
+      const isSelectedBot = Boolean(bot && selectedUser.user_id === bot.id)
+      setSelectedUserBreakdownLoading(true)
+      setSelectedUserBreakdownError('')
+
+      try {
+        const data = await fetchLineupParticipantBreakdownByRounds(
+          isSelectedBot ? { botId: selectedUser.user_id } : { userId: selectedUser.user_id },
+          league.id,
+          selectedUserBreakdownWeek.replace(/\./g, '-')
+        )
+        setSelectedUserBreakdown(data)
+      } catch (e) {
+        console.error('Could not load selected user breakdown:', e)
+        setSelectedUserBreakdownError('Could not load score breakdown')
+      } finally {
+        setSelectedUserBreakdownLoading(false)
+      }
+    }
+
+    loadSelectedUserBreakdown()
+  }, [league?.id, selectedUser?.user_id, selectedUserBreakdownWeek, bot?.id])
 
   useEffect(() => {
     async function maybeProcessPayout() {
@@ -891,18 +943,32 @@ const LeaguePage: React.FC = () => {
     try {
       setSelectedUser(userData)
       setShowUserPopup(true)
+      setSelectedUserTeam([])
+      setSelectedUserLineup([])
+      setSelectedUserBreakdown({ early: [], late: [] })
+      setSelectedUserBreakdownWeeks([])
+      setSelectedUserBreakdownWeek(null)
+      setSelectedUserBreakdownError('')
 
       // Check if this is a bot by checking if userData.user_id matches bot.id
-      const isBot = bot && userData.user_id === bot.id;
+      const isBot = Boolean(bot && userData.user_id === bot.id);
+      const selectedBot = isBot ? bot : null;
+      const participant = isBot ? { botId: userData.user_id } : { userId: userData.user_id }
+
+      if (league) {
+        const displayWeeks = await fetchLineupParticipantDisplayWeeks(participant, league)
+        setSelectedUserBreakdownWeeks(displayWeeks)
+        setSelectedUserBreakdownWeek(displayWeeks.length > 0 ? displayWeeks[displayWeeks.length - 1] : null)
+      }
 
       // Get user's team
       let teamData = null;
-      if (isBot) {
+      if (selectedBot) {
         // Fetch bot's team by bot_id
         const { data } = await supabase
           .from('teams')
           .select('*')
-          .eq('bot_id', bot.id)
+          .eq('bot_id', selectedBot.id)
           .eq('league_id', leagueId!)
           .maybeSingle(); // Use maybeSingle instead of single
         teamData = data;
@@ -928,15 +994,15 @@ const LeaguePage: React.FC = () => {
         setSelectedUserTeam([])
       }
 
-      // Get user's current lineup
-      const currentWeek = getCurrentWeekStart()
+      // Get participant's editable lineup. Once this week is scored, this means next week.
+      const currentWeek = await getEditableLineupWeekStart()
       let lineupData = null;
       try {
-        if (isBot) {
+        if (selectedBot) {
           const { data } = await supabase
             .from('lineups')
             .select('*')
-            .eq('bot_id', bot.id)
+            .eq('bot_id', selectedBot.id)
             .eq('league_id', leagueId!)
             .eq('week_start_date', currentWeek)
             .maybeSingle(); // Use maybeSingle instead of single
@@ -1884,7 +1950,7 @@ const LeaguePage: React.FC = () => {
           {/* User Popup Modal */}
           {showUserPopup && selectedUser && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border-2 border-gold">
+              <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border-2 border-gold">
                 <div className="p-6">
                   <div className="flex items-center justify-between mb-6">
                     <h2 className="text-xl font-bold text-neutral-900">
@@ -1930,7 +1996,7 @@ const LeaguePage: React.FC = () => {
                   </div>
 
                   {/* Current Lineup Section */}
-                  <div>
+                  <div className="mb-6">
                     <h3 className="text-lg font-semibold mb-3 text-neutral-900">Current Lineup ({selectedUserLineup.length}/5 players)</h3>
                     {selectedUserLineup.length === 0 ? (
                       <p className="text-neutral-500 text-sm">No lineup set for this week.</p>
@@ -1949,6 +2015,108 @@ const LeaguePage: React.FC = () => {
                           </div>
                         ))}
                       </div>
+                    )}
+                  </div>
+
+                  {/* Score Breakdown Section */}
+                  <div>
+                    <div className="mb-3 flex flex-wrap items-center gap-2">
+                      <h3 className="text-lg font-semibold text-neutral-900">Score Breakdown</h3>
+                      {selectedUserBreakdownWeeks.length > 0 && (
+                        <select
+                          className="border border-neutral-300 rounded px-2 py-1 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-royalBlue"
+                          value={selectedUserBreakdownWeek || ''}
+                          onChange={e => setSelectedUserBreakdownWeek(e.target.value)}
+                        >
+                          {selectedUserBreakdownWeeks.map(week => (
+                            <option key={week} value={week}>{week}</option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
+
+                    {selectedUserBreakdownLoading ? (
+                      <div className="text-neutral-600">Loading breakdown...</div>
+                    ) : selectedUserBreakdownError ? (
+                      <div className="text-red-600">{selectedUserBreakdownError}</div>
+                    ) : selectedUserBreakdown.early.length > 0 || selectedUserBreakdown.late.length > 0 ? (
+                      <div className="space-y-5">
+                        {selectedUserBreakdown.early.length > 0 && (
+                          <div>
+                            <h4 className="font-semibold mb-2 text-neutral-900">Early Round</h4>
+                            <table className="min-w-full text-sm text-neutral-900">
+                              <thead>
+                                <tr>
+                                  <th className="text-left px-2 py-1 border-b border-royalBlue">Player</th>
+                                  <th className="text-center px-2 py-1 border-b border-royalBlue">Record</th>
+                                  <th className="text-right px-2 py-1 border-b border-royalBlue">Points</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {selectedUserBreakdown.early.map((row) => (
+                                  <tr key={`early-${row.player_id || row.player_name}`} className="border-b border-neutral-100 last:border-b-0">
+                                    <td className="px-2 py-1">{row.player_name}</td>
+                                    <td className="px-2 py-1 text-center">
+                                      {row.wins !== undefined && row.total_games !== undefined ? `${row.wins}/${row.total_games}` : '-'}
+                                    </td>
+                                    <td className="px-2 py-1 text-right">{Number(row.player_points).toFixed(2)}</td>
+                                  </tr>
+                                ))}
+                                <tr className="font-bold border-t border-royalBlue">
+                                  <td className="px-2 py-1">TOTAL</td>
+                                  <td className="px-2 py-1 text-center">-</td>
+                                  <td className="px-2 py-1 text-right">
+                                    {selectedUserBreakdown.early.reduce((sum, p) => sum + Number(p.player_points), 0).toFixed(2)}
+                                  </td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+
+                        {selectedUserBreakdown.late.length > 0 && (
+                          <div>
+                            <h4 className="font-semibold mb-2 text-neutral-900">Late Round</h4>
+                            <table className="min-w-full text-sm text-neutral-900">
+                              <thead>
+                                <tr>
+                                  <th className="text-left px-2 py-1 border-b border-royalBlue">Player</th>
+                                  <th className="text-center px-2 py-1 border-b border-royalBlue">Record</th>
+                                  <th className="text-right px-2 py-1 border-b border-royalBlue">Points</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {selectedUserBreakdown.late.map((row) => (
+                                  <tr key={`late-${row.player_id || row.player_name}`} className="border-b border-neutral-100 last:border-b-0">
+                                    <td className="px-2 py-1">{row.player_name}</td>
+                                    <td className="px-2 py-1 text-center">
+                                      {row.wins !== undefined && row.total_games !== undefined ? `${row.wins}/${row.total_games}` : '-'}
+                                    </td>
+                                    <td className="px-2 py-1 text-right">{Number(row.player_points).toFixed(2)}</td>
+                                  </tr>
+                                ))}
+                                <tr className="font-bold border-t border-royalBlue">
+                                  <td className="px-2 py-1">TOTAL</td>
+                                  <td className="px-2 py-1 text-center">-</td>
+                                  <td className="px-2 py-1 text-right">
+                                    {selectedUserBreakdown.late.reduce((sum, p) => sum + Number(p.player_points), 0).toFixed(2)}
+                                  </td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+
+                        <div className="bg-neutral-50 rounded-lg p-3 border border-royalBlue">
+                          <span className="font-semibold text-neutral-900">Week Total: </span>
+                          <span className="font-bold text-royalBlue">
+                            {(selectedUserBreakdown.early.reduce((sum, p) => sum + Number(p.player_points), 0) +
+                              selectedUserBreakdown.late.reduce((sum, p) => sum + Number(p.player_points), 0)).toFixed(2)} points
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-neutral-500 text-sm">No scored breakdown available for this participant yet.</p>
                     )}
                   </div>
                 </div>

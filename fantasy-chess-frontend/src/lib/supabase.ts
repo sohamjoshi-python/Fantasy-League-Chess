@@ -51,6 +51,13 @@ export async function fetchUserLeagueDisplayWeeks(
   userId: string,
   league: Pick<League, 'id' | 'start_date' | 'end_date'>
 ): Promise<string[]> {
+  return fetchLineupParticipantDisplayWeeks({ userId }, league)
+}
+
+export async function fetchLineupParticipantDisplayWeeks(
+  participant: { userId?: string; botId?: string },
+  league: Pick<League, 'id' | 'start_date' | 'end_date'>
+): Promise<string[]> {
   const { minMonday, maxMonday } = getLeagueLineupWeekBounds(
     league.start_date,
     league.end_date
@@ -59,15 +66,24 @@ export async function fetchUserLeagueDisplayWeeks(
     return []
   }
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('lineups')
     .select('week_start_date')
-    .eq('user_id', userId)
     .eq('league_id', league.id)
     .gte('week_start_date', minMonday)
     .lte('week_start_date', maxMonday)
     .gt('total_points', 0)
     .order('week_start_date', { ascending: true })
+
+  if (participant.botId) {
+    query = query.eq('bot_id', participant.botId)
+  } else if (participant.userId) {
+    query = query.eq('user_id', participant.userId)
+  } else {
+    return []
+  }
+
+  const { data, error } = await query
 
   if (error || !data) {
     return []
@@ -176,6 +192,17 @@ export async function fetchLineupPlayerBreakdownByRounds(userId: string, leagueI
   early: Array<{ player_id: string, player_name: string, player_points: number, wins?: number, total_games?: number }>, 
   late: Array<{ player_id: string, player_name: string, player_points: number, wins?: number, total_games?: number }> 
 }> {
+  return fetchLineupParticipantBreakdownByRounds({ userId }, leagueId, weekDate)
+}
+
+export async function fetchLineupParticipantBreakdownByRounds(
+  participant: { userId?: string; botId?: string },
+  leagueId: string,
+  weekDate: string
+): Promise<{
+  early: Array<{ player_id: string, player_name: string, player_points: number, wins?: number, total_games?: number }>,
+  late: Array<{ player_id: string, player_name: string, player_points: number, wins?: number, total_games?: number }>
+}> {
   try {
     // Convert date format from YYYY-MM-DD to YYYY.MM.DD for games table (games are stored by Tuesday date)
     const formattedDate = weekDate.replace(/-/g, '.');
@@ -202,13 +229,22 @@ export async function fetchLineupPlayerBreakdownByRounds(userId: string, leagueI
     
     // Removed debug log
     
-    // Get user's lineup for this week (using Monday week_start_date)
-    const { data: lineup, error: lineupError } = await supabase
+    // Get participant's lineup for this week (using Monday week_start_date)
+    let lineupQuery = supabase
       .from('lineups')
       .select('player_ids')
-      .eq('user_id', userId)
       .eq('league_id', leagueId)
       .eq('week_start_date', lineupWeekStart)
+
+    if (participant.botId) {
+      lineupQuery = lineupQuery.eq('bot_id', participant.botId)
+    } else if (participant.userId) {
+      lineupQuery = lineupQuery.eq('user_id', participant.userId)
+    } else {
+      return { early: [], late: [] };
+    }
+
+    const { data: lineup, error: lineupError } = await lineupQuery
       .maybeSingle();
     
     if (lineupError || !lineup || !lineup.player_ids || lineup.player_ids.length === 0) {
