@@ -593,6 +593,33 @@ const LeaguePage: React.FC = () => {
     return `${year}-${month}-${day}`
   }
 
+  const getTuesdayDateForWeek = (weekStartDate: string) => {
+    const [year, month, day] = weekStartDate.split('-').map(Number)
+    const tuesday = new Date(Date.UTC(year, month - 1, day + 1))
+    const yyyy = tuesday.getUTCFullYear()
+    const mm = String(tuesday.getUTCMonth() + 1).padStart(2, '0')
+    const dd = String(tuesday.getUTCDate()).padStart(2, '0')
+    return {
+      dashed: `${yyyy}-${mm}-${dd}`,
+      dotted: `${yyyy}.${mm}.${dd}`,
+    }
+  }
+
+  const hasImportedGamesForWeek = async (weekStartDate: string) => {
+    const { dotted } = getTuesdayDateForWeek(weekStartDate)
+    const { count, error } = await supabase
+      .from('games')
+      .select('id', { count: 'exact', head: true })
+      .eq('date', dotted)
+
+    if (error) {
+      console.error('Error checking imported games for lineup lock:', error)
+      return false
+    }
+
+    return (count || 0) > 0
+  }
+
   const saveLineup = async () => {
     if (!league || !user || selectedLineupPlayers.length < 1 || selectedLineupPlayers.length > 5) return
 
@@ -614,31 +641,55 @@ const LeaguePage: React.FC = () => {
       setLoading(true)
 
       const currentWeek = getCurrentWeekStart()
-      // Delete any existing lineup for this user/league/week
-      await supabase
-        .from('lineups')
-        .delete()
-        .match({
-          user_id: user.id,
-          league_id: league.id,
-          week_start_date: currentWeek
-        });
+      if (await hasImportedGamesForWeek(currentWeek)) {
+        setIsEditingLineup(false)
+        setSelectedLineupPlayers(currentLineup?.player_ids || [])
+        setError('This week has already been scored, so the lineup is locked. Marketplace changes will apply to future lineups.')
+        return
+      }
 
-      // Now insert the new lineup
-      const { error: insertError } = await supabase
+      const { data: existingLineup, error: existingLineupError } = await supabase
         .from('lineups')
-        .insert([
-          {
-            user_id: user.id,
-            league_id: league.id,
-            week_start_date: currentWeek,
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('league_id', league.id)
+        .eq('week_start_date', currentWeek)
+        .maybeSingle()
+
+      if (existingLineupError) {
+        setError(existingLineupError.message || 'Failed to load lineup')
+        return
+      }
+
+      if (existingLineup) {
+        const { error: updateError } = await supabase
+          .from('lineups')
+          .update({
             player_ids: uniquePlayerIds,
-            total_points: 0
-          }
-        ]);
-      if (insertError) {
-        setError(insertError.message || 'Failed to insert lineup');
-        return;
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingLineup.id)
+
+        if (updateError) {
+          setError(updateError.message || 'Failed to update lineup')
+          return
+        }
+      } else {
+        const { error: insertError } = await supabase
+          .from('lineups')
+          .insert([
+            {
+              user_id: user.id,
+              league_id: league.id,
+              week_start_date: currentWeek,
+              player_ids: uniquePlayerIds,
+              total_points: 0
+            }
+          ]);
+        if (insertError) {
+          setError(insertError.message || 'Failed to insert lineup');
+          return;
+        }
       }
 
       setIsEditingLineup(false)
