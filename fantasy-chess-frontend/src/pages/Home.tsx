@@ -193,15 +193,13 @@ const Home: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="bg-white rounded-xl shadow-lg p-6 border-2 border-royalBlue">
               <h3 className="text-xl font-semibold mb-3 text-neutral-900">Share Your Feedback</h3>
-              <p className="mb-4 text-neutral-700">Help us improve Fantasy League Chess</p>
-              <a 
-                href="https://forms.gle/xDGEcbp5UPuVbJT16" 
-                target="_blank" 
-                rel="noopener noreferrer"
+              <p className="mb-4 text-neutral-700">Help us improve Fantasy League Chess or report a bug</p>
+              <Link
+                to="/feedback"
                 className="inline-block bg-royalBlue text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
               >
                 Give Feedback
-              </a>
+              </Link>
             </div>
             <div className="bg-white rounded-xl shadow-lg p-6 border-2 border-royalBlue">
               <h3 className="text-xl font-semibold mb-3 text-neutral-900">Need Help?</h3>

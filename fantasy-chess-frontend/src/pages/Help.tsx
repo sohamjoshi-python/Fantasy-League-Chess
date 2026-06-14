@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { Link } from 'react-router-dom'
 import { ArrowRight, Trophy, Users, Target, BarChart3, HelpCircle, Play, Coins, Store, MessageCircle } from 'lucide-react'
 import logo from '../assets/fantasy-league-chess-logo-updated.png'
 import { getBrandName, getBrandNameFull } from '../utils/browserDetection';
@@ -603,15 +604,13 @@ const Help: React.FC = () => {
             <div className="text-center p-4 bg-neutral-50 rounded-lg border border-royalBlue">
               <MessageCircle className="w-8 h-8 mx-auto mb-2 text-royalBlue" />
               <h3 className="font-semibold text-neutral-900 mb-2">Share Your Feedback</h3>
-              <p className="text-sm text-neutral-700 mb-3">Help us improve by sharing your thoughts and suggestions</p>
-              <a 
-                href="https://forms.gle/xDGEcbp5UPuVbJT16" 
-                target="_blank" 
-                rel="noopener noreferrer"
+              <p className="text-sm text-neutral-700 mb-3">Help us improve by sharing suggestions or reporting bugs</p>
+              <Link
+                to="/feedback"
                 className="inline-block bg-royalBlue text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
               >
                 Give Feedback
-              </a>
+              </Link>
             </div>
             <div className="text-center p-4 bg-neutral-50 rounded-lg border border-royalBlue">
               <HelpCircle className="w-8 h-8 mx-auto mb-2 text-royalBlue" />

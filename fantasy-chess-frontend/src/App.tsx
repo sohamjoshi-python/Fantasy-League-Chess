@@ -15,6 +15,7 @@ import SignIn from './pages/SignIn'
 import ResetPassword from './pages/ResetPassword'
 import Tutorial from './pages/Tutorial'
 import EmailConfirmationSuccess from './pages/EmailConfirmationSuccess'
+import Feedback from './pages/Feedback'
 import Leaderboard from './pages/Leaderboard';
 import PlayerHistory from './pages/PlayerHistory';
 import Tos from './pages/tos';
@@ -53,6 +54,7 @@ function App() {
             <Route path="/signup" element={<SignUp />} />
             <Route path="/signin" element={<SignIn />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/feedback" element={<Feedback />} />
             <Route path="/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
             <Route path="/avatar-shop" element={<ProtectedRoute><AvatarShopPage /></ProtectedRoute>} />
             <Route path="/tos" element={<Tos />} />

@@ -1,5 +1,6 @@
 import React from 'react';
 import { MessageCircle, HelpCircle } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const Footer: React.FC = () => {
   return (
@@ -11,15 +12,13 @@ const Footer: React.FC = () => {
           </div>
           
           <div className="flex items-center space-x-6">
-            <a 
-              href="https://forms.gle/xDGEcbp5UPuVbJT16" 
-              target="_blank" 
-              rel="noopener noreferrer"
+            <Link
+              to="/feedback"
               className="flex items-center space-x-2 text-sm text-neutral-600 hover:text-royalBlue transition-colors"
             >
               <MessageCircle className="w-4 h-4" />
-              <span>Feedback</span>
-            </a>
+              <span>Feedback & Bugs</span>
+            </Link>
             
             <a 
               href="mailto:support@fantasyleaguechess.com"

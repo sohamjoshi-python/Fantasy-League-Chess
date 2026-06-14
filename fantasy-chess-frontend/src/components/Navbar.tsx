@@ -141,7 +141,7 @@ const Navbar: React.FC = () => {
                       <a href="/dashboard" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Dashboard</a>
                       <a href="/join-league" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Join League</a>
                       <a href="/help" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Help & Tutorial</a>
-                      <a href="https://forms.gle/xDGEcbp5UPuVbJT16" target="_blank" rel="noopener noreferrer" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Feedback</a>
+                      <Link to="/feedback" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Feedback & Bugs</Link>
                       <a href="mailto:support@fantasyleaguechess.com" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Contact Support</a>
                       <button onClick={handleSignOut} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Sign Out</button>
                     </div>
@@ -252,15 +252,13 @@ const Navbar: React.FC = () => {
                 >
                   Help & Tutorial
                 </Link>
-                <a
-                  href="https://forms.gle/xDGEcbp5UPuVbJT16"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <Link
+                  to="/feedback"
                   className="block px-4 py-2 text-neutral-700 hover:bg-gray-100 hover:text-royalBlue rounded-md transition-colors"
                   onClick={() => setShowMobileMenu(false)}
                 >
-                  Feedback
-                </a>
+                  Feedback & Bugs
+                </Link>
                 <a
                   href="mailto:support@fantasyleaguechess.com"
                   className="block px-4 py-2 text-neutral-700 hover:bg-gray-100 hover:text-royalBlue rounded-md transition-colors"
