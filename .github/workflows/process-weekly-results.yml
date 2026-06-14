@@ -6,6 +6,19 @@ on:
     - cron: '0 6 * * 3'
       timezone: America/New_York
   workflow_dispatch:
+    inputs:
+      test_email:
+        description: "Email recipient for manual test runs"
+        required: true
+        default: "sohampjoshi@gmail.com"
+      send_all:
+        description: "Send to all eligible users instead of only test_email"
+        required: true
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
 
 jobs:
   call-edge-function:
@@ -46,6 +59,9 @@ jobs:
         env:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           SB_KEY: ${{ secrets.SB_KEY }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          TEST_EMAIL: ${{ github.event.inputs.test_email || 'sohampjoshi@gmail.com' }}
+          SEND_ALL: ${{ github.event.inputs.send_all || 'false' }}
         run: |
           KEY="${SUPABASE_SERVICE_ROLE_KEY:-$SB_KEY}"
           if [ -z "$KEY" ]; then
@@ -55,11 +71,17 @@ jobs:
           WEEK_JSON=$(python -c "
           from datetime import datetime, timedelta
           from zoneinfo import ZoneInfo
+          import json
+          import os
           eastern = datetime.now(ZoneInfo('America/New_York')).date()
           days_since_tuesday = (eastern.weekday() - 1) % 7
           tuesday = eastern - timedelta(days=days_since_tuesday)
-          print('{\"week_date\": \"' + tuesday.isoformat() + '\"}')
+          payload = {'week_date': tuesday.isoformat()}
+          if os.environ.get('GITHUB_EVENT_NAME') == 'workflow_dispatch' and os.environ.get('SEND_ALL') != 'true':
+            payload['test_email'] = os.environ.get('TEST_EMAIL') or 'sohampjoshi@gmail.com'
+          print(json.dumps(payload))
           ")
+          echo "Request payload: $WEEK_JSON"
           curl -sf -X POST \
             -H "Authorization: Bearer $KEY" \
             -H "apikey: $KEY" \

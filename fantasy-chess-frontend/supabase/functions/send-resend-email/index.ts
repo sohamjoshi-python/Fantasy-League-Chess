@@ -13,6 +13,7 @@ serve(async (req) => {
 
   try {
     const { to, subject, htmlContent, textContent, templateId, userId, leagueId, metadata, emailType, userEmail } = await req.json();
+    const recipientEmail = to || userEmail;
     
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
     const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -22,6 +23,13 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ success: false, error: 'Missing RESEND_API_KEY environment variable.' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!recipientEmail) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Missing recipient email.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -57,7 +65,7 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           from: 'Fantasy League Chess <noreply@fantasyleaguechess.com>',
-          to: [to],
+          to: [recipientEmail],
           subject: finalSubject,
           html: finalHtmlContent,
           text: finalTextContent,
@@ -87,7 +95,7 @@ serve(async (req) => {
           user_id: userId,
           league_id: leagueId,
           template_id: templateId,
-          to_email: to,
+          to_email: recipientEmail,
           subject: finalSubject,
           html_content: finalHtmlContent,
           text_content: finalTextContent,
