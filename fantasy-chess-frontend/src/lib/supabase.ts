@@ -8,7 +8,6 @@ import {
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
-const siteUrl = 'https://fantasyleaguechess.com'
 
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables')
@@ -874,11 +873,7 @@ export async function createTrade(
     if (error) throw error;
 
     await notifyLeagueMembersOfTrade({
-      tradeId: data,
-      leagueId,
-      sellerId,
-      playerId,
-      price
+      tradeId: data
     });
 
     return { success: true, tradeId: data };
@@ -888,221 +883,18 @@ export async function createTrade(
   }
 }
 
-async function notifyLeagueMembersOfTrade({
-  tradeId,
-  leagueId,
-  sellerId,
-  playerId,
-  price
-}: {
-  tradeId: string
-  leagueId: string
-  sellerId: string
-  playerId: string
-  price: number
-}) {
+async function notifyLeagueMembersOfTrade({ tradeId }: { tradeId: string }) {
   try {
-    const [{ data: league, error: leagueError }, { data: player, error: playerError }, { data: seller, error: sellerError }, { data: trade, error: tradeError }] = await Promise.all([
-      supabase
-        .from('leagues')
-        .select('id, name, member_ids')
-        .eq('id', leagueId)
-        .single(),
-      supabase
-        .from('chess_players')
-        .select('id, name, elo')
-        .eq('id', playerId)
-        .single(),
-      supabase
-        .from('users')
-        .select('id, email, username')
-        .eq('id', sellerId)
-        .single(),
-      supabase
-        .from('trades')
-        .select('id, expires_at')
-        .eq('id', tradeId)
-        .single()
-    ]);
+    const { error } = await supabase.functions.invoke('notify-trade-created', {
+      body: { tradeId }
+    });
 
-    if (leagueError || playerError || sellerError || tradeError || !league || !player || !seller || !trade) {
-      console.error('Unable to load trade email details:', { leagueError, playerError, sellerError, tradeError });
-      return;
+    if (error) {
+      console.error('Trade notification email function failed:', error);
     }
-
-    const memberIds = Array.from(new Set([...(league.member_ids || []), sellerId]));
-    const { data: members, error: membersError } = await supabase
-      .from('users')
-      .select('id, email, username')
-      .in('id', memberIds);
-
-    if (membersError || !members?.length) {
-      console.error('Unable to load trade email recipients:', membersError);
-      return;
-    }
-
-    const tradeUrl = `${siteUrl}/league/${leagueId}`;
-    const expiresAt = new Date(trade.expires_at);
-    const timeLeft = formatTradeTimeLeft(expiresAt);
-    const sellerName = seller.username || seller.email || 'A league member';
-    const playerName = player.name || 'A player';
-    const subject = `${playerName} is available in ${league.name}`;
-
-    await Promise.all(
-      members
-        .filter((member) => member.email)
-        .map((member) => {
-          const recipientIsSeller = member.id === sellerId;
-          const sellerDescription = recipientIsSeller ? 'you' : sellerName;
-          const { htmlContent, textContent } = createTradeListedEmailContent({
-            recipientName: member.username || member.email?.split('@')[0] || 'there',
-            playerName,
-            playerElo: player.elo,
-            sellerDescription,
-            leagueName: league.name,
-            price,
-            timeLeft,
-            expiresAt,
-            tradeUrl,
-            recipientIsSeller
-          });
-
-          return supabase.functions.invoke('send-resend-email', {
-            body: {
-              to: member.email,
-              subject,
-              htmlContent,
-              textContent,
-              emailType: 'custom',
-              userId: member.id,
-              leagueId,
-              metadata: {
-                source: 'trade_created',
-                tradeId,
-                playerId,
-                sellerId,
-                recipientIsSeller
-              }
-            }
-          });
-        })
-    );
   } catch (error) {
     console.error('Error sending trade notification emails:', error);
   }
-}
-
-function createTradeListedEmailContent({
-  recipientName,
-  playerName,
-  playerElo,
-  sellerDescription,
-  leagueName,
-  price,
-  timeLeft,
-  expiresAt,
-  tradeUrl,
-  recipientIsSeller
-}: {
-  recipientName: string
-  playerName: string
-  playerElo?: number
-  sellerDescription: string
-  leagueName: string
-  price: number
-  timeLeft: string
-  expiresAt: Date
-  tradeUrl: string
-  recipientIsSeller: boolean
-}) {
-  const headline = recipientIsSeller
-    ? `${playerName} was listed for trade by you.`
-    : `${playerName} is being traded by ${sellerDescription}.`;
-  const actionText = recipientIsSeller
-    ? 'You can view or cancel the listing from the league marketplace.'
-    : 'Open the league marketplace to buy this player before the listing expires.';
-  const expiresText = expiresAt.toLocaleString(undefined, {
-    month: 'long',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit'
-  });
-  const eloText = typeof playerElo === 'number' ? `ELO ${playerElo}` : 'ELO unavailable';
-
-  const textContent = [
-    `Hi ${recipientName},`,
-    headline,
-    `League: ${leagueName}`,
-    `Player: ${playerName} (${eloText})`,
-    `Price: ${price} coins`,
-    `Time left: ${timeLeft}`,
-    `Expires: ${expiresText}`,
-    actionText,
-    `Open trade: ${tradeUrl}`
-  ].join('\n\n');
-
-  const htmlContent = `
-    <!DOCTYPE html>
-    <html lang="en">
-      <body style="font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; color: #333333; line-height: 1.6;">
-        <div style="max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); overflow: hidden;">
-          <div style="background-color: #4CAF50; color: #ffffff; padding: 24px 20px; text-align: center;">
-            <img src="https://fantasyleaguechess.com/assets/fantasy-league-chess-logo-updated.png" alt="Fantasy League Chess" style="max-width: 200px; height: auto; margin-bottom: 12px;">
-            <h1 style="margin: 0; font-size: 24px; color: #ffffff;">New Trade Listing</h1>
-          </div>
-          <div style="padding: 28px 24px;">
-            <p style="margin: 0 0 18px;">Hi ${escapeTradeEmailHtml(recipientName)},</p>
-            <p style="margin: 0 0 18px;">${escapeTradeEmailHtml(headline)}</p>
-            <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 18px; margin: 22px 0;">
-              <p style="margin: 0 0 8px;"><strong>League:</strong> ${escapeTradeEmailHtml(leagueName)}</p>
-              <p style="margin: 0 0 8px;"><strong>Player:</strong> ${escapeTradeEmailHtml(playerName)} (${escapeTradeEmailHtml(eloText)})</p>
-              <p style="margin: 0 0 8px;"><strong>Price:</strong> ${price} coins</p>
-              <p style="margin: 0;"><strong>Time left:</strong> ${escapeTradeEmailHtml(timeLeft)} (expires ${escapeTradeEmailHtml(expiresText)})</p>
-            </div>
-            <p style="margin: 0 0 24px;">${escapeTradeEmailHtml(actionText)}</p>
-            <p style="margin: 30px 0; text-align: center;">
-              <a href="${tradeUrl}" style="display: inline-block; background-color: #4CAF50; color: #ffffff; padding: 12px 24px; border-radius: 5px; text-decoration: none; font-weight: bold;">Open Trade</a>
-            </p>
-          </div>
-          <div style="text-align: center; font-size: 12px; color: #777777; padding: 0 24px 24px;">
-            <p style="margin: 0;">&copy; ${new Date().getFullYear()} Fantasy League Chess. All rights reserved.</p>
-          </div>
-        </div>
-      </body>
-    </html>
-  `;
-
-  return { htmlContent, textContent };
-}
-
-function formatTradeTimeLeft(expiresAt: Date) {
-  const millisecondsLeft = expiresAt.getTime() - Date.now();
-  if (!Number.isFinite(millisecondsLeft) || millisecondsLeft <= 0) {
-    return 'less than 1 hour';
-  }
-
-  const hoursLeft = Math.ceil(millisecondsLeft / (1000 * 60 * 60));
-  const days = Math.floor(hoursLeft / 24);
-  const hours = hoursLeft % 24;
-
-  if (days > 0 && hours > 0) {
-    return `${days} day${days === 1 ? '' : 's'} and ${hours} hour${hours === 1 ? '' : 's'}`;
-  }
-
-  if (days > 0) {
-    return `${days} day${days === 1 ? '' : 's'}`;
-  }
-
-  return `${hoursLeft} hour${hoursLeft === 1 ? '' : 's'}`;
-}
-
-function escapeTradeEmailHtml(value: string | number | null | undefined) {
-  return String(value ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
 }
 
 export async function acceptTrade(
