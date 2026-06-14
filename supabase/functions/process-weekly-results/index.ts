@@ -91,17 +91,17 @@ function createWeeklyResultsEmail(user: any, lineups: any[], leagueById: Map<str
           </li>
         `)
         .join('')
-    : '<li>No accepted trades were recorded for your leagues this week.</li>'
+    : '<li>No bought, sold, or traded players were recorded for your leagues this week.</li>'
 
   const textContent = [
     `Hi ${displayName},`,
     `Here are your Fantasy League Chess results for last week: ${resultDate}.`,
     ...lineups.map((lineup) => `${leagueById.get(lineup.league_id)?.name || 'League'}: ${formatPoints(lineup.total_points)} points`),
     `Total points: ${formatPoints(totalPoints)}`,
-    'Trade updates:',
+    'Bought, sold, and traded players:',
     ...(userTrades.length
       ? userTrades.map((trade) => `${trade.buyerName} acquired ${trade.playerName} from ${trade.sellerName} for ${trade.price} coins in ${trade.leagueName}.`)
-      : ['No accepted trades were recorded for your leagues this week.']),
+      : ['No bought, sold, or traded players were recorded for your leagues this week.']),
     `View your dashboard: ${dashboardUrl}`,
   ].join('\n\n')
 
@@ -125,7 +125,7 @@ function createWeeklyResultsEmail(user: any, lineups: any[], leagueById: Map<str
             <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
               <tbody>${leagueRows}</tbody>
             </table>
-            <h2 style="font-size: 18px; margin: 24px 0 10px; color: #1f2937;">Trade Updates</h2>
+            <h2 style="font-size: 18px; margin: 24px 0 10px; color: #1f2937;">Bought, Sold, and Traded Players</h2>
             <ul style="padding-left: 20px; margin: 0 0 24px;">${tradeRows}</ul>
             <p style="margin: 30px 0; text-align: center;">
               <a href="${dashboardUrl}" style="display: inline-block; background-color: #4CAF50; color: #ffffff; padding: 12px 24px; border-radius: 5px; text-decoration: none; font-weight: bold;">View Dashboard</a>

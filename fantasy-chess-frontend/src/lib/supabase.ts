@@ -909,10 +909,28 @@ export async function acceptTrade(
 
     if (error) throw error;
 
+    if (data) {
+      await notifyLeagueMembersOfAcceptedTrade({ tradeId });
+    }
+
     return { success: data };
   } catch (error) {
     console.error('Error accepting trade:', error);
     return { success: false, error };
+  }
+}
+
+async function notifyLeagueMembersOfAcceptedTrade({ tradeId }: { tradeId: string }) {
+  try {
+    const { error } = await supabase.functions.invoke('notify-trade-accepted', {
+      body: { tradeId }
+    });
+
+    if (error) {
+      console.error('Accepted trade notification email function failed:', error);
+    }
+  } catch (error) {
+    console.error('Error sending accepted trade notification emails:', error);
   }
 }
 
