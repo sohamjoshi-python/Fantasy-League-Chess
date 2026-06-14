@@ -5,7 +5,9 @@
   "main": "discord-bot-hybrid-dm.js",
   "scripts": {
     "start": "node discord-bot-hybrid-dm.js",
-    "test": "node test-enhanced-bot.js"
+    "test": "node test-enhanced-bot.js",
+    "send-feedback-campaign": "node fantasy-chess-frontend/scripts/send-feedback-campaign.js",
+    "test-feedback-campaign": "node fantasy-chess-frontend/scripts/send-feedback-campaign.js --campaign both --to sohampjoshi@gmail.com --send"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.50.3",

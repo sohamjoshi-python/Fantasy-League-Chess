@@ -56,8 +56,18 @@ function formatPoints(value: unknown): string {
   return Number.isFinite(numberValue) ? numberValue.toFixed(2) : '0.00'
 }
 
+function formatMonthDay(dateValue: string): string {
+  const [year, month, day] = dateValue.split('-').map(Number)
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'long',
+    day: 'numeric',
+    timeZone: 'UTC',
+  }).format(new Date(Date.UTC(year, month - 1, day)))
+}
+
 function createWeeklyResultsEmail(user: any, lineups: any[], leagueById: Map<string, any>, tradesByLeagueId: Map<string, any[]>, tuesdayDate: string) {
-  const displayName = user.username || user.display_name || user.email?.split('@')[0] || 'there'
+  const displayName = user.username || user.email?.split('@')[0] || 'there'
+  const resultDate = formatMonthDay(tuesdayDate)
   const totalPoints = lineups.reduce((sum, lineup) => sum + Number(lineup.total_points || 0), 0)
   const leagueRows = lineups
     .map((lineup) => {
@@ -85,7 +95,7 @@ function createWeeklyResultsEmail(user: any, lineups: any[], leagueById: Map<str
 
   const textContent = [
     `Hi ${displayName},`,
-    `Here are your Fantasy League Chess results for Titled Tuesday ${tuesdayDate}.`,
+    `Here are your Fantasy League Chess results for last week: ${resultDate}.`,
     ...lineups.map((lineup) => `${leagueById.get(lineup.league_id)?.name || 'League'}: ${formatPoints(lineup.total_points)} points`),
     `Total points: ${formatPoints(totalPoints)}`,
     'Trade updates:',
@@ -106,7 +116,7 @@ function createWeeklyResultsEmail(user: any, lineups: any[], leagueById: Map<str
           </div>
           <div style="padding: 28px 24px;">
             <p style="margin: 0 0 18px;">Hi ${escapeHtml(displayName)},</p>
-            <p style="margin: 0 0 18px;">Here are your Fantasy League Chess results for Titled Tuesday ${escapeHtml(tuesdayDate)}.</p>
+            <p style="margin: 0 0 18px;">Here are your Fantasy League Chess results for last week: ${escapeHtml(resultDate)}.</p>
             <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 18px; margin: 22px 0; text-align: center;">
               <div style="font-size: 13px; color: #166534; font-weight: 700; text-transform: uppercase;">Total Fantasy Points</div>
               <div style="font-size: 32px; color: #166534; font-weight: 800;">${formatPoints(totalPoints)}</div>
@@ -130,7 +140,7 @@ function createWeeklyResultsEmail(user: any, lineups: any[], leagueById: Map<str
   `
 
   return {
-    subject: `Your Fantasy League Chess results for ${tuesdayDate}`,
+    subject: `Your Fantasy League Chess results for last week: ${resultDate}`,
     htmlContent,
     textContent,
   }
@@ -193,16 +203,18 @@ serve(async (req) => {
 
       if (lineupsError) {
         console.error('Error fetching lineups with results:', lineupsError)
+        throw lineupsError
       } else if (lineupsWithResults?.length) {
         const userIds = Array.from(new Set(lineupsWithResults.map((lineup) => lineup.user_id).filter(Boolean)))
         const leagueIds = Array.from(new Set(lineupsWithResults.map((lineup) => lineup.league_id).filter(Boolean)))
         const { data: usersWithResults, error: usersError } = await supabase
           .from('users')
-          .select('id, email, username, display_name')
+          .select('id, email, username')
           .in('id', userIds)
 
         if (usersError) {
           console.error('Error fetching users with results:', usersError)
+          throw usersError
         } else {
           const [{ data: leagues }, { data: trades }] = await Promise.all([
             supabase
@@ -220,7 +232,7 @@ serve(async (req) => {
           const tradePlayerIds = Array.from(new Set((trades || []).map((trade) => trade.player_id).filter(Boolean)))
           const [{ data: tradeUsers }, { data: tradePlayers }] = await Promise.all([
             tradeUserIds.length
-              ? supabase.from('users').select('id, username, display_name, email').in('id', tradeUserIds)
+              ? supabase.from('users').select('id, username, email').in('id', tradeUserIds)
               : Promise.resolve({ data: [] }),
             tradePlayerIds.length
               ? supabase.from('chess_players').select('id, name').in('id', tradePlayerIds)
@@ -238,8 +250,8 @@ serve(async (req) => {
             const player = playerById.get(trade.player_id)
             const formattedTrade = {
               leagueName: league?.name || 'League',
-              sellerName: seller?.username || seller?.display_name || seller?.email || 'another manager',
-              buyerName: buyer?.username || buyer?.display_name || buyer?.email || 'another manager',
+              sellerName: seller?.username || seller?.email || 'another manager',
+              buyerName: buyer?.username || buyer?.email || 'another manager',
               playerName: player?.name || 'a player',
               price: trade.price,
             }
