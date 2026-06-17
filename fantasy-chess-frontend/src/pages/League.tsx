@@ -1420,12 +1420,19 @@ const LeaguePage: React.FC = () => {
               <div className="flex items-center space-x-2">
                 <Calendar className="h-4 w-4 lg:h-5 lg:w-5 text-gold" />
                 <span className="text-xs lg:text-sm text-neutral-600">
-                  {seasonStarted ? 'Started: ' : 'Starts: '}
-                  {formatCalendarDate(league.start_date)}
+                  <span>
+                    {seasonStarted ? 'Ends: ' : 'Starts: '}
+                    {formatCalendarDate(seasonStarted ? league.end_date : league.start_date)}
+                  </span>
+                  {seasonStarted && (
+                    <span className="block text-[11px] lg:text-xs text-neutral-500">
+                      Started {formatCalendarDate(league.start_date)}
+                    </span>
+                  )}
                   <span className="relative group cursor-pointer ml-1">
                     <svg className="w-3 h-3 text-royalBlue inline-block" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
                     <span className="absolute left-1/2 -translate-x-1/2 mt-2 w-64 bg-white text-neutral-900 text-xs rounded shadow-lg border border-royalBlue px-3 py-2 z-50 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                      The start date is when the league begins and points start accumulating. The draft must be completed before this date.
+                      The start date is when points begin accumulating. After a league starts, this card shows the end date, and the original start date remains listed below it.
                     </span>
                   </span>
                 </span>

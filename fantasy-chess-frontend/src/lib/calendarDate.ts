@@ -54,13 +54,15 @@ export function parseCalendarYmd(ymd: string): Date {
 }
 
 /**
- * League end date: last calendar day of the month after the start month.
- * e.g. start 2026-05-15 → end 2026-06-30
+ * League end date: Wednesday after the last eligible Titled Tuesday in the
+ * month after the start month. This keeps the league active through the
+ * Tuesday scoring/email job and the Wednesday backup job.
+ * e.g. start 2026-05-15 -> last TT 2026-06-30 -> end 2026-07-01
  */
 export function getLeagueEndDateFromStart(startDateYmd: string): string {
   const d = parseCalendarYmd(startDateYmd)
   d.setMonth(d.getMonth() + 2, 0)
-  return getLocalDateString(d)
+  return addDaysToYmd(getLastTuesdayOnOrBefore(getLocalDateString(d)), 1)
 }
 
 /** Monday lineup week_start_date → Titled Tuesday display (YYYY.MM.DD). */

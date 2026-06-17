@@ -65,11 +65,33 @@ function formatMonthDay(dateValue: string): string {
   }).format(new Date(Date.UTC(year, month - 1, day)))
 }
 
-function createWeeklyResultsEmail(user: any, lineups: any[], leagueById: Map<string, any>, tradesByLeagueId: Map<string, any[]>, tuesdayDate: string) {
+function addDaysToYmd(dateValue: string, days: number): string {
+  const [year, month, day] = dateValue.split('-').map(Number)
+  const date = new Date(Date.UTC(year, month - 1, day))
+  date.setUTCDate(date.getUTCDate() + days)
+  return date.toISOString().slice(0, 10)
+}
+
+function isFinalLeagueWeek(league: any, tuesdayDate: string): boolean {
+  if (!league?.end_date) return false
+  return league.end_date >= tuesdayDate && league.end_date <= addDaysToYmd(tuesdayDate, 1)
+}
+
+function createWeeklyResultsEmail(
+  user: any,
+  lineups: any[],
+  leagueById: Map<string, any>,
+  tradesByLeagueId: Map<string, any[]>,
+  tuesdayDate: string,
+  finalLeaderboardsByLeagueId: Map<string, any[]>,
+) {
   const displayName = user.username || user.email?.split('@')[0] || 'there'
   const resultDate = formatMonthDay(tuesdayDate)
-  const totalPoints = lineups.reduce((sum, lineup) => sum + Number(lineup.total_points || 0), 0)
-  const leagueRows = lineups
+  const finalLineups = lineups.filter((lineup) => finalLeaderboardsByLeagueId.has(lineup.league_id))
+  const weeklyLineups = lineups.filter((lineup) => !finalLeaderboardsByLeagueId.has(lineup.league_id))
+  const hasFinalLeagues = finalLineups.length > 0
+  const totalPoints = weeklyLineups.reduce((sum, lineup) => sum + Number(lineup.total_points || 0), 0)
+  const leagueRows = weeklyLineups
     .map((lineup) => {
       const league = leagueById.get(lineup.league_id)
       return `
@@ -77,6 +99,39 @@ function createWeeklyResultsEmail(user: any, lineups: any[], leagueById: Map<str
           <td style="padding: 12px; border-top: 1px solid #e5e7eb;">${escapeHtml(league?.name || 'League')}</td>
           <td style="padding: 12px; border-top: 1px solid #e5e7eb; text-align: right; font-weight: 700;">${formatPoints(lineup.total_points)}</td>
         </tr>
+      `
+    })
+    .join('')
+
+  const finalLeagueSections = finalLineups
+    .map((lineup) => {
+      const league = leagueById.get(lineup.league_id)
+      const leaderboard = finalLeaderboardsByLeagueId.get(lineup.league_id) || []
+      const userStanding = leaderboard.find((standing) => standing.user_id === user.id)
+      const podiumRows = leaderboard.slice(0, 5).map((standing) => `
+        <tr>
+          <td style="padding: 10px 8px; border-top: 1px solid #fde68a; font-weight: 700;">#${standing.rank}</td>
+          <td style="padding: 10px 8px; border-top: 1px solid #fde68a;">${escapeHtml(standing.name)}</td>
+          <td style="padding: 10px 8px; border-top: 1px solid #fde68a; text-align: right; font-weight: 700;">${formatPoints(standing.total_points)}</td>
+        </tr>
+      `).join('')
+
+      return `
+        <div style="background-color: #fffbeb; border: 1px solid #facc15; border-radius: 10px; padding: 18px; margin: 22px 0;">
+          <h2 style="font-size: 20px; margin: 0 0 8px; color: #92400e;">${escapeHtml(league?.name || 'League')} Final Standings</h2>
+          <p style="margin: 0 0 14px; color: #78350f;">The final Titled Tuesday is in the books. Here is the overall leaderboard for the season.</p>
+          ${userStanding ? `<p style="margin: 0 0 14px; color: #78350f; font-weight: 700;">You finished #${userStanding.rank} with ${formatPoints(userStanding.total_points)} total points.</p>` : ''}
+          <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr>
+                <th style="padding: 8px; text-align: left; color: #78350f;">Rank</th>
+                <th style="padding: 8px; text-align: left; color: #78350f;">Manager</th>
+                <th style="padding: 8px; text-align: right; color: #78350f;">Total</th>
+              </tr>
+            </thead>
+            <tbody>${podiumRows}</tbody>
+          </table>
+        </div>
       `
     })
     .join('')
@@ -95,36 +150,53 @@ function createWeeklyResultsEmail(user: any, lineups: any[], leagueById: Map<str
 
   const textContent = [
     `Hi ${displayName},`,
-    `Here are your Fantasy League Chess results for last week: ${resultDate}.`,
-    ...lineups.map((lineup) => `${leagueById.get(lineup.league_id)?.name || 'League'}: ${formatPoints(lineup.total_points)} points`),
-    `Total points: ${formatPoints(totalPoints)}`,
+    hasFinalLeagues
+      ? `The final Titled Tuesday for one of your Fantasy League Chess leagues just wrapped up on ${resultDate}. Here are the final standings.`
+      : `Here are your Fantasy League Chess results for last week: ${resultDate}.`,
+    ...finalLineups.flatMap((lineup) => {
+      const league = leagueById.get(lineup.league_id)
+      const leaderboard = finalLeaderboardsByLeagueId.get(lineup.league_id) || []
+      const userStanding = leaderboard.find((standing) => standing.user_id === user.id)
+      return [
+        `${league?.name || 'League'} final standings:`,
+        ...leaderboard.slice(0, 5).map((standing) => `#${standing.rank} ${standing.name}: ${formatPoints(standing.total_points)} points`),
+        userStanding ? `Your finish: #${userStanding.rank} with ${formatPoints(userStanding.total_points)} total points` : '',
+      ].filter(Boolean)
+    }),
+    ...weeklyLineups.map((lineup) => `${leagueById.get(lineup.league_id)?.name || 'League'}: ${formatPoints(lineup.total_points)} points`),
+    weeklyLineups.length ? `Total weekly points: ${formatPoints(totalPoints)}` : '',
     'Bought, sold, and traded players:',
     ...(userTrades.length
       ? userTrades.map((trade) => `${trade.buyerName} acquired ${trade.playerName} from ${trade.sellerName} for ${trade.price} coins in ${trade.leagueName}.`)
       : ['No bought, sold, or traded players were recorded for your leagues this week.']),
     `View your dashboard: ${dashboardUrl}`,
-  ].join('\n\n')
+  ].filter(Boolean).join('\n\n')
 
   const htmlContent = `
     <!DOCTYPE html>
     <html lang="en">
       <body style="font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; color: #333333; line-height: 1.6;">
         <div style="max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); overflow: hidden;">
-          <div style="background-color: #4CAF50; color: #ffffff; padding: 24px 20px; text-align: center;">
+          <div style="background-color: ${hasFinalLeagues ? '#d97706' : '#4CAF50'}; color: #ffffff; padding: 24px 20px; text-align: center;">
             <img src="https://fantasyleaguechess.com/assets/fantasy-league-chess-logo-updated.png" alt="Fantasy League Chess" style="max-width: 200px; height: auto; margin-bottom: 12px;">
-            <h1 style="margin: 0; font-size: 24px; color: #ffffff;">Your Weekly Fantasy Chess Results</h1>
+            <h1 style="margin: 0; font-size: 24px; color: #ffffff;">${hasFinalLeagues ? 'League Finale Results' : 'Your Weekly Fantasy Chess Results'}</h1>
           </div>
           <div style="padding: 28px 24px;">
             <p style="margin: 0 0 18px;">Hi ${escapeHtml(displayName)},</p>
-            <p style="margin: 0 0 18px;">Here are your Fantasy League Chess results for last week: ${escapeHtml(resultDate)}.</p>
-            <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 18px; margin: 22px 0; text-align: center;">
-              <div style="font-size: 13px; color: #166534; font-weight: 700; text-transform: uppercase;">Total Fantasy Points</div>
-              <div style="font-size: 32px; color: #166534; font-weight: 800;">${formatPoints(totalPoints)}</div>
-            </div>
-            <h2 style="font-size: 18px; margin: 24px 0 10px; color: #1f2937;">League Results</h2>
-            <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
-              <tbody>${leagueRows}</tbody>
-            </table>
+            <p style="margin: 0 0 18px;">${hasFinalLeagues
+              ? `The final Titled Tuesday for one of your leagues just wrapped up on ${escapeHtml(resultDate)}. Great season!`
+              : `Here are your Fantasy League Chess results for last week: ${escapeHtml(resultDate)}.`}</p>
+            ${finalLeagueSections}
+            ${weeklyLineups.length ? `
+              <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 18px; margin: 22px 0; text-align: center;">
+                <div style="font-size: 13px; color: #166534; font-weight: 700; text-transform: uppercase;">Total Weekly Fantasy Points</div>
+                <div style="font-size: 32px; color: #166534; font-weight: 800;">${formatPoints(totalPoints)}</div>
+              </div>
+              <h2 style="font-size: 18px; margin: 24px 0 10px; color: #1f2937;">Other League Results</h2>
+              <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
+                <tbody>${leagueRows}</tbody>
+              </table>
+            ` : ''}
             <h2 style="font-size: 18px; margin: 24px 0 10px; color: #1f2937;">Bought, Sold, and Traded Players</h2>
             <ul style="padding-left: 20px; margin: 0 0 24px;">${tradeRows}</ul>
             <p style="margin: 30px 0; text-align: center;">
@@ -140,7 +212,9 @@ function createWeeklyResultsEmail(user: any, lineups: any[], leagueById: Map<str
   `
 
   return {
-    subject: `Your Fantasy League Chess results for last week: ${resultDate}`,
+    subject: hasFinalLeagues
+      ? `Final Fantasy League Chess standings for ${resultDate}`
+      : `Your Fantasy League Chess results for last week: ${resultDate}`,
     htmlContent,
     textContent,
   }
@@ -205,8 +279,8 @@ serve(async (req) => {
         console.error('Error fetching lineups with results:', lineupsError)
         throw lineupsError
       } else if (lineupsWithResults?.length) {
-        const userIds = Array.from(new Set(lineupsWithResults.map((lineup) => lineup.user_id).filter(Boolean)))
-        const leagueIds = Array.from(new Set(lineupsWithResults.map((lineup) => lineup.league_id).filter(Boolean)))
+        const userIds = Array.from(new Set(lineupsWithResults.map((lineup) => lineup.user_id).filter(Boolean))) as string[]
+        const leagueIds = Array.from(new Set(lineupsWithResults.map((lineup) => lineup.league_id).filter(Boolean))) as string[]
         const { data: usersWithResults, error: usersError } = await supabase
           .from('users')
           .select('id, email, username')
@@ -219,7 +293,7 @@ serve(async (req) => {
           const [{ data: leagues }, { data: trades }] = await Promise.all([
             supabase
               .from('leagues')
-              .select('id, name')
+              .select('id, name, end_date')
               .in('id', leagueIds),
             supabase
               .from('trades')
@@ -242,6 +316,69 @@ serve(async (req) => {
           const tradeUserById = new Map<string, any>((tradeUsers || []).map((user: any) => [user.id, user]))
           const playerById = new Map<string, any>((tradePlayers || []).map((player: any) => [player.id, player]))
           const tradesByLeagueId = new Map<string, any[]>()
+          const finalLeagueIds = leagueIds.filter((leagueId) => isFinalLeagueWeek(leagueById.get(leagueId), tuesdayDate))
+          const finalLeaderboardsByLeagueId = new Map<string, any[]>()
+
+          if (finalLeagueIds.length) {
+            const { data: finalLeagueLineups, error: finalLineupsError } = await supabase
+              .from('lineups')
+              .select('league_id, user_id, bot_id, total_points')
+              .in('league_id', finalLeagueIds)
+              .not('total_points', 'is', null)
+
+            if (finalLineupsError) {
+              console.error('Error fetching final league standings lineups:', finalLineupsError)
+            } else {
+              const finalUserIds = Array.from(new Set((finalLeagueLineups || []).map((lineup: any) => lineup.user_id).filter(Boolean)))
+              const finalBotIds = Array.from(new Set((finalLeagueLineups || []).map((lineup: any) => lineup.bot_id).filter(Boolean)))
+              const [{ data: finalUsers }, { data: finalBots }] = await Promise.all([
+                finalUserIds.length
+                  ? supabase.from('users').select('id, username, email').in('id', finalUserIds)
+                  : Promise.resolve({ data: [] }),
+                finalBotIds.length
+                  ? supabase.from('bots').select('id, name').in('id', finalBotIds)
+                  : Promise.resolve({ data: [] }),
+              ])
+              const finalUserById = new Map<string, any>((finalUsers || []).map((finalUser: any) => [finalUser.id, finalUser]))
+              const finalBotById = new Map<string, any>((finalBots || []).map((finalBot: any) => [finalBot.id, finalBot]))
+              const totalsByLeagueAndParticipant = new Map<string, any>()
+
+              for (const lineup of finalLeagueLineups || []) {
+                const participantId = lineup.user_id || lineup.bot_id
+                if (!lineup.league_id || !participantId) continue
+                const participantType = lineup.user_id ? 'user' : 'bot'
+                const key = `${lineup.league_id}:${participantType}:${participantId}`
+                const existing = totalsByLeagueAndParticipant.get(key) || {
+                  league_id: lineup.league_id,
+                  user_id: lineup.user_id,
+                  bot_id: lineup.bot_id,
+                  participantType,
+                  participantId,
+                  total_points: 0,
+                }
+                existing.total_points += Number(lineup.total_points || 0)
+                totalsByLeagueAndParticipant.set(key, existing)
+              }
+
+              for (const leagueId of finalLeagueIds) {
+                const standings = Array.from(totalsByLeagueAndParticipant.values())
+                  .filter((standing) => standing.league_id === leagueId)
+                  .map((standing) => {
+                    const participant = standing.user_id
+                      ? finalUserById.get(standing.user_id)
+                      : finalBotById.get(standing.bot_id)
+                    return {
+                      ...standing,
+                      name: participant?.username || participant?.email || participant?.name || 'League member',
+                    }
+                  })
+                  .sort((a, b) => b.total_points - a.total_points)
+                  .map((standing, index) => ({ ...standing, rank: index + 1 }))
+
+                finalLeaderboardsByLeagueId.set(leagueId, standings)
+              }
+            }
+          }
 
           for (const trade of trades || []) {
             const league = leagueById.get(trade.league_id)
@@ -293,7 +430,14 @@ serve(async (req) => {
           for (const user of pendingRecipients) {
             if (!user.email) continue
             const userLineups = lineupsWithResults.filter((lineup) => lineup.user_id === user.id)
-            const { subject, htmlContent, textContent } = createWeeklyResultsEmail(user, userLineups, leagueById, tradesByLeagueId, tuesdayDate)
+            const { subject, htmlContent, textContent } = createWeeklyResultsEmail(
+              user,
+              userLineups,
+              leagueById,
+              tradesByLeagueId,
+              tuesdayDate,
+              finalLeaderboardsByLeagueId,
+            )
             try {
               await supabase.functions.invoke('send-resend-email', {
                 body: {
