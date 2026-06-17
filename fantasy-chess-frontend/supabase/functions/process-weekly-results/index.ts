@@ -264,9 +264,33 @@ serve(async (req) => {
             ? (usersWithResults || []).filter((user) => user.email?.toLowerCase() === testEmail)
             : (usersWithResults || [])
 
-          console.log(`Sending weekly results emails to ${emailRecipients.length} users${testEmail ? ` (test_email=${testEmail})` : ''}`)
+          let alreadySent = new Set<string>()
+          if (!testEmail && emailRecipients.length) {
+            const { data: previousEmails, error: previousEmailsError } = await supabase
+              .from('emails')
+              .select('user_id')
+              .eq('status', 'sent')
+              .contains('metadata', {
+                source: 'process_weekly_results',
+                weekDate: tuesdayDate,
+                lineupWeekStart,
+              })
 
-          for (const user of emailRecipients) {
+            if (previousEmailsError) {
+              console.error('Error checking previously sent weekly results emails:', previousEmailsError)
+            } else {
+              alreadySent = new Set((previousEmails || []).map((email: any) => email.user_id).filter(Boolean))
+            }
+          }
+
+          const pendingRecipients = emailRecipients.filter((user) => testEmail || !alreadySent.has(user.id))
+
+          console.log(
+            `Sending weekly results emails to ${pendingRecipients.length} users${testEmail ? ` (test_email=${testEmail})` : ''}`
+            + `${alreadySent.size ? `; skipping ${alreadySent.size} already sent` : ''}`,
+          )
+
+          for (const user of pendingRecipients) {
             if (!user.email) continue
             const userLineups = lineupsWithResults.filter((lineup) => lineup.user_id === user.id)
             const { subject, htmlContent, textContent } = createWeeklyResultsEmail(user, userLineups, leagueById, tradesByLeagueId, tuesdayDate)

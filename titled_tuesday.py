@@ -76,10 +76,11 @@ def date_slug_fragments(target_date):
     month = MONTH_NAMES[target_date.month - 1]
     year = target_date.year
     day = target_date.day
-    return [
+    fragments = [
         f"{month}-{day}-{year}",
         f"{month}-{day:02d}-{year}",
     ]
+    return list(dict.fromkeys(fragments))
 
 
 def api_get(url):
@@ -115,7 +116,7 @@ def find_slugs_from_titled_tuesdays_page(target_date):
     slugs = []
     seen = set()
     for match in re.findall(
-        r"/tournament/live/([a-z0-9-]+titled-tuesday[a-z0-9-]+)",
+        r"/tournament/live/([a-z0-9-]*titled-tuesday[a-z0-9-]*)",
         response.text,
         re.IGNORECASE,
     ):
