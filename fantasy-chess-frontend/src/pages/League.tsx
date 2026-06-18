@@ -178,6 +178,79 @@ type RoundBreakdown = {
   late: PlayerBreakdownRow[]
 }
 
+type StandingDisplayRow = {
+  user_id: string
+  rank: number
+  display_name: string
+  avatar_url?: string
+  total_points: number
+}
+
+const FinalPodiumCard: React.FC<{
+  standing: StandingDisplayRow
+  place: 1 | 2 | 3
+  featured?: boolean
+  isCurrentUser?: boolean
+  onSelect: () => void
+}> = ({ standing, place, featured = false, isCurrentUser = false, onSelect }) => {
+  const placeStyles = {
+    1: {
+      card: 'border-royalBlue bg-gradient-to-b from-blue-50 to-white shadow-xl md:-mt-4',
+      badge: 'bg-royalBlue text-white ring-blue-200',
+      label: 'Champion',
+    },
+    2: {
+      card: 'border-neutral-300 bg-gradient-to-b from-neutral-100 to-white shadow-lg',
+      badge: 'bg-neutral-400 text-white ring-neutral-200',
+      label: 'Runner Up',
+    },
+    3: {
+      card: 'border-orange-300 bg-gradient-to-b from-orange-50 to-white shadow-lg',
+      badge: 'bg-[#cd7f32] text-white ring-orange-200',
+      label: 'Third Place',
+    },
+  }[place]
+
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={`group relative w-full rounded-2xl border-2 p-4 text-center transition-all hover:-translate-y-1 hover:shadow-2xl ${placeStyles.card} ${
+        featured ? 'md:scale-105 md:z-10' : ''
+      }`}
+    >
+      <div className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2">
+        <div className={`flex h-12 w-12 items-center justify-center rounded-full text-xl font-extrabold ring-4 ${placeStyles.badge}`}>
+          {place}
+        </div>
+      </div>
+      <div className="mt-6 flex flex-col items-center">
+        <div className={`rounded-full border-4 border-gold bg-white p-1 shadow-md ${featured ? 'h-20 w-20' : 'h-16 w-16'}`}>
+          <img
+            src={standing.avatar_url}
+            alt={`${standing.display_name} avatar`}
+            className="h-full w-full rounded-full object-cover"
+          />
+        </div>
+        <div className="mt-3 text-xs font-bold uppercase tracking-wide text-gold">
+          {placeStyles.label}
+        </div>
+        <div className="mt-1 flex max-w-full justify-center">
+          <ExpandableUsername
+            username={standing.display_name}
+            isCurrentUser={isCurrentUser}
+            maxWidth={featured ? '170px' : '140px'}
+          />
+        </div>
+        <div className={`mt-2 font-extrabold text-neutral-900 ${featured ? 'text-xl' : 'text-lg'}`}>
+          {Number(standing.total_points).toFixed(2)}
+          <span className="ml-1 text-sm font-semibold text-neutral-500">pts</span>
+        </div>
+      </div>
+    </button>
+  )
+}
+
 const LeaguePage: React.FC = () => {
   const { leagueId } = useParams<{ leagueId: string }>()
   const { user } = useAuth()
@@ -1621,40 +1694,44 @@ const LeaguePage: React.FC = () => {
                 <>
                   {showConfetti && <Confetti className="pointer-events-none" style={{zIndex: 30}} />}
                   {/* Podium for Top 3 */}
-                  <div className="flex justify-center items-end mb-8 gap-4">
-                    {/* 2nd Place */}
-                    {standings[1] && (
-                      <div className="flex flex-col items-center">
-                        <div className="w-16 h-16 lg:w-20 lg:h-20 rounded-full bg-silver flex items-center justify-center text-2xl font-bold text-white border-4 border-silver mb-2">2</div>
-                        <div className="flex items-center gap-2">
-                          <img src={standings[1].avatar_url} alt="Avatar" className="w-8 h-8 rounded-full border-2 border-gold" />
-                          <ExpandableUsername username={standings[1].display_name} />
+                  <div className="mb-8 rounded-3xl border border-gold/40 bg-gradient-to-br from-amber-50 via-white to-blue-50 px-4 pb-5 pt-8 shadow-inner">
+                    <div className="mb-6 text-center">
+                      <p className="text-xs font-bold uppercase tracking-[0.25em] text-gold">Final Results</p>
+                      <h3 className="mt-1 text-2xl font-extrabold text-neutral-900">League Champions</h3>
+                    </div>
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-3 md:items-end">
+                      {standings[1] && (
+                        <div className="order-2 md:order-1">
+                          <FinalPodiumCard
+                            standing={standings[1]}
+                            place={2}
+                            isCurrentUser={standings[1].user_id === user?.id}
+                            onSelect={() => handleUserClick(standings[1])}
+                          />
                         </div>
-                        <span className="text-neutral-600 text-sm">{standings[1].total_points} pts</span>
-                      </div>
-                    )}
-                    {/* 1st Place */}
-                    {standings[0] && (
-                      <div className="flex flex-col items-center">
-                        <div className="w-20 h-20 lg:w-24 lg:h-24 rounded-full bg-royalBlue flex items-center justify-center text-3xl font-extrabold text-white border-4 border-royalBlue mb-2 shadow-lg">1</div>
-                        <div className="flex items-center gap-2">
-                          <img src={standings[0].avatar_url} alt="Avatar" className="w-10 h-10 rounded-full border-2 border-gold" />
-                          <ExpandableUsername username={standings[0].display_name} />
+                      )}
+                      {standings[0] && (
+                        <div className="order-1 md:order-2">
+                          <FinalPodiumCard
+                            standing={standings[0]}
+                            place={1}
+                            featured
+                            isCurrentUser={standings[0].user_id === user?.id}
+                            onSelect={() => handleUserClick(standings[0])}
+                          />
                         </div>
-                        <span className="text-neutral-900 font-bold text-base">{standings[0].total_points} pts</span>
-                      </div>
-                    )}
-                    {/* 3rd Place */}
-                    {standings[2] && (
-                      <div className="flex flex-col items-center">
-                        <div className="w-16 h-16 lg:w-20 lg:h-20 rounded-full bg-[#cd7f32] flex items-center justify-center text-2xl font-bold text-white border-4 border-[#cd7f32] mb-2">3</div>
-                        <div className="flex items-center gap-2">
-                          <img src={standings[2].avatar_url} alt="Avatar" className="w-8 h-8 rounded-full border-2 border-gold" />
-                          <ExpandableUsername username={standings[2].display_name} />
+                      )}
+                      {standings[2] && (
+                        <div className="order-3">
+                          <FinalPodiumCard
+                            standing={standings[2]}
+                            place={3}
+                            isCurrentUser={standings[2].user_id === user?.id}
+                            onSelect={() => handleUserClick(standings[2])}
+                          />
                         </div>
-                        <span className="text-neutral-600 text-sm">{standings[2].total_points} pts</span>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                   {/* The rest of the players */}
                   {standings.length > 3 && (
