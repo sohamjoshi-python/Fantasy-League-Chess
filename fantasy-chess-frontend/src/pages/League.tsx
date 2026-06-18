@@ -1762,7 +1762,7 @@ const LeaguePage: React.FC = () => {
             )}
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+          <div className={`grid grid-cols-1 gap-6 lg:gap-8 ${seasonEnded ? '' : 'lg:grid-cols-2'}`}>
             {/* Standings */}
             <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6 border-2 border-gold relative">
               {showConfetti && <Confetti className="pointer-events-none" style={{zIndex: 30}} />}
@@ -1923,6 +1923,7 @@ const LeaguePage: React.FC = () => {
             </div>
 
             {/* Team Management */}
+            {!seasonEnded && (
             <div className="space-y-4 lg:space-y-6">
               {/* Your Team */}
               <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6 border-2 border-gold">
@@ -2169,6 +2170,7 @@ const LeaguePage: React.FC = () => {
                 </div>
               )}
             </div>
+            )}
           </div>
 
 
