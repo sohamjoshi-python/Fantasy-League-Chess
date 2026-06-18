@@ -215,7 +215,7 @@ const FinalPodiumCard: React.FC<{
     <button
       type="button"
       onClick={onSelect}
-      className={`group relative w-full rounded-2xl border-2 p-4 text-center transition-all hover:-translate-y-1 hover:shadow-2xl ${placeStyles.card} ${
+      className={`group relative flex min-h-[210px] w-full min-w-0 rounded-2xl border-2 p-4 text-center transition-all hover:-translate-y-1 hover:shadow-2xl ${placeStyles.card} ${
         featured ? 'md:scale-105 md:z-10' : ''
       }`}
     >
@@ -224,7 +224,7 @@ const FinalPodiumCard: React.FC<{
           {place}
         </div>
       </div>
-      <div className="mt-6 flex flex-col items-center">
+      <div className="mt-6 flex w-full min-w-0 flex-col items-center justify-between">
         <div className={`rounded-full border-4 border-gold bg-white p-1 shadow-md ${featured ? 'h-20 w-20' : 'h-16 w-16'}`}>
           <img
             src={standing.avatar_url}
@@ -235,12 +235,12 @@ const FinalPodiumCard: React.FC<{
         <div className="mt-3 text-xs font-bold uppercase tracking-wide text-gold">
           {placeStyles.label}
         </div>
-        <div className="mt-1 flex max-w-full justify-center">
-          <ExpandableUsername
-            username={standing.display_name}
-            isCurrentUser={isCurrentUser}
-            maxWidth={featured ? '170px' : '140px'}
-          />
+        <div
+          className="mt-1 w-full max-w-full overflow-hidden break-words px-1 text-center text-sm font-semibold leading-snug text-neutral-900"
+          title={`${standing.display_name}${isCurrentUser ? ' (You)' : ''}`}
+        >
+          {standing.display_name}
+          {isCurrentUser && <span className="block text-xs font-medium text-royalBlue">(You)</span>}
         </div>
         <div className={`mt-2 font-extrabold text-neutral-900 ${featured ? 'text-xl' : 'text-lg'}`}>
           {Number(standing.total_points).toFixed(2)}
@@ -389,10 +389,14 @@ const LeaguePage: React.FC = () => {
         leagueSeasonHasEndedLocal(league?.end_date || '') &&
         !league?.payout_processed
       ) {
-        // Call the payout function
-        await supabase.rpc('process_league_payouts');
-        // Optionally, reload league data to reflect payout_processed
-        // You may want to call loadLeagueData() here
+        const { error: payoutError } = await supabase.rpc('process_league_payouts');
+        if (payoutError) {
+          console.error('Failed to process league payouts:', payoutError);
+          setError(payoutError.message || 'Failed to process league payout.');
+          return;
+        }
+
+        await loadLeagueData();
       }
     }
     maybeProcessPayout();
