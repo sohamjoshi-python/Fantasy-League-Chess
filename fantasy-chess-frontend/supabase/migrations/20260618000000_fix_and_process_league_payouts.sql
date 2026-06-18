@@ -6,8 +6,26 @@ CREATE TABLE IF NOT EXISTS public.payouts (
   league_id UUID REFERENCES public.leagues(id) ON DELETE CASCADE,
   user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
   amount NUMERIC NOT NULL,
+  rank INTEGER NOT NULL DEFAULT 1,
   processed_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'payouts'
+      AND column_name = 'rank'
+  ) THEN
+    ALTER TABLE public.payouts
+    ADD COLUMN rank INTEGER NOT NULL DEFAULT 1;
+  ELSE
+    ALTER TABLE public.payouts
+    ALTER COLUMN rank SET DEFAULT 1;
+  END IF;
+END $$;
 
 CREATE OR REPLACE FUNCTION public.process_league_payouts()
 RETURNS void
@@ -19,6 +37,7 @@ DECLARE
   league_row RECORD;
   winner_id UUID;
   prize_amount INTEGER;
+  payout_already_exists BOOLEAN;
 BEGIN
   FOR league_row IN
     SELECT *
@@ -29,6 +48,7 @@ BEGIN
     SELECT lineups.user_id
     INTO winner_id
     FROM public.lineups
+    JOIN public.users ON users.id = lineups.user_id
     WHERE lineups.league_id = league_row.id
       AND lineups.user_id IS NOT NULL
     GROUP BY lineups.user_id
@@ -41,8 +61,24 @@ BEGIN
 
     prize_amount := COALESCE(league_row.buy_in, 0)::INTEGER * COALESCE(cardinality(league_row.member_ids), 0);
 
-    INSERT INTO public.payouts (league_id, user_id, amount)
-    VALUES (league_row.id, winner_id, prize_amount);
+    SELECT EXISTS (
+      SELECT 1
+      FROM public.payouts
+      WHERE payouts.league_id = league_row.id
+    ) INTO payout_already_exists;
+
+    IF payout_already_exists THEN
+      UPDATE public.leagues
+      SET
+        payout_processed = true,
+        updated_at = NOW()
+      WHERE id = league_row.id;
+
+      CONTINUE;
+    END IF;
+
+    INSERT INTO public.payouts (league_id, user_id, amount, rank)
+    VALUES (league_row.id, winner_id, prize_amount, 1);
 
     UPDATE public.users
     SET

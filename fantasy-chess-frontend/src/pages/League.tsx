@@ -195,7 +195,7 @@ const FinalPodiumCard: React.FC<{
 }> = ({ standing, place, featured = false, isCurrentUser = false, onSelect }) => {
   const placeStyles = {
     1: {
-      card: 'border-royalBlue bg-gradient-to-b from-blue-50 to-white shadow-xl md:-mt-4',
+      card: 'border-royalBlue bg-gradient-to-b from-blue-50 to-white shadow-xl',
       badge: 'bg-royalBlue text-white ring-blue-200',
       label: 'Champion',
     },
@@ -1699,7 +1699,7 @@ const LeaguePage: React.FC = () => {
                   {showConfetti && <Confetti className="pointer-events-none" style={{zIndex: 30}} />}
                   {/* Podium for Top 3 */}
                   <div className="mb-8 rounded-3xl border border-gold/40 bg-gradient-to-br from-amber-50 via-white to-blue-50 px-4 pb-5 pt-8 shadow-inner">
-                    <div className="mb-6 text-center">
+                    <div className="mb-10 text-center">
                       <p className="text-xs font-bold uppercase tracking-[0.25em] text-gold">Final Results</p>
                       <h3 className="mt-1 text-2xl font-extrabold text-neutral-900">League Champions</h3>
                     </div>
