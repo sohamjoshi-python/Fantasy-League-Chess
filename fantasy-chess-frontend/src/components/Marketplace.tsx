@@ -12,7 +12,7 @@ import TradingTab from './TradingTab';
 import { getTradeNotifications, markNotificationSeen } from '../lib/supabase';
 import { TradeNotificationWithDetails } from '../types';
 import PlayerDetailModal from './PlayerDetailModal';
-import { addDaysToYmd, getWeekStartMonday } from '../lib/calendarDate';
+import { addDaysToYmd, getWeekStartMonday, leagueSeasonHasEndedLocal } from '../lib/calendarDate';
 
 interface MarketplaceProps {
   leagueId: string;
@@ -102,6 +102,7 @@ interface League {
   marketplace_started: boolean;
   draft_completed: boolean;
   creator_id: string;
+  end_date: string;
 }
 
 export default function Marketplace({ leagueId, onTeamUpdate }: MarketplaceProps) {
@@ -139,6 +140,18 @@ export default function Marketplace({ leagueId, onTeamUpdate }: MarketplaceProps
   const [currentNotification, setCurrentNotification] = useState<TradeNotificationWithDetails | null>(null);
   const [playerTradeStatus, setPlayerTradeStatus] = useState<Record<string, boolean>>({});
   const [selectedPlayerForModal, setSelectedPlayerForModal] = useState<ChessPlayer | null>(null);
+  const leagueEnded = !!league?.end_date && leagueSeasonHasEndedLocal(league.end_date);
+
+  const blockEndedLeagueAction = () => {
+    if (!leagueEnded) return false;
+    setError('This league has ended. Player buying, selling, and trading are closed.');
+    setBuyingPlayer(null);
+    setSellingPlayer(null);
+    setSellingToMarketplace(null);
+    setShowTradeModal(false);
+    setTradePlayer(null);
+    return true;
+  };
 
   useEffect(() => {
     if (user && leagueId) {
@@ -241,7 +254,7 @@ export default function Marketplace({ leagueId, onTeamUpdate }: MarketplaceProps
       // Load league data first
       const { data: leagueData, error: leagueError } = await supabase
         .from('leagues')
-        .select('id, name, marketplace_started, draft_completed, creator_id')
+        .select('id, name, marketplace_started, draft_completed, creator_id, end_date')
         .eq('id', leagueId)
         .single();
       
@@ -360,6 +373,8 @@ export default function Marketplace({ leagueId, onTeamUpdate }: MarketplaceProps
 
   // Buy a player: add to user's team
   const buyPlayer = async (playerId: string, price: number) => {
+    if (blockEndedLeagueAction()) return;
+
     try {
       // Get current user's team
       const { data: userTeam, error: teamError } = await supabase
@@ -450,6 +465,8 @@ export default function Marketplace({ leagueId, onTeamUpdate }: MarketplaceProps
   // Sell a player: remove from user's team
   const sellPlayer = async () => {
     if (!sellingPlayer) return;
+    if (blockEndedLeagueAction()) return;
+
     try {
       // Get current user's team
       const { data: userTeam, error: teamError } = await supabase
@@ -534,6 +551,8 @@ export default function Marketplace({ leagueId, onTeamUpdate }: MarketplaceProps
   // Confirm sell to marketplace
   const confirmSellToMarketplace = async () => {
     if (!sellingToMarketplace) return;
+    if (blockEndedLeagueAction()) return;
+
     setLoading(true);
     setError(null);
     try {
@@ -649,6 +668,8 @@ export default function Marketplace({ leagueId, onTeamUpdate }: MarketplaceProps
   };
 
   const handleCreateTrade = (player: ChessPlayer) => {
+    if (blockEndedLeagueAction()) return;
+
     setTradePlayer(player);
     setShowTradeModal(true);
   };
@@ -826,6 +847,19 @@ export default function Marketplace({ leagueId, onTeamUpdate }: MarketplaceProps
           <h2 className="text-2xl font-bold text-gray-700 mb-2">Marketplace Not Available</h2>
           <p className="text-gray-600 mb-4">
             The marketplace will be available once the turn-based marketplace has started.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (leagueEnded) {
+    return (
+      <div className="bg-white shadow-md p-6 w-full">
+        <div className="text-center py-8">
+          <div className="text-2xl font-bold text-gray-700 mb-2">Marketplace Closed</div>
+          <p className="text-gray-600">
+            This league has ended, so player buying, selling, and trading are closed.
           </p>
         </div>
       </div>

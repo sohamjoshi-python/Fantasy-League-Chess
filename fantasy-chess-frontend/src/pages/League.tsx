@@ -365,6 +365,14 @@ const LeaguePage: React.FC = () => {
     }
   }, [isEditingLineup, currentLineup])
 
+  useEffect(() => {
+    if (isEditingLineup && league?.end_date && leagueSeasonHasEndedLocal(league.end_date)) {
+      setIsEditingLineup(false)
+      setSelectedLineupPlayers(currentLineup?.player_ids || [])
+      setError('This league has ended. Lineups can no longer be changed.')
+    }
+  }, [isEditingLineup, league?.end_date, currentLineup])
+
   const loadLeagueData = async () => {
     if (!leagueId || !user) return
 
@@ -427,11 +435,17 @@ const LeaguePage: React.FC = () => {
 
           if (players) {
             setTeamPlayers(players)
+          } else {
+            setTeamPlayers([])
           }
         } catch (error) {
           // Team players query failed
+          setTeamPlayers([])
         }
+      } else {
+        setTeamPlayers([])
       }
+      const teamPlayerIds = new Set<string>(teamData?.player_ids || [])
 
       // Get available players for draft
       if (!isTeamBuildingComplete(leagueRow)) {
@@ -493,17 +507,27 @@ const LeaguePage: React.FC = () => {
       }
 
       if (lineupToDisplay && !lineupError) {
-        setCurrentLineup(lineupToDisplay)
-        setSelectedLineupPlayers(lineupToDisplay.player_ids)
+        const currentTeamLineupIds = (lineupToDisplay.player_ids || []).filter((id: string) =>
+          teamPlayerIds.has(id)
+        )
+        const filteredLineupToDisplay = {
+          ...lineupToDisplay,
+          player_ids: currentTeamLineupIds,
+        }
+
+        setCurrentLineup(filteredLineupToDisplay)
+        setSelectedLineupPlayers(currentTeamLineupIds)
 
         // Get lineup players
-        const { data: lineupPlayers } = await supabase
-          .from('chess_players')
-          .select('*')
-          .in('id', lineupToDisplay.player_ids)
+        if (currentTeamLineupIds.length > 0) {
+          const { data: lineupPlayers } = await supabase
+            .from('chess_players')
+            .select('*')
+            .in('id', currentTeamLineupIds)
 
-        if (lineupPlayers) {
-          setLineupPlayers(lineupPlayers)
+          setLineupPlayers(lineupPlayers || [])
+        } else {
+          setLineupPlayers([])
         }
       } else {
         // No lineup exists for this week, that's okay
@@ -687,6 +711,13 @@ const LeaguePage: React.FC = () => {
 
   const saveLineup = async () => {
     if (!league || !user || selectedLineupPlayers.length < 1 || selectedLineupPlayers.length > 5) return
+
+    if (leagueSeasonHasEndedLocal(league.end_date)) {
+      setIsEditingLineup(false)
+      setSelectedLineupPlayers(currentLineup?.player_ids || [])
+      setError('This league has ended. Lineups can no longer be changed.')
+      return
+    }
 
     if (!isLineupChangeAllowed()) {
       setIsEditingLineup(false)
@@ -983,7 +1014,9 @@ const LeaguePage: React.FC = () => {
         teamData = data;
       }
 
-      if (teamData) {
+      const selectedTeamPlayerIds = new Set<string>(teamData?.player_ids || [])
+
+      if (teamData && teamData.player_ids?.length > 0) {
         const { data: teamPlayers } = await supabase
           .from('chess_players')
           .select('*')
@@ -1024,12 +1057,20 @@ const LeaguePage: React.FC = () => {
 
       if (lineupData) {
         try {
-          const { data: lineupPlayers } = await supabase
-            .from('chess_players')
-            .select('*')
-            .in('id', lineupData.player_ids)
+          const currentTeamLineupIds = (lineupData.player_ids || []).filter((id: string) =>
+            selectedTeamPlayerIds.has(id)
+          )
 
-          setSelectedUserLineup(lineupPlayers || [])
+          if (currentTeamLineupIds.length > 0) {
+            const { data: lineupPlayers } = await supabase
+              .from('chess_players')
+              .select('*')
+              .in('id', currentTeamLineupIds)
+
+            setSelectedUserLineup(lineupPlayers || [])
+          } else {
+            setSelectedUserLineup([])
+          }
         } catch (error) {
           
           setSelectedUserLineup([]);
@@ -1409,11 +1450,21 @@ const LeaguePage: React.FC = () => {
               <p className="text-neutral-600 mb-4 text-sm lg:text-base">{league?.description}</p>
             )}
             {/* Winner and payout display */}
-            {seasonEnded && league?.payout_processed && payout && (
+            {seasonEnded && (
               <div className="bg-green-100 rounded-lg p-4 my-4 border border-green-200">
-                <h3 className="font-bold text-lg text-green-800">🏆 Winner: {winnerName}</h3>
-                <p className="text-green-700">Prize: {payout.amount} coins</p>
-                <p className="text-green-700">Payout processed: {new Date(payout.processed_at).toLocaleString()}</p>
+                <h3 className="font-bold text-lg text-green-800">
+                  Winner: {winnerName || standings[0]?.display_name || 'Pending final standings'}
+                </h3>
+                {league?.payout_processed && payout ? (
+                  <>
+                    <p className="text-green-700">Prize: {payout.amount} coins</p>
+                    <p className="text-green-700">Payout processed: {new Date(payout.processed_at).toLocaleString()}</p>
+                  </>
+                ) : (
+                  <p className="text-green-700">
+                    Final standings are locked. Prize payout is pending processing.
+                  </p>
+                )}
               </div>
             )}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1421,7 +1472,7 @@ const LeaguePage: React.FC = () => {
                 <Calendar className="h-4 w-4 lg:h-5 lg:w-5 text-gold" />
                 <span className="text-xs lg:text-sm text-neutral-600">
                   <span>
-                    {seasonStarted ? 'Ends: ' : 'Starts: '}
+                    {seasonEnded ? 'Ended: ' : seasonStarted ? 'Ends: ' : 'Starts: '}
                     {formatCalendarDate(seasonStarted ? league.end_date : league.start_date)}
                   </span>
                   {seasonStarted && (
@@ -1566,7 +1617,7 @@ const LeaguePage: React.FC = () => {
             <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6 border-2 border-gold relative">
               {showConfetti && <Confetti className="pointer-events-none" style={{zIndex: 30}} />}
               <h2 className="text-lg lg:text-xl font-bold mb-4 text-neutral-900">Standings</h2>
-              {seasonEnded && league?.payout_processed && payout ? (
+              {seasonEnded ? (
                 <>
                   {showConfetti && <Confetti className="pointer-events-none" style={{zIndex: 30}} />}
                   {/* Podium for Top 3 */}
@@ -1648,6 +1699,9 @@ const LeaguePage: React.FC = () => {
                         ))}
                       </div>
                     </div>
+                  )}
+                  {standings.length === 0 && (
+                    <div className="text-neutral-600">Final standings are not available yet.</div>
                   )}
                 </>
               ) : (
@@ -1735,7 +1789,7 @@ const LeaguePage: React.FC = () => {
                       </p>
                     )}
                   </div>
-                  {teamPlayers.length >= 1 && !isEditingLineup && (
+                  {teamPlayers.length >= 1 && !isEditingLineup && !seasonEnded && (
                     <button
                       type="button"
                       onClick={() => {
@@ -1937,7 +1991,7 @@ const LeaguePage: React.FC = () => {
               </div>
 
               {/* Turn-Based Marketplace Section */}
-              {!teamBuildingComplete && !league.marketplace_completed && (
+              {!seasonEnded && !teamBuildingComplete && !league.marketplace_completed && (
                 <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6 border-2 border-gold">
                   <TurnBasedMarketplace league={league} onUpdate={loadLeagueData} />
                 </div>
@@ -1948,7 +2002,7 @@ const LeaguePage: React.FC = () => {
 
 
           {/* Coin Marketplace - Show after draft is completed */}
-          {league && isCoinMarketplaceAvailable(league) && (
+          {league && !seasonEnded && isCoinMarketplaceAvailable(league) && (
             <div className="mt-8 w-full">
                   <Marketplace leagueId={leagueId!} onTeamUpdate={loadLeagueData} />
             </div>
