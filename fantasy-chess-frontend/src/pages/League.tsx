@@ -1314,6 +1314,10 @@ const LeaguePage: React.FC = () => {
   // Delete league (admin only)
   const handleDeleteLeague = async () => {
     if (!league || !isOwner) return;
+    if (leagueSeasonHasStartedLocal(league.start_date) || leagueSeasonHasEndedLocal(league.end_date)) {
+      setError('Leagues cannot be deleted after they have started.');
+      return;
+    }
     if (!window.confirm('Are you sure you want to delete this league? This cannot be undone.')) return;
     setLoading(true);
     try {
@@ -1742,7 +1746,7 @@ const LeaguePage: React.FC = () => {
           )}
 
           <div className="flex gap-4 mb-4">
-            {isOwner && (
+            {isOwner && !seasonStarted && !seasonEnded && (
               <button
                 onClick={handleDeleteLeague}
                 className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded font-semibold shadow-lg"
