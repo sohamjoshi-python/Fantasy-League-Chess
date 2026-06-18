@@ -184,13 +184,7 @@ type StandingDisplayRow = {
   display_name: string
   avatar_url?: string
   total_points: number
-  points_won?: number
-  points_lost?: number
-}
-
-type PointsBreakdown = {
-  points_won: number
-  points_lost: number
+  coin_delta?: number
 }
 
 const FinalPodiumCard: React.FC<{
@@ -253,12 +247,14 @@ const FinalPodiumCard: React.FC<{
           {Number(standing.total_points).toFixed(2)}
           <span className="ml-1 text-sm font-semibold text-neutral-500">pts</span>
         </div>
-        <div className="mt-2 flex flex-wrap justify-center gap-2 text-[11px] font-bold">
-          <span className="rounded-full bg-green-100 px-2 py-1 text-green-700">
-            +{Number(standing.points_won || 0).toFixed(2)}
-          </span>
-          <span className="rounded-full bg-red-100 px-2 py-1 text-red-700">
-            -{Number(standing.points_lost || 0).toFixed(2)}
+        <div className="mt-2 flex justify-center text-[11px] font-bold">
+          <span className={`rounded-full px-2 py-1 ${
+            (standing.coin_delta || 0) >= 0
+              ? 'bg-green-100 text-green-700'
+              : 'bg-red-100 text-red-700'
+          }`}>
+            {(standing.coin_delta || 0) >= 0 ? '+' : ''}
+            {Number(standing.coin_delta || 0).toFixed(0)} coins
           </span>
         </div>
       </div>
@@ -656,11 +652,19 @@ const LeaguePage: React.FC = () => {
       // Get league data with member_ids and creator_id
       const { data: leagueData } = await supabase
         .from('leagues')
-        .select('member_ids, creator_id')
+        .select('member_ids, creator_id, buy_in')
         .eq('id', leagueId)
         .single()
 
       if (!leagueData) return
+
+      const { data: leaguePayout } = await supabase
+        .from('payouts')
+        .select('user_id, amount')
+        .eq('league_id', leagueId)
+        .order('processed_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
 
       // Get all unique user IDs (creator + members)
       const allUserIds = new Set([
@@ -711,76 +715,10 @@ const LeaguePage: React.FC = () => {
         })
       }
 
-      const pointBreakdowns = new Map<string, PointsBreakdown>()
-      const addPointBreakdown = (participantId: string, points: number) => {
-        const current = pointBreakdowns.get(participantId) || { points_won: 0, points_lost: 0 }
-        if (points >= 0) {
-          current.points_won += points
-        } else {
-          current.points_lost += Math.abs(points)
-        }
-        pointBreakdowns.set(participantId, current)
-      }
-
-      const lineupRows = lineups || []
-      const lineupPlayerIds = Array.from(new Set(
-        lineupRows.flatMap(lineup => lineup.player_ids || [])
-      ))
-      const lineupGameDates = Array.from(new Set(
-        lineupRows
-          .map(lineup => lineup.week_start_date ? getTuesdayDateForWeek(lineup.week_start_date).dotted : null)
-          .filter((date): date is string => Boolean(date))
-      ))
-
-      if (lineupPlayerIds.length > 0 && lineupGameDates.length > 0) {
-        const [{ data: lineupPlayers }, { data: games }] = await Promise.all([
-          supabase
-            .from('chess_players')
-            .select('id, name')
-            .in('id', lineupPlayerIds),
-          supabase
-            .from('games')
-            .select('date, white, black, white_points, black_points')
-            .in('date', lineupGameDates),
-        ])
-
-        const playerNameById = new Map((lineupPlayers || []).map(player => [player.id, player.name]))
-        const gamesByDate = new Map<string, any[]>()
-        ;(games || []).forEach(game => {
-          const dateGames = gamesByDate.get(game.date) || []
-          dateGames.push(game)
-          gamesByDate.set(game.date, dateGames)
-        })
-
-        lineupRows.forEach(lineup => {
-          const participantId = lineup.user_id || lineup.bot_id
-          if (!participantId || !lineup.week_start_date) return
-
-          const { dotted } = getTuesdayDateForWeek(lineup.week_start_date)
-          const weekGames = gamesByDate.get(dotted) || []
-          ;(lineup.player_ids || []).forEach((playerId: string) => {
-            const playerName = playerNameById.get(playerId)
-            if (!playerName) return
-
-            weekGames.forEach(game => {
-              if (game.white === playerName) {
-                addPointBreakdown(participantId, Number(game.white_points || 0))
-              } else if (game.black === playerName) {
-                addPointBreakdown(participantId, Number(game.black_points || 0))
-              }
-            })
-          })
-        })
-      }
-
-      userPoints.forEach((totalPoints, participantId) => {
-        if (!pointBreakdowns.has(participantId)) {
-          pointBreakdowns.set(participantId, {
-            points_won: Math.max(totalPoints, 0),
-            points_lost: Math.abs(Math.min(totalPoints, 0)),
-          })
-        }
-      })
+      const memberCount = leagueData.member_ids?.length || 0
+      const buyIn = Number(leagueData.buy_in || 0)
+      const prizeAmount = Number(leaguePayout?.amount ?? buyIn * memberCount)
+      const payoutWinnerId = leaguePayout?.user_id
 
       // Create standings data for all members (excluding bots)
       const standingsData = Array.from(allUserIds)
@@ -798,8 +736,9 @@ const LeaguePage: React.FC = () => {
             user_id: userId,
             display_name: userMap[userId]?.username || 'Unknown User',
             total_points: userPoints.get(userId) || 0,
-            points_won: pointBreakdowns.get(userId)?.points_won || 0,
-            points_lost: pointBreakdowns.get(userId)?.points_lost || 0,
+            coin_delta: payoutWinnerId === userId
+              ? prizeAmount - buyIn
+              : -buyIn,
             rank: 0,
             avatar_url: userMap[userId]?.avatar_url || fantasyLeagueChessLogo,
           }
@@ -819,8 +758,9 @@ const LeaguePage: React.FC = () => {
           user_id: botData.id,
           display_name: `${botData.name} 🤖`, // Use bot.name from the bots table
           total_points: botPoints,
-          points_won: pointBreakdowns.get(botData.id)?.points_won || 0,
-          points_lost: pointBreakdowns.get(botData.id)?.points_lost || 0,
+          coin_delta: payoutWinnerId === botData.id
+            ? prizeAmount - buyIn
+            : -buyIn,
           rank: 0,
           avatar_url: fantasyLeagueChessLogo,
         })
@@ -830,6 +770,10 @@ const LeaguePage: React.FC = () => {
       standingsData.sort((a, b) => b.total_points - a.total_points)
       standingsData.forEach((standing, index) => {
         standing.rank = index + 1
+        const isWinner = payoutWinnerId
+          ? standing.user_id === payoutWinnerId
+          : index === 0
+        standing.coin_delta = isWinner ? prizeAmount - buyIn : -buyIn
       })
 
       setStandings(standingsData)
@@ -1867,14 +1811,14 @@ const LeaguePage: React.FC = () => {
                             </div>
                             <div className="flex flex-col items-end flex-shrink-0 ml-2">
                               <p className="font-semibold text-sm lg:text-base text-neutral-900">{Number(standing.total_points).toFixed(2)} points</p>
-                              <div className="mt-1 flex gap-1 text-[11px] font-bold">
-                                <span className="rounded-full bg-green-100 px-2 py-0.5 text-green-700">
-                                  +{Number(standing.points_won || 0).toFixed(2)}
-                                </span>
-                                <span className="rounded-full bg-red-100 px-2 py-0.5 text-red-700">
-                                  -{Number(standing.points_lost || 0).toFixed(2)}
-                                </span>
-                              </div>
+                              <span className={`mt-1 rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                                (standing.coin_delta || 0) >= 0
+                                  ? 'bg-green-100 text-green-700'
+                                  : 'bg-red-100 text-red-700'
+                              }`}>
+                                {(standing.coin_delta || 0) >= 0 ? '+' : ''}
+                                {Number(standing.coin_delta || 0).toFixed(0)} coins
+                              </span>
                               {isOwner && !seasonStarted && standing.user_id !== user?.id && (
                                 <button
                                   onClick={(e) => {
@@ -1924,14 +1868,16 @@ const LeaguePage: React.FC = () => {
                       </div>
                       <div className="flex flex-col items-end flex-shrink-0 ml-1 sm:ml-2">
                         <p className="font-semibold text-xs sm:text-sm lg:text-base text-neutral-900 whitespace-nowrap">{Number(standing.total_points).toFixed(2)} pts</p>
-                        <div className="mt-1 flex gap-1 text-[10px] sm:text-[11px] font-bold">
-                          <span className="rounded-full bg-green-100 px-1.5 py-0.5 text-green-700">
-                            +{Number(standing.points_won || 0).toFixed(2)}
+                        {seasonEnded && (
+                          <span className={`mt-1 rounded-full px-1.5 py-0.5 text-[10px] sm:text-[11px] font-bold ${
+                            (standing.coin_delta || 0) >= 0
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-red-100 text-red-700'
+                          }`}>
+                            {(standing.coin_delta || 0) >= 0 ? '+' : ''}
+                            {Number(standing.coin_delta || 0).toFixed(0)} coins
                           </span>
-                          <span className="rounded-full bg-red-100 px-1.5 py-0.5 text-red-700">
-                            -{Number(standing.points_lost || 0).toFixed(2)}
-                          </span>
-                        </div>
+                        )}
                         {isOwner && !seasonStarted && standing.user_id !== user?.id && (
                           <button
                             onClick={(e) => {
