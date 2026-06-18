@@ -9,6 +9,8 @@ interface LeaderboardEntry {
   username: string;
   wins?: number;
   total_points?: number;
+  points_won?: number;
+  points_lost?: number;
   total_leagues?: number;
   total_prize_money?: number;
   leagues_played?: number;
@@ -107,6 +109,10 @@ const Leaderboard: React.FC = () => {
 
   const formatCoins = (amount: number) => {
     return `${Math.floor(amount)} 🪙`;
+  };
+
+  const formatPoints = (amount?: number) => {
+    return Number(amount || 0).toFixed(1);
   };
 
   const formatDate = (dateString: string) => {
@@ -275,9 +281,14 @@ const Leaderboard: React.FC = () => {
                         </p>
                       </div>
                       <div className="text-right">
-                        <div className="text-2xl font-bold text-gold">{entry.total_points?.toFixed(1)} pts</div>
-                        <div className="text-sm text-neutral-600">
-                          {entry.average_points_per_league?.toFixed(1)} avg
+                        <div className="text-2xl font-bold text-gold">{formatPoints(entry.total_points)} pts</div>
+                        <div className="mt-1 flex flex-wrap justify-end gap-2 text-xs font-semibold">
+                          <span className="rounded-full bg-green-100 px-2 py-1 text-green-700">
+                            +{formatPoints(entry.points_won)} won
+                          </span>
+                          <span className="rounded-full bg-red-100 px-2 py-1 text-red-700">
+                            -{formatPoints(entry.points_lost)} lost
+                          </span>
                         </div>
                       </div>
                     </div>
