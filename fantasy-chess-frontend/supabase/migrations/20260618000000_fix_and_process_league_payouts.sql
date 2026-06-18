@@ -27,6 +27,59 @@ BEGIN
   END IF;
 END $$;
 
+-- Some older league data has auth user IDs in lineups/member_ids but is missing
+-- the matching app profile row. Payouts reference public.users, so backfill those
+-- profiles from auth.users before choosing winners.
+INSERT INTO public.users (id, email, username, coins, created_at, updated_at)
+SELECT DISTINCT
+  auth_users.id,
+  COALESCE(auth_users.email, auth_users.id::TEXT || '@missing-email.local'),
+  LEFT(
+    COALESCE(
+      auth_users.raw_user_meta_data->>'username',
+      auth_users.raw_user_meta_data->>'display_name',
+      split_part(COALESCE(auth_users.email, auth_users.id::TEXT), '@', 1)
+    ) || '_' || LEFT(auth_users.id::TEXT, 8),
+    255
+  ),
+  100,
+  COALESCE(auth_users.created_at, NOW()),
+  NOW()
+FROM auth.users AS auth_users
+WHERE auth_users.id IN (
+    SELECT creator_id
+    FROM public.leagues
+    WHERE end_date < CURRENT_DATE
+      AND COALESCE(payout_processed, false) = false
+      AND creator_id IS NOT NULL
+
+    UNION
+
+    SELECT UNNEST(member_ids)
+    FROM public.leagues
+    WHERE end_date < CURRENT_DATE
+      AND COALESCE(payout_processed, false) = false
+      AND member_ids IS NOT NULL
+
+    UNION
+
+    SELECT user_id
+    FROM public.lineups
+    WHERE user_id IS NOT NULL
+      AND league_id IN (
+        SELECT id
+        FROM public.leagues
+        WHERE end_date < CURRENT_DATE
+          AND COALESCE(payout_processed, false) = false
+      )
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM public.users
+    WHERE users.id = auth_users.id
+  )
+ON CONFLICT (id) DO NOTHING;
+
 CREATE OR REPLACE FUNCTION public.process_league_payouts()
 RETURNS void
 LANGUAGE plpgsql

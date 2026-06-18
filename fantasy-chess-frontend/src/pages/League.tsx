@@ -1195,21 +1195,31 @@ const LeaguePage: React.FC = () => {
     }
   };
 
-  // Fetch payout and winner info if league ended and payout processed
+  // Fetch payout and winner info for ended leagues. The payout row is the source
+  // of truth because the league flag can be stale in the client after manual SQL.
   useEffect(() => {
     async function fetchPayoutAndWinner() {
       if (
         league &&
-        leagueSeasonHasEndedLocal(league?.end_date || '') &&
-        league?.payout_processed
+        leagueSeasonHasEndedLocal(league?.end_date || '')
       ) {
         const { data: payoutData } = await supabase
           .from('payouts')
           .select('user_id, amount, processed_at')
           .eq('league_id', league?.id)
+          .order('processed_at', { ascending: false })
+          .limit(1)
           .maybeSingle(); // Use maybeSingle instead of single
         setPayout(payoutData);
         if (payoutData) {
+          if (!league.payout_processed) {
+            setLeague(currentLeague =>
+              currentLeague?.id === league.id
+                ? { ...currentLeague, payout_processed: true }
+                : currentLeague
+            );
+          }
+
           // Try to get display name from userMap or fallback to user_id
           let displayName = '';
           if (userMap[payoutData.user_id]) {
@@ -1235,14 +1245,14 @@ const LeaguePage: React.FC = () => {
 
   // Show confetti for a few seconds when the league is completed and podium is shown
   useEffect(() => {
-    if (league?.end_date && leagueSeasonHasEndedLocal(league.end_date) && league?.payout_processed && payout) {
+    if (league?.end_date && leagueSeasonHasEndedLocal(league.end_date) && payout) {
       setShowConfetti(true);
       const timeout = setTimeout(() => setShowConfetti(false), 8000); // 8 seconds for all confetti to fall
       return () => clearTimeout(timeout);
     } else {
       setShowConfetti(false);
     }
-  }, [league?.end_date, league?.payout_processed, payout]);
+  }, [league?.end_date, payout]);
 
   // Delete league (admin only)
   const handleDeleteLeague = async () => {
@@ -1532,7 +1542,7 @@ const LeaguePage: React.FC = () => {
                 <h3 className="font-bold text-lg text-green-800">
                   Winner: {winnerName || standings[0]?.display_name || 'Pending final standings'}
                 </h3>
-                {league?.payout_processed && payout ? (
+                {payout ? (
                   <>
                     <p className="text-green-700">Prize: {payout.amount} coins</p>
                     <p className="text-green-700">Payout processed: {new Date(payout.processed_at).toLocaleString()}</p>
