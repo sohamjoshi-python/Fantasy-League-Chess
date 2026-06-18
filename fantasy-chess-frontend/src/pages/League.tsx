@@ -652,19 +652,28 @@ const LeaguePage: React.FC = () => {
       // Get league data with member_ids and creator_id
       const { data: leagueData } = await supabase
         .from('leagues')
-        .select('member_ids, creator_id, buy_in')
+        .select('member_ids, creator_id, buy_in, payout_processed')
         .eq('id', leagueId)
         .single()
 
       if (!leagueData) return
 
-      const { data: leaguePayout } = await supabase
-        .from('payouts')
-        .select('user_id, amount')
-        .eq('league_id', leagueId)
-        .order('processed_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
+      let leaguePayout: { user_id: string; amount: number } | null = null
+      if (!leagueData.payout_processed) {
+        const { data: payoutData, error: payoutError } = await supabase
+          .from('payouts')
+          .select('user_id, amount')
+          .eq('league_id', leagueId)
+          .order('processed_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+
+        if (payoutError) {
+          console.warn('Could not load payout row for standings coin display:', payoutError)
+        } else {
+          leaguePayout = payoutData
+        }
+      }
 
       // Get all unique user IDs (creator + members)
       const allUserIds = new Set([
@@ -1237,13 +1246,27 @@ const LeaguePage: React.FC = () => {
         league &&
         leagueSeasonHasEndedLocal(league?.end_date || '')
       ) {
-        const { data: payoutData } = await supabase
+        if (league.payout_processed) {
+          setPayout(null);
+          setWinnerName(standings[0]?.display_name || '');
+          return;
+        }
+
+        const { data: payoutData, error: payoutError } = await supabase
           .from('payouts')
           .select('user_id, amount, processed_at')
           .eq('league_id', league?.id)
           .order('processed_at', { ascending: false })
           .limit(1)
           .maybeSingle(); // Use maybeSingle instead of single
+
+        if (payoutError) {
+          console.warn('Could not load payout details:', payoutError);
+          setPayout(null);
+          setWinnerName(standings[0]?.display_name || '');
+          return;
+        }
+
         setPayout(payoutData);
         if (payoutData) {
           if (!league.payout_processed) {
@@ -1275,7 +1298,7 @@ const LeaguePage: React.FC = () => {
       }
     }
     fetchPayoutAndWinner();
-  }, [league, userMap]);
+  }, [league, userMap, standings]);
 
   // Show confetti for a few seconds when the league is completed and podium is shown
   useEffect(() => {
@@ -1524,6 +1547,7 @@ const LeaguePage: React.FC = () => {
   const teamBuildingComplete = isTeamBuildingComplete(league)
   const seasonStarted = leagueSeasonHasStartedLocal(league.start_date)
   const seasonEnded = leagueSeasonHasEndedLocal(league.end_date)
+  const computedPrizeAmount = Number(league.buy_in || 0) * (league.member_ids?.length || 0)
 
   return (
     <>
@@ -1582,9 +1606,10 @@ const LeaguePage: React.FC = () => {
                     <p className="text-green-700">Payout processed: {new Date(payout.processed_at).toLocaleString()}</p>
                   </>
                 ) : league?.payout_processed ? (
-                  <p className="text-green-700">
-                    Payout processed. Prize details are still loading.
-                  </p>
+                  <>
+                    <p className="text-green-700">Prize: {computedPrizeAmount} coins</p>
+                    <p className="text-green-700">Payout processed.</p>
+                  </>
                 ) : (
                   <p className="text-green-700">
                     Final standings are locked. Prize payout is pending processing.
