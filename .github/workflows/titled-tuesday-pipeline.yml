@@ -1,0 +1,148 @@
+name: Titled Tuesday Weekly Pipeline
+
+on:
+  schedule:
+    # Tuesday 22:00 UTC (5 PM ET standard / 6 PM ET daylight) — primary ingest + score + email
+    - cron: "0 22 * * 2"
+    # Wednesday 06:00 UTC — backup if the Tuesday ingest/scoring was missed (re-score + email)
+    - cron: "0 6 * * 3"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Run mode: 'ingest' (full Stockfish ingest + score) or 'backup' (RPC re-score only)"
+        required: true
+        default: "ingest"
+        type: choice
+        options:
+          - "ingest"
+          - "backup"
+      test_email:
+        description: "Email recipient for manual test runs"
+        required: true
+        default: "sohampjoshi@gmail.com"
+      send_all:
+        description: "Send to all eligible users instead of only test_email"
+        required: true
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+
+jobs:
+  titled-tuesday:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # Decide whether this run does a full ingest or just the backup re-score,
+      # and compute the target Tuesday once so every later step reuses it.
+      - name: Resolve run parameters
+        id: params
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          SCHEDULE: ${{ github.event.schedule }}
+          INPUT_MODE: ${{ github.event.inputs.mode }}
+        run: |
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            MODE="${INPUT_MODE:-ingest}"
+          elif [ "$SCHEDULE" = "0 22 * * 2" ]; then
+            MODE="ingest"
+          else
+            MODE="backup"
+          fi
+          echo "mode=$MODE" >> "$GITHUB_OUTPUT"
+
+          TUESDAY=$(python -c "
+          from datetime import datetime, timedelta
+          from zoneinfo import ZoneInfo
+          eastern = datetime.now(ZoneInfo('America/New_York')).date()
+          days_since_tuesday = (eastern.weekday() - 1) % 7
+          print((eastern - timedelta(days=days_since_tuesday)).isoformat())
+          ")
+          echo "tuesday=$TUESDAY" >> "$GITHUB_OUTPUT"
+          echo "Run mode: $MODE, target Tuesday: $TUESDAY"
+
+      - name: Install Stockfish
+        if: steps.params.outputs.mode == 'ingest'
+        run: sudo apt-get update && sudo apt-get install -y stockfish
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install supabase python-dotenv
+
+      - name: Ingest & score Titled Tuesday (primary)
+        if: steps.params.outputs.mode == 'ingest'
+        env:
+          SB_URL: ${{ secrets.SB_URL }}
+          SB_KEY: ${{ secrets.SB_KEY }}
+          TUESDAY: ${{ steps.params.outputs.tuesday }}
+        run: |
+          python -c "
+          from datetime import date
+          import os
+          from titled_tuesday import convert
+
+          tuesday = date.fromisoformat(os.environ['TUESDAY'])
+          print('Ingesting and scoring Titled Tuesday:', tuesday)
+          convert(tuesday)
+          "
+
+      - name: Score lineups via RPC (backup)
+        if: steps.params.outputs.mode == 'backup'
+        env:
+          SB_URL: ${{ secrets.SB_URL }}
+          SB_KEY: ${{ secrets.SB_KEY }}
+          TUESDAY: ${{ steps.params.outputs.tuesday }}
+        run: |
+          python -c "
+          import os
+          from supabase import create_client
+
+          sb = create_client(os.environ['SB_URL'], os.environ['SB_KEY'])
+          tuesday = os.environ['TUESDAY']
+          print('Backup scoring for Titled Tuesday', tuesday)
+          result = sb.rpc('process_weekly_results', {'week_date': tuesday}).execute()
+          print(result)
+          "
+
+      # The Edge Function re-runs scoring as a safety net, then sends weekly emails.
+      - name: Send weekly results emails
+        env:
+          SB_URL: ${{ secrets.SB_URL }}
+          SB_KEY: ${{ secrets.SB_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          EVENT_NAME: ${{ github.event_name }}
+          TEST_EMAIL: ${{ github.event.inputs.test_email || 'sohampjoshi@gmail.com' }}
+          SEND_ALL: ${{ github.event.inputs.send_all || 'false' }}
+          TUESDAY: ${{ steps.params.outputs.tuesday }}
+        run: |
+          KEY="${SUPABASE_SERVICE_ROLE_KEY:-$SB_KEY}"
+          if [ -z "$KEY" ]; then
+            echo "No SUPABASE_SERVICE_ROLE_KEY or SB_KEY secret configured; skipping weekly results emails."
+            exit 0
+          fi
+
+          WEEK_JSON=$(python -c "
+          import json, os
+          payload = {'week_date': os.environ['TUESDAY']}
+          if os.environ.get('EVENT_NAME') == 'workflow_dispatch' and os.environ.get('SEND_ALL') != 'true':
+            payload['test_email'] = os.environ.get('TEST_EMAIL') or 'sohampjoshi@gmail.com'
+          print(json.dumps(payload))
+          ")
+          echo "Request payload: $WEEK_JSON"
+          curl -sf -X POST \
+            -H "Authorization: Bearer $KEY" \
+            -H "apikey: $KEY" \
+            -H "Content-Type: application/json" \
+            -d "$WEEK_JSON" \
+            "${SB_URL%/}/functions/v1/process-weekly-results"
