@@ -187,7 +187,7 @@ const Help: React.FC = () => {
                 <ArrowRight className="w-5 h-5 text-purple mt-0.5 mr-3 flex-shrink-0" />
                 <div>
                   <h3 className="font-semibold text-neutral-900">Choose Your Players</h3>
-                  <p className="text-neutral-700">Select from real chess players with different ELO ratings. Higher ELO generally means better performance potential.</p>
+                  <p className="text-neutral-700">Select from real chess players with different Elo ratings. High Elo does not automatically mean high fantasy scores — players earn the most when they beat Elo expectation or play cleaner than their own usual ACL.</p>
                 </div>
               </div>
               <div className="flex items-start">
@@ -298,12 +298,12 @@ const Help: React.FC = () => {
                 <ArrowRight className="w-5 h-5 text-purple mt-0.5 mr-3 flex-shrink-0" />
                 <div>
                   <h3 className="font-semibold text-neutral-900">Player Performance Points</h3>
-                  <p className="text-neutral-700">Players earn points based on their actual chess game results:</p>
+                  <p className="text-neutral-700">Each tournament game scores fantasy points from four pieces:</p>
                   <ul className="list-disc list-inside text-neutral-700 mt-2 space-y-1">
-                    <li><strong>Win:</strong> 3 points</li>
-                    <li><strong>Draw:</strong> 1 point</li>
-                    <li><strong>Loss:</strong> 0 points</li>
-                    <li><strong>Bonus:</strong> Additional points for performance quality</li>
+                    <li><strong>Game result:</strong> a small bonus for winning or drawing</li>
+                    <li><strong>Surprise:</strong> extra points for beating (or drawing) a higher-rated opponent</li>
+                    <li><strong>Accuracy:</strong> a modest bonus or penalty vs that player's own usual ACL</li>
+                    <li><strong>Consistency:</strong> +3 if the game is at least 5 ACL better than their usual play</li>
                   </ul>
                 </div>
               </div>
@@ -333,27 +333,28 @@ const Help: React.FC = () => {
                   <li>• <strong>100 ACL = Poor Play</strong> (made significant mistakes)</li>
                 </ul>
                 <p className="text-sm text-neutral-700">
-                  In {getBrandName()}, ACL is the primary factor in scoring because it rewards consistent, high-quality play rather than just winning games. A player who loses but plays accurately will score better than a player who wins but makes many mistakes.
+                  In {getBrandName()}, ACL is compared to <strong>that player's own historical average</strong>, not to the rest of the field. A Super GM does not score extra just for being more accurate than a CM. They score when they play cleaner than <em>their usual selves</em>. A CM who upsets a much higher-rated opponent can outscore a Super GM who wins as expected.
                 </p>
               </div>
               <div className="bg-neutral-50 p-4 rounded-lg border border-royalBlue mb-4">
                 <h4 className="font-semibold text-neutral-900 mb-2">Complete Scoring Formula</h4>
                 <p className="text-sm text-neutral-700 mb-3">
-                  Fantasy points are calculated using this sophisticated formula that rewards both winning and playing quality:
+                  Fantasy points are calculated per game. Upsets vs Elo are the largest term; accuracy vs a player's own baseline is a smaller adjustment:
                 </p>
                 <div className="bg-white p-3 rounded border text-sm font-mono text-neutral-800 mb-3">
                   <div className="mb-2"><strong>Raw Points =</strong></div>
                   <div className="ml-4 mb-1">0.5 × Game Result</div>
-                  <div className="ml-4 mb-1">+ 2.0 × (Result - Expected Score)</div>
-                  <div className="ml-4 mb-1">+ 8.0 × (Average ACL - Player ACL)</div>
-                  <div className="ml-4 mb-1">+ 3.0 × Consistency Bonus</div>
-                  <div className="mt-2"><strong>Final Points =</strong> Raw Points (capped between -8 and +15)</div>
+                  <div className="ml-4 mb-1">+ 7.0 × (Result − Expected Score)</div>
+                  <div className="ml-4 mb-1">+ 0.8 × (Player's Usual ACL − This Game's ACL)</div>
+                  <div className="ml-4 mb-1">+ 3.0 if this game is at least 5 ACL better than their usual ACL</div>
+                  <div className="mt-2"><strong>Final Points =</strong> Raw Points (capped between −12 and +12)</div>
                 </div>
                 <div className="text-sm text-neutral-700 space-y-2">
                   <div><strong>• Game Result:</strong> 1.0 for win, 0.5 for draw, 0.0 for loss</div>
-                  <div><strong>• Expected Score:</strong> Calculated based on ELO ratings (1/(1+10^((opponent_elo-player_elo)/400)))</div>
-                  <div><strong>• ACL Delta:</strong> How much better/worse the player performed vs average</div>
-                  <div><strong>• Consistency Bonus:</strong> Extra points for playing better than expected for their rating</div>
+                  <div><strong>• Expected Score:</strong> Calculated from Elo (1 / (1 + 10^((opponent_elo − player_elo) / 400)))</div>
+                  <div><strong>• Surprise:</strong> How much better or worse the result was than that Elo expectation. This is the main scoring term, so beating a much higher-rated opponent scores far more than a routine favorite win.</div>
+                  <div><strong>• ACL Delta:</strong> How much cleaner or sloppier this game was versus <em>that player's</em> historical average ACL. Lower ACL is better. Super GMs are judged against Super-GM-level accuracy, not against CMs.</div>
+                  <div><strong>• Consistency Bonus:</strong> A flat +3 when the game is at least 5 ACL better than that player's own average</div>
                 </div>
               </div>
               <div className="bg-neutral-50 p-4 rounded-lg border border-royalBlue mb-4">

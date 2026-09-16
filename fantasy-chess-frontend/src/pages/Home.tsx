@@ -170,13 +170,13 @@ const Home: React.FC = () => {
       <section className="w-full py-12 flex justify-center bg-white">
         <div className="max-w-2xl w-full bg-white rounded-2xl shadow-lg p-8 flex flex-col items-center border-2 border-royalBlue">
           <h2 className="text-2xl font-bold mb-2 text-neutral-900">Scoring System</h2>
-          <ul className="text-neutral-700 text-base mb-4">
-            <li><span className="font-semibold">Win:</span> 3.0 points</li>
-            <li><span className="font-semibold">Draw:</span> 1.0 point</li>
-            <li><span className="font-semibold">Loss:</span> 0.0 points</li>
-            <li><span className="font-semibold">Performance Bonus:</span> Based on average centipawn loss (ACL)</li>
+          <ul className="text-neutral-700 text-base mb-4 space-y-1">
+            <li><span className="font-semibold">Upsets:</span> Beating a higher-rated opponent is the largest source of points</li>
+            <li><span className="font-semibold">Accuracy:</span> A smaller bonus or penalty vs that player's own usual ACL</li>
+            <li><span className="font-semibold">Wins:</span> A small bonus for winning or drawing</li>
+            <li><span className="font-semibold">Cap:</span> Each game is capped between −12 and +12 points</li>
           </ul>
-          <p className="text-neutral-700 text-center text-sm">Points are calculated using game results and player average centipawn loss (ACL). See the rules for full details.</p>
+          <p className="text-neutral-700 text-center text-sm">Super GMs are judged against their own accuracy, not against lower-rated players. See the rules for the full formula.</p>
         </div>
       </section>
 

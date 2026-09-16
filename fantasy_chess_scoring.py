@@ -7,9 +7,9 @@ def expected_score(player_elo: float, opponent_elo: float) -> float:
     """Calculate expected score based on ELO difference"""
     return 1 / (1 + 10 ** ((opponent_elo - player_elo) / 400))
 
-# 1. ACL-Focused Scoring (Updated for Individual Player Baseline)
-# Compares each player's game ACL against their own historical average ACL
-# This rewards players for performing better than their usual level
+# 1. Overperformance-focused scoring (individual ACL baseline)
+# Compares each player's game ACL against their own historical average ACL.
+# Surprise vs Elo expected score is the main term so upsets outscore routine Super GM wins.
 def acl_focused_scoring_individual_baseline(
     player_elo: float,
     opponent_elo: float,
@@ -17,19 +17,19 @@ def acl_focused_scoring_individual_baseline(
     player_game_acl: float,  # ACL for this specific game
     player_avg_acl: float,   # Player's historical average ACL from games.accuracy
     base_win_bonus: float = 0.5,
-    surprise_coeff: float = 2.0,
-    acl_coeff: float = 8.0,
+    surprise_coeff: float = 7.0,
+    acl_coeff: float = 0.8,
     consistency_bonus_threshold: float = 5.0, # ACL points better than their avg to get bonus
     consistency_bonus_amount: float = 3.0,
-    cap_low: float = -8.0,
-    cap_high: float = 15.0,
+    cap_low: float = -12.0,
+    cap_high: float = 12.0,
 ) -> float:
     """
-    ACL-Focused Scoring with Individual Player Baseline:
-    - Compares player's game ACL against their own historical average ACL
-    - Rewards players for performing better than their usual level
-    - Minimal win bonus to reduce dominance by high-ELO players
-    - Heavy emphasis on playing above their personal baseline
+    Overperformance-focused scoring with an individual ACL baseline:
+    - Surprise (result vs Elo expected score) is the main scoring term
+    - ACL is compared only to that player's own historical average, not the field
+    - ACL weight is kept modest so a slightly clean Super GM game cannot cap out
+    - Symmetric caps prevent consistent elite players from farming an uneven floor/ceiling
     """
     expected = expected_score(player_elo, opponent_elo)
     surprise = result - expected
@@ -234,7 +234,7 @@ if __name__ == "__main__":
     
     print("\nKey Benefits of Individual Baseline Approach:")
     print("1. Rewards players for performing better than their usual level")
-    print("2. Lower-rated players can score well by exceeding their personal baseline")
-    print("3. High-rated players need to play above their average to score high")
+    print("2. Lower-rated players can score well by exceeding their Elo expected score")
+    print("3. High-rated players need upsets or a clearly cleaner-than-usual game to score high")
     print("4. More fair comparison across different skill levels")
     print("5. Encourages improvement and consistent high performance")

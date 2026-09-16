@@ -136,7 +136,7 @@ const Tutorial: React.FC = () => {
     {
       id: 'scoring-system',
       title: 'How Scoring Works',
-      description: 'Players earn points based on their real-world chess performance. Wins = +10 points, Draws = +5 points, Losses = 0 points. Your team\'s total points determine your ranking.',
+      description: 'Players earn points from real tournament games. Upsets against higher-rated opponents score the most. Accuracy is a smaller bonus or penalty versus that player\'s own usual ACL. Each game is capped between −12 and +12.',
       action: 'Click "Next" to see final results',
       target: 'next-button'
     },

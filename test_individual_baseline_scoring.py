@@ -8,7 +8,7 @@ def test_individual_baseline_scoring():
     print("=" * 80)
     print()
     print("This system compares each player's game ACL against their own historical average ACL")
-    print("Formula: Points = (0.5 × result) + (2.0 × surprise) + (8.0 × ACL_delta) + consistency_bonus")
+    print("Formula: Points = (0.5 × result) + (7.0 × surprise) + (0.8 × ACL_delta) + consistency_bonus")
     print("Where: ACL_delta = player_avg_acl - player_game_acl (lower ACL = better play)")
     print()
     
@@ -45,19 +45,19 @@ def test_individual_baseline_scoring():
     print()
     print("KEY INSIGHTS:")
     print("-" * 80)
-    print("1. Players score well when they perform better than their usual level")
-    print("2. High-rated players need to play above their average to score high")
-    print("3. Lower-rated players can score well by exceeding their personal baseline")
-    print("4. The system rewards improvement and consistent high performance")
+    print("1. Players score well when they beat Elo expectation (upsets)")
+    print("2. High-rated players get little from expected wins")
+    print("3. Accuracy is a modest adjustment vs each player's own ACL average")
+    print("4. Super GMs are not rewarded just for being more accurate than CMs")
     print("5. This balances the dominance of top players like Hikaru")
     
     print()
     print("COMPARISON WITH TRADITIONAL SCORING:")
     print("-" * 80)
-    print("Traditional: Hikaru wins = high points regardless of play quality")
-    print("New System: Hikaru needs excellent play (ACL 15 vs avg 25) to score high")
+    print("Traditional: Hikaru wins = high points regardless of opponent strength")
+    print("New System: Hikaru's expected wins score little; upsets score a lot")
     print("Traditional: Lower-rated players struggle to compete")
-    print("New System: Lower-rated players can score well with excellent play")
+    print("New System: Lower-rated players can score well by beating higher-rated opponents")
     
     # Show specific examples
     print()
@@ -84,8 +84,8 @@ def test_individual_baseline_scoring():
     
     print()
     print("This system successfully balances the playing field!")
-    print("High-rated players must play well to score high, not just win.")
-    print("Lower-rated players can compete by playing above their usual level.")
+    print("High-rated players must overperform Elo expectation to score high, not just win.")
+    print("Lower-rated players can compete by beating stronger opponents.")
 
 if __name__ == "__main__":
     test_individual_baseline_scoring() 

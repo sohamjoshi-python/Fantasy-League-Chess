@@ -195,12 +195,12 @@ const Onboarding: React.FC = () => {
                 <ArrowRight className="w-5 h-5 text-royalBlue mt-0.5 mr-3 flex-shrink-0" />
                 <div>
                   <h3 className="font-semibold text-neutral-900">Points System</h3>
-                  <p className="text-neutral-700">Players earn points based on their performance in Titled Tuesday tournaments:</p>
+                  <p className="text-neutral-700">Players earn points from Titled Tuesday games. Upsets vs Elo count the most; accuracy is a smaller bonus or penalty versus that player's own usual ACL. Each game is capped between −12 and +12.</p>
                   <ul className="list-disc list-inside text-neutral-700 mt-2 space-y-1">
-                    <li>Win: 3 points</li>
-                    <li>Draw: 1 point</li>
-                    <li>Loss: 0 points</li>
-                    <li>Bonus points for playing quality (ACL)</li>
+                    <li>Small bonus for winning or drawing</li>
+                    <li>Large bonus for beating a higher-rated opponent</li>
+                    <li>Modest accuracy adjustment vs their own ACL average</li>
+                    <li>+3 if the game is at least 5 ACL better than their usual play</li>
                   </ul>
                 </div>
               </div>

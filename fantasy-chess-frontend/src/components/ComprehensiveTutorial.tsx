@@ -262,7 +262,7 @@ const ComprehensiveTutorial: React.FC = () => {
     {
       id: 'game-timing',
       title: 'Game Schedule & Scoring',
-      description: 'Games are based on real titled tournaments every Tuesday. Your players earn points based on their actual tournament performance. Points are calculated using ACL (Average Centipawn Loss) - a measure of chess accuracy where lower values mean more precise play!',
+      description: 'Games are based on real titled tournaments every Tuesday. Your players earn points from results, upsets vs Elo, and a smaller accuracy adjustment against their own usual ACL.',
       action: 'Click "Next" to learn about marketplace trading',
       target: 'next-step-button',
       page: 'leaderboard'
@@ -286,7 +286,7 @@ const ComprehensiveTutorial: React.FC = () => {
     {
       id: 'scoring-formulas',
       title: 'Complete Scoring System',
-      description: 'Fantasy points are calculated using a sophisticated formula that rewards both winning and playing quality. The main components are: Base Win Bonus (0.5 points), Surprise Bonus (2.0x multiplier), ACL Quality Bonus (8.0x multiplier), and Consistency Bonus (3.0x multiplier). Points are capped between -8 and +15.',
+      description: 'Fantasy points are calculated per game. The main components are: a small win bonus (0.5× result), a large surprise bonus (7.0× result minus Elo expected score), a modest ACL adjustment (0.8× vs that player\'s own usual ACL), and +3 if the game is at least 5 ACL better than their average. Points are capped between −12 and +12.',
       action: 'Click "Next" to learn about snake draft',
       target: 'next-step-button',
       page: 'leaderboard'
@@ -838,11 +838,11 @@ const ComprehensiveTutorial: React.FC = () => {
               <div className="bg-yellow-50 p-4 rounded-lg mb-6 border border-yellow-200">
                 <h4 className="font-semibold text-yellow-900 mb-2">💡 How Scoring Actually Works</h4>
                 <div className="text-sm text-yellow-800 space-y-2">
-                  <p><strong>Playing Quality (ACL):</strong> Rewards accurate moves vs average skill level</p>
-                  <p><strong>Win Bonus:</strong> Small bonus (0.5 points) for winning games</p>
-                  <p><strong>Surprise Factor:</strong> Extra points for beating higher-rated opponents</p>
-                  <p><strong>Consistency Bonus:</strong> Rewards playing better than expected skill level</p>
-                  <p><strong>Quality Focus:</strong> Emphasizes how well you play, not just winning</p>
+                  <p><strong>Surprise Factor:</strong> The largest term — extra points for beating higher-rated opponents</p>
+                  <p><strong>Playing Quality (ACL):</strong> A smaller bonus or penalty vs that player's own usual accuracy</p>
+                  <p><strong>Win Bonus:</strong> Small bonus (0.5 × result) for winning or drawing</p>
+                  <p><strong>Consistency Bonus:</strong> +3 if the game is at least 5 ACL better than their usual play</p>
+                  <p><strong>Cap:</strong> Each game is capped between −12 and +12</p>
                 </div>
               </div>
 
@@ -1014,9 +1014,9 @@ const ComprehensiveTutorial: React.FC = () => {
                     <h3 className="font-semibold mb-2">Scoring System:</h3>
                     <ul className="text-left space-y-2">
                       <li>• <strong>Tournaments:</strong> Real titled tournaments every Tuesday</li>
-                      <li>• <strong>Scoring:</strong> Based on actual tournament performance</li>
-                      <li>• <strong>ACL:</strong> Average Centipawn Loss (lower is better)</li>
-                      <li>• <strong>Points:</strong> Calculated from player's real game results</li>
+                      <li>• <strong>Upsets:</strong> Beating a higher-rated opponent is the largest source of points</li>
+                      <li>• <strong>ACL:</strong> Average Centipawn Loss vs that player's own usual accuracy (lower is better)</li>
+                      <li>• <strong>Cap:</strong> Each game is capped between −12 and +12 points</li>
                     </ul>
                   </div>
                   <p className="text-sm text-gray-600">Your players earn points based on their actual chess performance in real tournaments!</p>
@@ -1046,8 +1046,29 @@ const ComprehensiveTutorial: React.FC = () => {
               </div>
             )}
 
+            {currentStepData.id === 'scoring-formulas' && (
+              <div className="text-center">
+                <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Target className="w-8 h-8 text-purple-600" />
+                </div>
+                <h2 className="text-2xl font-bold mb-4 text-gray-900">Complete Scoring System</h2>
+                <div className="max-w-2xl mx-auto space-y-4 text-gray-700">
+                  <p>Each game scores fantasy points from results, Elo surprise, and a modest accuracy adjustment against that player's own usual ACL.</p>
+                  <div className="bg-purple-50 p-4 rounded-lg text-left text-sm font-mono">
+                    <div className="font-semibold mb-2 font-sans">Raw Points =</div>
+                    <div>0.5 × Game Result</div>
+                    <div>+ 7.0 × (Result − Expected Score)</div>
+                    <div>+ 0.8 × (Player's Usual ACL − This Game's ACL)</div>
+                    <div>+ 3.0 if the game is at least 5 ACL better than their usual ACL</div>
+                    <div className="mt-2">Final Points = capped between −12 and +12</div>
+                  </div>
+                  <p className="text-sm text-gray-600">A CM who upsets a much higher-rated opponent can outscore a Super GM who wins as expected. Super GMs are judged against their own accuracy, not against the field.</p>
+                </div>
+              </div>
+            )}
+
             {/* Default Leaderboard Content */}
-            {!['bots-explanation', 'league-mechanics', 'game-timing', 'normal-marketplace'].includes(currentStepData.id) && (
+            {!['bots-explanation', 'league-mechanics', 'game-timing', 'normal-marketplace', 'scoring-formulas'].includes(currentStepData.id) && (
               <>
                 <h2 className="text-2xl font-bold mb-6 flex items-center">
                   <Crown className="w-6 h-6 mr-2 text-yellow-500" />

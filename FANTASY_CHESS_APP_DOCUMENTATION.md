@@ -150,92 +150,70 @@ Fantasy Chess League is a comprehensive web application that allows users to cre
 ### Detailed Point System & Calculation
 
 #### Core Scoring Principles
-The Fantasy Chess scoring system is based on real chess tournament results and ELO rating changes. Points are awarded based on:
+Fantasy points are calculated **per game** from Titled Tuesday results. Upsets versus Elo are the main term. Accuracy (ACL) is a smaller adjustment against **that player's own historical average**, not the rest of the field.
 
-1. **Game Results**: Win (+1), Loss (0), Draw (+0.5)
-2. **ELO Rating Changes**: Performance-based bonus/penalty points
-3. **Tournament Performance**: Bonus points for strong tournament finishes
-4. **Consistency Factor**: Additional points for consistent performance
+1. **Game Result**: a small bonus for winning or drawing
+2. **Surprise**: extra points when the result beats Elo expectation
+3. **ACL vs personal baseline**: modest bonus or penalty for playing cleaner or sloppier than usual
+4. **Consistency bonus**: +3 if the game is at least 5 ACL better than that player's average
 
-#### Point Calculation Formula
-
-**Base Points per Game:**
-- **Win**: 1.0 point
-- **Draw**: 0.5 points  
-- **Loss**: 0.0 points
-
-**ELO Performance Bonus:**
-- **ELO Gain**: +0.1 points per ELO point gained
-- **ELO Loss**: -0.05 points per ELO point lost
-- **Maximum ELO Bonus**: +5.0 points per game
-- **Maximum ELO Penalty**: -2.0 points per game
-
-**Tournament Performance Bonus:**
-- **1st Place**: +10.0 points
-- **2nd Place**: +7.0 points
-- **3rd Place**: +5.0 points
-- **Top 10%**: +3.0 points
-- **Top 25%**: +1.5 points
-- **Top 50%**: +0.5 points
-
-**Consistency Multiplier:**
-- **Perfect Week** (all wins): 1.5x multiplier
-- **Strong Week** (≥75% win rate): 1.25x multiplier
-- **Good Week** (≥50% win rate): 1.1x multiplier
-- **Average Week** (25-49% win rate): 1.0x multiplier
-- **Poor Week** (<25% win rate): 0.8x multiplier
+Tournament place (top 10, top 100, etc.) is not scored.
 
 #### Complete Scoring Formula
 
 ```
-Total Points = (Base Points + ELO Bonus + Tournament Bonus) × Consistency Multiplier
+Raw Points =
+  0.5 × Game Result
+  + 7.0 × (Result − Expected Score)
+  + 0.8 × (Player's Usual ACL − This Game's ACL)
+  + 3.0 if this game is at least 5 ACL better than their usual ACL
+
+Final Points = Raw Points, capped between −12 and +12
 
 Where:
-- Base Points = (Wins × 1.0) + (Draws × 0.5) + (Losses × 0.0)
-- ELO Bonus = min(max(ELO_Change × 0.1, -2.0), 5.0)
-- Tournament Bonus = Based on final tournament position
-- Consistency Multiplier = Based on weekly win percentage
+- Game Result = 1.0 for a win, 0.5 for a draw, 0.0 for a loss
+- Expected Score = 1 / (1 + 10^((opponent_elo − player_elo) / 400))
+- Lower ACL is better (fewer centipawns lost vs engine best moves)
 ```
+
+A Super GM who wins as expected scores little from surprise. A CM who beats a much higher-rated opponent scores a large surprise bonus. Super GMs do not get extra points just for being more accurate than lower-rated players.
 
 #### Example Calculations
 
-**Example 1: Strong Performance**
-- Games: 5 wins, 1 draw, 0 losses
-- ELO Change: +25 points
-- Tournament Finish: 2nd place
-- Win Rate: 83.3% (5.5/6)
+**Example 1: Favorite win, typical accuracy**
+- 3390 player beats a 2670 opponent (expected score ≈ 0.98)
+- Game ACL matches their usual ACL
 
 ```
-Base Points = (5 × 1.0) + (1 × 0.5) + (0 × 0.0) = 5.5
-ELO Bonus = min(25 × 0.1, 5.0) = 2.5
-Tournament Bonus = 7.0 (2nd place)
-Consistency Multiplier = 1.25 (Strong Week)
-
-Total Points = (5.5 + 2.5 + 7.0) × 1.25 = 18.75 points
+Raw = 0.5×1.0 + 7.0×(1.0 − 0.98) + 0.8×0 = 0.64
+Final = 0.64
 ```
 
-**Example 2: Average Performance**
-- Games: 2 wins, 2 draws, 2 losses
-- ELO Change: -5 points
-- Tournament Finish: 15th place (top 50%)
-- Win Rate: 50% (3/6)
+**Example 2: Upset win, typical accuracy**
+- 2260 player beats a 2770 opponent (expected score ≈ 0.05)
+- Game ACL matches their usual ACL
 
 ```
-Base Points = (2 × 1.0) + (2 × 0.5) + (2 × 0.0) = 3.0
-ELO Bonus = max(-5 × 0.1, -2.0) = -0.5
-Tournament Bonus = 0.5 (top 50%)
-Consistency Multiplier = 1.1 (Good Week)
+Raw = 0.5×1.0 + 7.0×(1.0 − 0.05) + 0.8×0 = 7.15
+Final = 7.15
+```
 
-Total Points = (3.0 + (-0.5) + 0.5) × 1.1 = 3.3 points
+**Example 3: Upset plus a clearly cleaner-than-usual game**
+- Same 2260 vs 2770 win
+- Game ACL is 5 better than their usual ACL (consistency bonus applies)
+
+```
+Raw = 0.5 + 7.0×0.95 + 0.8×5 + 3.0 = 14.15
+Final = 12.00 (cap)
 ```
 
 #### Scoring Implementation Details
 
 **Data Sources:**
 - Chess.com tournament results
-- ELO rating changes from official tournaments
-- Game PGN files for detailed analysis
-- Tournament standings and rankings
+- Stockfish ACL from game PGNs
+- Each player's historical average ACL
+- Game-by-game Elo from the tournament headers
 
 **Processing Schedule:**
 - Weekly scoring runs every Monday at 2 AM PT
@@ -245,8 +223,8 @@ Total Points = (3.0 + (-0.5) + 0.5) × 1.1 = 3.3 points
 
 **Edge Cases:**
 - **No Games Played**: 0 points (no penalty)
-- **ELO Rating Unchanged**: No ELO bonus/penalty
-- **Tournament Cancellation**: Base points only
+- **Missing ACL**: score result and Elo surprise only (no accuracy adjustment)
+- **No tournament that week**: 0 points from games
 - **Disputed Results**: Manual review and adjustment
 
 #### League-Specific Scoring
