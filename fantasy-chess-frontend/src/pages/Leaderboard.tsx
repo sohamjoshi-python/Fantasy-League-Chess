@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import fantasyLeagueChessLogo from '../assets/fantasy-league-chess-logo-updated.png';
+import { resolveAvatarUrl } from '../lib/avatars';
 import { Trophy, Target, Clock, Calendar, Medal, Crown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getLocalDateString, getWeekStartMonday, addDaysToYmd } from '../lib/calendarDate';
 
@@ -226,7 +226,7 @@ const Leaderboard: React.FC = () => {
                         {getRankIcon(index)}
                       </div>
                       <img 
-                        src={entry.avatar_url || fantasyLeagueChessLogo} 
+                        src={resolveAvatarUrl(entry.avatar_url)} 
                         alt="Avatar" 
                         className="w-12 h-12 rounded-full border-2 border-gold" 
                       />
@@ -270,7 +270,7 @@ const Leaderboard: React.FC = () => {
                         {getRankIcon(index)}
                       </div>
                       <img 
-                        src={entry.avatar_url || fantasyLeagueChessLogo} 
+                        src={resolveAvatarUrl(entry.avatar_url)} 
                         alt="Avatar" 
                         className="w-12 h-12 rounded-full border-2 border-gold" 
                       />
@@ -319,7 +319,7 @@ const Leaderboard: React.FC = () => {
                         <span className="text-lg font-bold text-neutral-600">{index + 1}</span>
                       </div>
                       <img 
-                        src={winner.avatar_url || fantasyLeagueChessLogo} 
+                        src={resolveAvatarUrl(winner.avatar_url)} 
                         alt="Avatar" 
                         className="w-12 h-12 rounded-full border-2 border-gold" 
                       />
@@ -387,7 +387,7 @@ const Leaderboard: React.FC = () => {
                         {getRankIcon(index)}
                       </div>
                       <img 
-                        src={performer.avatar_url || fantasyLeagueChessLogo} 
+                        src={resolveAvatarUrl(performer.avatar_url)} 
                         alt="Avatar" 
                         className="w-12 h-12 rounded-full border-2 border-gold" 
                       />

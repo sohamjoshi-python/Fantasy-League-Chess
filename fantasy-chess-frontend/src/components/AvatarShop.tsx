@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { buyAvatar, equipAvatar, fetchAvatarsForUser, ShopAvatar } from '../lib/avatars'
-import fantasyLeagueChessLogo from '../assets/fantasy-league-chess-logo-updated.png'
 
 type AvatarShopProps = {
   onClose?: () => void
@@ -17,7 +16,6 @@ const AvatarShop: React.FC<AvatarShopProps> = ({ onClose, onBalanceChange }) => 
 
   const load = useCallback(async () => {
     if (!user) return
-    setLoading(true)
     setError('')
     try {
       const list = await fetchAvatarsForUser(user.id)
@@ -40,7 +38,9 @@ const AvatarShop: React.FC<AvatarShopProps> = ({ onClose, onBalanceChange }) => 
     setError('')
     try {
       await buyAvatar(user.id, avatar.id)
-      await load()
+      setAvatars((current) =>
+        current.map((item) => (item.id === avatar.id ? { ...item, owned: true } : item))
+      )
       onBalanceChange?.()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Purchase failed')
@@ -55,7 +55,13 @@ const AvatarShop: React.FC<AvatarShopProps> = ({ onClose, onBalanceChange }) => 
     setError('')
     try {
       await equipAvatar(user.id, avatar.id)
-      await load()
+      setAvatars((current) =>
+        current.map((item) => ({
+          ...item,
+          equipped: item.id === avatar.id,
+        }))
+      )
+      onBalanceChange?.()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not equip avatar')
     } finally {
@@ -102,7 +108,7 @@ const AvatarShop: React.FC<AvatarShopProps> = ({ onClose, onBalanceChange }) => 
               }`}
             >
               <img
-                src={avatar.image_url || fantasyLeagueChessLogo}
+                src={avatar.image_url}
                 alt={avatar.name}
                 className="w-16 h-16 rounded-full object-cover border border-gold mb-2"
               />

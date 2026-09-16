@@ -15,6 +15,7 @@ const USER_ID_TABLES = [
   'notifications',
   'emails',
   'feedback_reports',
+  'user_avatars',
 ]
 
 serve(async (req) => {

@@ -25,7 +25,7 @@ import {
   fetchLineupParticipantDisplayWeeks,
 } from '../lib/supabase';
 import Confetti from 'react-confetti';
-import fantasyLeagueChessLogo from '../assets/fantasy-league-chess-logo-updated.png';
+import { resolveAvatarUrl } from '../lib/avatars';
 
 import Marketplace from '../components/Marketplace';
 import TurnBasedMarketplace from '../components/TurnBasedMarketplace';
@@ -702,7 +702,7 @@ const LeaguePage: React.FC = () => {
       Array.from(allUserIds).forEach((userId) => {
         avatarMap[userId] = {
           username: `User_${userId.slice(0, 6)}`,
-          avatar_url: fantasyLeagueChessLogo,
+          avatar_url: resolveAvatarUrl(),
         }
       })
 
@@ -716,7 +716,7 @@ const LeaguePage: React.FC = () => {
         userDetails.forEach((u) => {
           avatarMap[u.id] = {
             username: u.username || `User_${u.id.slice(0, 6)}`,
-            avatar_url: u.selected_avatar_url || fantasyLeagueChessLogo,
+            avatar_url: resolveAvatarUrl(u.selected_avatar_url),
           }
         })
       }
@@ -766,7 +766,7 @@ const LeaguePage: React.FC = () => {
               ? prizeAmount - buyIn
               : -buyIn,
             rank: 0,
-            avatar_url: userMap[userId]?.avatar_url || fantasyLeagueChessLogo,
+            avatar_url: resolveAvatarUrl(userMap[userId]?.avatar_url),
           }
         })
         .filter((item): item is NonNullable<typeof item> => item !== null) // Type-safe filter
@@ -788,7 +788,7 @@ const LeaguePage: React.FC = () => {
             ? prizeAmount - buyIn
             : -buyIn,
           rank: 0,
-          avatar_url: fantasyLeagueChessLogo,
+          avatar_url: resolveAvatarUrl(),
         })
       }
 

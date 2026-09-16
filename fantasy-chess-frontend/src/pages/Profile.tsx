@@ -3,9 +3,9 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
+import { resolveAvatarUrl } from '../lib/avatars'
 import { User } from '../types'
 import AvatarShop from '../components/AvatarShop'
-import fantasyLeagueChessLogo from '../assets/fantasy-league-chess-logo-updated.png'
 
 interface ProfileProps {
   showOnlyShop?: boolean;
@@ -50,8 +50,8 @@ const Profile: React.FC<ProfileProps> = ({ showOnlyShop = false, onCloseShop }) 
     }
   }, [user])
 
-  const loadProfile = async () => {
-    setLoading(true)
+  const loadProfile = async ({ silent = false }: { silent?: boolean } = {}) => {
+    if (!silent) setLoading(true)
     const { data } = await supabase
       .from('users')
       .select('*')
@@ -61,7 +61,7 @@ const Profile: React.FC<ProfileProps> = ({ showOnlyShop = false, onCloseShop }) 
       setProfile(data)
       setUsername(data.username || '')
     }
-    setLoading(false)
+    if (!silent) setLoading(false)
   }
 
   const handleSave = async (e: React.FormEvent) => {
@@ -98,16 +98,16 @@ const Profile: React.FC<ProfileProps> = ({ showOnlyShop = false, onCloseShop }) 
     setSaving(false)
   }
 
-  if (loading) {
-    return <div className="flex justify-center items-center h-64">Loading...</div>
-  }
-
   if (showOnlyShop) {
     return (
       <div className="w-full max-w-4xl mx-auto pt-24 px-4 pb-12">
-        <AvatarShop onClose={onCloseShop} onBalanceChange={loadProfile} />
+        <AvatarShop onClose={onCloseShop} onBalanceChange={() => loadProfile({ silent: true })} />
       </div>
     )
+  }
+
+  if (loading) {
+    return <div className="flex justify-center items-center h-64">Loading...</div>
   }
 
   return (
@@ -116,7 +116,7 @@ const Profile: React.FC<ProfileProps> = ({ showOnlyShop = false, onCloseShop }) 
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div className="flex items-center gap-4">
             <img
-              src={profile?.selected_avatar_url || fantasyLeagueChessLogo}
+              src={resolveAvatarUrl(profile?.selected_avatar_url)}
               alt=""
               className="w-16 h-16 rounded-full border-2 border-gold object-cover"
             />
