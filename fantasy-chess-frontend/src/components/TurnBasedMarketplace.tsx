@@ -3,7 +3,13 @@ import { supabase } from '../lib/supabase';
 import { autoMarketplaceForBot } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { ChessPlayer, League, CurrentMarketplaceTurn, MarketplaceTurn } from '../types';
-import { isTeamBuildingComplete, preserveMarketplaceTurn } from '../lib/leagueStatus';
+import {
+  formatCalendarDate,
+  getMarketplaceAutoStartDate,
+  isMarketplaceAutoStartDue,
+  isTeamBuildingComplete,
+  preserveMarketplaceTurn,
+} from '../lib/leagueStatus';
 import { calculatePlayerPrice } from '../types/coin-system';
 import { useMarketplaceData } from '../hooks/useMarketplaceData';
 import { useDebounce } from '../hooks/useDebounce';
@@ -1230,11 +1236,18 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
   }, [availablePlayers, debouncedSearchTerm, userCoinBalance]);
 
   if (!league.marketplace_started) {
+    const autoStartDate = getMarketplaceAutoStartDate(league.start_date)
+    const autoStartDue = isMarketplaceAutoStartDue(league)
     return (
       <div className="bg-white rounded-lg shadow-lg p-6 border-2 border-blue-200">
         <h3 className="text-xl font-bold mb-4 text-gray-900">Turn-Based Marketplace</h3>
         <p className="text-gray-600 mb-4">
           The marketplace allows players to take turns buying chess players. Each player can have up to {league.max_players_per_team || 10} players on their team.
+        </p>
+        <p className="text-gray-600 mb-4">
+          {autoStartDue
+            ? 'The marketplace is due to start automatically now. It will open as soon as this league has at least 2 members.'
+            : `If the owner does not start it sooner, the marketplace will start automatically on ${formatCalendarDate(autoStartDate)} (one week before the league start date).`}
         </p>
         
         {isOwner && (
@@ -1256,7 +1269,9 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
         
         {!isOwner && (
           <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded">
-            Waiting for the league owner to start the marketplace...
+            {autoStartDue
+              ? 'Waiting for the marketplace to start automatically...'
+              : `Waiting for the league owner to start the marketplace, or it will start automatically on ${formatCalendarDate(autoStartDate)}.`}
           </div>
         )}
       </div>

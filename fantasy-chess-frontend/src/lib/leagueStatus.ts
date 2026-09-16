@@ -1,7 +1,15 @@
 import { League } from '../types'
-import { leagueSeasonHasStartedLocal } from './calendarDate'
+import {
+  compareCalendarDates,
+  getLocalDateString,
+  getMarketplaceAutoStartDate,
+  leagueSeasonHasEndedLocal,
+  leagueSeasonHasStartedLocal,
+} from './calendarDate'
 
 export {
+  getMarketplaceAutoStartDate,
+  getMinLeagueStartDateString,
   leagueSeasonHasEndedLocal,
   leagueSeasonHasStartedLocal,
 } from './calendarDate'
@@ -30,6 +38,26 @@ export function isLeagueJoinClosed(
     !!league.marketplace_completed ||
     leagueSeasonHasStartedLocal(league.start_date)
   )
+}
+
+/** True when the turn-based marketplace should auto-start (week before start_date, if not already started). */
+export function isMarketplaceAutoStartDue(
+  league: Pick<
+    League,
+    | 'start_date'
+    | 'end_date'
+    | 'marketplace_started'
+    | 'marketplace_completed'
+    | 'draft_completed'
+  >
+): boolean {
+  if (league.marketplace_started || league.marketplace_completed || league.draft_completed) {
+    return false
+  }
+  if (!league.start_date || leagueSeasonHasEndedLocal(league.end_date)) {
+    return false
+  }
+  return compareCalendarDates(getLocalDateString(), getMarketplaceAutoStartDate(league.start_date)) >= 0
 }
 
 /** Turn-based marketplace or legacy snake draft is finished. */

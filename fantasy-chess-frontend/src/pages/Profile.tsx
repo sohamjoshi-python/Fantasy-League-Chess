@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { User } from '../types'
@@ -13,12 +13,34 @@ interface ProfileProps {
 }
 
 const Profile: React.FC<ProfileProps> = ({ showOnlyShop = false, onCloseShop }) => {
-  const { user } = useAuth()
+  const { user, signOut } = useAuth()
+  const navigate = useNavigate()
   const [profile, setProfile] = useState<User | null>(null)
   const [username, setUsername] = useState('')
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
+
+  const handleDeleteAccount = async () => {
+    setDeleting(true)
+    setDeleteError('')
+    try {
+      const { error } = await supabase.functions.invoke('delete-account')
+      if (error) {
+        throw error
+      }
+      // Account is gone; end the session and return to the landing page.
+      await signOut().catch(() => {})
+      navigate('/')
+    } catch (err: any) {
+      setDeleteError(err?.message || 'Failed to delete account. Please try again or contact support.')
+      setDeleting(false)
+    }
+  }
 
   useEffect(() => {
     if (user) {
@@ -148,6 +170,64 @@ const Profile: React.FC<ProfileProps> = ({ showOnlyShop = false, onCloseShop }) 
           {message && <div className="text-green-600 text-center text-sm lg:text-base">{message}</div>}
         </form>
       </div>
+
+      <div className="bg-white rounded-lg shadow-lg p-6 border-2 border-red-300 mt-6">
+        <h3 className="text-lg font-bold text-red-700 mb-1">Danger Zone</h3>
+        <p className="text-sm text-neutral-600 mb-4">
+          Permanently delete your account and all associated data. This cannot be undone.
+        </p>
+        <button
+          type="button"
+          onClick={() => {
+            setDeleteConfirmText('')
+            setDeleteError('')
+            setShowDeleteModal(true)
+          }}
+          className="inline-flex justify-center bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-semibold transition-colors"
+        >
+          Delete Account
+        </button>
+      </div>
+
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+            <h3 className="text-xl font-bold text-neutral-900 mb-2">Delete your account?</h3>
+            <p className="text-sm text-neutral-600 mb-4">
+              This will permanently remove your profile, teams, lineups, and league memberships.
+              This action <span className="font-semibold">cannot be undone</span>. Type{' '}
+              <span className="font-mono font-semibold">DELETE</span> to confirm.
+            </p>
+            <input
+              type="text"
+              value={deleteConfirmText}
+              onChange={e => setDeleteConfirmText(e.target.value)}
+              disabled={deleting}
+              placeholder="DELETE"
+              className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 text-neutral-900 text-sm lg:text-base mb-4"
+            />
+            {deleteError && <div className="text-red-600 text-sm mb-4">{deleteError}</div>}
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowDeleteModal(false)}
+                disabled={deleting}
+                className="px-4 py-2 rounded-md text-sm font-semibold border border-neutral-300 text-neutral-700 hover:bg-neutral-100 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteAccount}
+                disabled={deleting || deleteConfirmText !== 'DELETE'}
+                className="px-4 py-2 rounded-md text-sm font-semibold text-white bg-red-600 hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {deleting ? 'Deleting...' : 'Delete Account'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

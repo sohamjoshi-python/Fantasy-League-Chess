@@ -105,7 +105,7 @@ const Help: React.FC = () => {
                   <ul className="list-disc list-inside text-neutral-700 mt-2 space-y-1">
                     <li>League name and description</li>
                     <li>Buy-in amount (in coins)</li>
-                    <li>Start and end dates</li>
+                    <li>Start date (must be at least 7 days from today)</li>
                     <li>Maximum number of players (up to 20)</li>
                   </ul>
                 </div>
@@ -125,8 +125,8 @@ const Help: React.FC = () => {
               <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 my-4">
                 <h4 className="font-semibold text-blue-900 mb-1">What is the Start Date?</h4>
                 <p className="text-sm text-blue-900">
-                  The <strong>start date</strong> is when your league officially begins and points start accumulating for all teams. <br/>
-                  <strong>Important:</strong> The draft must be completed before the start date. No points are earned before this date, and no new members can join after the draft starts.
+                  The <strong>start date</strong> is when your league officially begins and points start accumulating for all teams. New leagues must start at least <strong>7 days</strong> from today. <br/>
+                  <strong>Important:</strong> The turn-based marketplace starts one week before the start date if the owner has not started it sooner. No points are earned before the start date, and no new members can join after the marketplace starts.
                 </p>
               </div>
               <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 my-4">
@@ -260,7 +260,7 @@ const Help: React.FC = () => {
                   <h3 className="font-semibold text-neutral-900">Two Marketplace Types</h3>
                   <p className="text-neutral-700">There are two ways to trade players:</p>
                   <ul className="list-disc list-inside text-neutral-700 mt-2 space-y-1">
-                    <li><strong>Turn-Based Marketplace:</strong> Take turns buying players after the draft</li>
+                    <li><strong>Turn-Based Marketplace:</strong> Take turns buying players. The owner can start this early; otherwise it starts automatically one week before the league start date.</li>
                     <li><strong>Regular Marketplace:</strong> Buy and sell players freely throughout the season</li>
                   </ul>
                 </div>

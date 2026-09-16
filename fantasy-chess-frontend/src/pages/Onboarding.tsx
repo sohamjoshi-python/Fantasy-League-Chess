@@ -138,7 +138,7 @@ const Onboarding: React.FC = () => {
                   <ul className="list-disc list-inside text-neutral-700 mt-2 space-y-1">
                     <li>League name and description</li>
                     <li>Buy-in amount (in coins)</li>
-                    <li>Start and end dates</li>
+                    <li>Start date (at least 7 days from today)</li>
                     <li>Maximum number of members</li>
                   </ul>
                 </div>

@@ -22,6 +22,24 @@ function getEasternTuesdayDate(reference = new Date()): string {
   return cursor.toISOString().slice(0, 10)
 }
 
+/** Today's calendar date in US Eastern (YYYY-MM-DD). */
+function getEasternTodayDate(reference = new Date()): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/New_York',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(reference)
+}
+
+// Only nudge accounts older than this many days, so brand-new signups who just
+// received the welcome email are left alone.
+const REENGAGEMENT_MIN_ACCOUNT_AGE_DAYS = 7
+// Never send a re-engagement nudge to the same user more often than this.
+const REENGAGEMENT_THROTTLE_DAYS = 21
+// Safety cap on how many nudges a single run may send.
+const REENGAGEMENT_MAX_PER_RUN = 200
+
 function parseWeekDate(body: unknown): string | null {
   if (!body || typeof body !== 'object') return null
   const weekDate = (body as { week_date?: unknown }).week_date
@@ -141,6 +159,49 @@ function createWeeklyResultsEmail(user: any, lineups: any[], leagueById: Map<str
 
   return {
     subject: `Your Fantasy League Chess results for last week: ${resultDate}`,
+    htmlContent,
+    textContent,
+  }
+}
+
+function createReengagementEmail(user: any) {
+  const displayName = user.username || user.email?.split('@')[0] || 'there'
+
+  const textContent = [
+    `Hi ${displayName},`,
+    `You're not in an active Fantasy League Chess league right now, so you're missing out on this week's Titled Tuesday action.`,
+    `Jump back in: draft a team of titled players, set your weekly lineup, and climb the standings.`,
+    `Join or create a league: ${dashboardUrl}`,
+  ].join('\n\n')
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html lang="en">
+      <body style="font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; color: #333333; line-height: 1.6;">
+        <div style="max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); overflow: hidden;">
+          <div style="background-color: #4CAF50; color: #ffffff; padding: 24px 20px; text-align: center;">
+            <img src="https://fantasyleaguechess.com/assets/fantasy-league-chess-logo-updated.png" alt="Fantasy League Chess" style="max-width: 200px; height: auto; margin-bottom: 12px;">
+            <h1 style="margin: 0; font-size: 24px; color: #ffffff;">Ready for your next match?</h1>
+          </div>
+          <div style="padding: 28px 24px;">
+            <p style="margin: 0 0 18px;">Hi ${escapeHtml(displayName)},</p>
+            <p style="margin: 0 0 18px;">You're not in an active league right now, so you're missing out on this week's Titled Tuesday action.</p>
+            <p style="margin: 0 0 18px;">Jump back in: draft a team of titled players, set your weekly lineup, and climb the standings.</p>
+            <p style="margin: 30px 0; text-align: center;">
+              <a href="${dashboardUrl}" style="display: inline-block; background-color: #4CAF50; color: #ffffff; padding: 12px 24px; border-radius: 5px; text-decoration: none; font-weight: bold;">Join a League</a>
+            </p>
+          </div>
+          <div style="text-align: center; font-size: 12px; color: #777777; padding: 0 24px 24px;">
+            <p style="margin: 0 0 6px;">You're receiving this occasional nudge because you have a Fantasy League Chess account but no active league.</p>
+            <p style="margin: 0;">&copy; ${new Date().getFullYear()} Fantasy League Chess. All rights reserved.</p>
+          </div>
+        </div>
+      </body>
+    </html>
+  `
+
+  return {
+    subject: 'Ready for your next Fantasy League Chess match?',
     htmlContent,
     textContent,
   }
@@ -299,6 +360,85 @@ serve(async (req) => {
       console.error('Error in email sending process:', emailError)
     }
 
+    // Gentle, throttled re-engagement nudge for users with no active league.
+    // Skipped entirely for test_email runs so manual tests never trigger a mass send.
+    let reengagementSent = 0
+    if (!testEmail) {
+      try {
+        const todayDate = getEasternTodayDate()
+        const throttleCutoff = new Date(Date.now() - REENGAGEMENT_THROTTLE_DAYS * 24 * 60 * 60 * 1000).toISOString()
+        const accountAgeCutoff = new Date(Date.now() - REENGAGEMENT_MIN_ACCOUNT_AGE_DAYS * 24 * 60 * 60 * 1000).toISOString()
+
+        // Build the set of users who belong to a league that is still running.
+        const { data: activeLeagues, error: activeLeaguesError } = await supabase
+          .from('leagues')
+          .select('member_ids, end_date')
+          .gte('end_date', todayDate)
+
+        if (activeLeaguesError) {
+          throw activeLeaguesError
+        }
+
+        const activeUserIds = new Set<string>()
+        for (const league of activeLeagues || []) {
+          for (const memberId of league.member_ids || []) {
+            if (memberId) activeUserIds.add(memberId)
+          }
+        }
+
+        // Candidates: confirmed accounts (welcome email sent), older than the grace
+        // period, and not nudged within the throttle window.
+        const { data: candidates, error: candidatesError } = await supabase
+          .from('users')
+          .select('id, email, username, last_reengagement_email_at')
+          .not('email', 'is', null)
+          .eq('sent_welcome_email', true)
+          .lt('created_at', accountAgeCutoff)
+          .or(`last_reengagement_email_at.is.null,last_reengagement_email_at.lt.${throttleCutoff}`)
+          .limit(REENGAGEMENT_MAX_PER_RUN)
+
+        if (candidatesError) {
+          // Most likely the last_reengagement_email_at column has not been migrated yet.
+          // Fail safe: skip the nudge rather than risk sending unthrottled.
+          throw candidatesError
+        }
+
+        const usersToNudge = (candidates || []).filter((user) => user.email && !activeUserIds.has(user.id))
+        console.log(`Re-engagement: ${usersToNudge.length} users with no active league to nudge`)
+
+        for (const user of usersToNudge) {
+          const { subject, htmlContent, textContent } = createReengagementEmail(user)
+          try {
+            await supabase.functions.invoke('send-free-email', {
+              body: {
+                to: user.email,
+                subject,
+                htmlContent,
+                textContent,
+                emailType: 'custom',
+                userEmail: user.email,
+                userId: user.id,
+                metadata: {
+                  source: 'process_weekly_results_reengagement',
+                  weekDate: tuesdayDate,
+                },
+              },
+            })
+            await supabase
+              .from('users')
+              .update({ last_reengagement_email_at: new Date().toISOString() })
+              .eq('id', user.id)
+            reengagementSent += 1
+            console.log(`Re-engagement email sent to ${user.email}`)
+          } catch (nudgeError) {
+            console.error(`Error sending re-engagement email to ${user.email}:`, nudgeError)
+          }
+        }
+      } catch (reengagementError) {
+        console.error('Re-engagement process skipped:', reengagementError)
+      }
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -306,6 +446,7 @@ serve(async (req) => {
         lineup_week_start: lineupWeekStart,
         message: `Processed weekly results for ${tuesdayDate}`,
         emailsSent,
+        reengagementSent,
       }),
       {
         status: 200,

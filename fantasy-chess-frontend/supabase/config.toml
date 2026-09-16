@@ -319,6 +319,7 @@ s3_secret_key = "env(S3_SECRET_KEY)"
 # Edge function scheduling is configured in the Supabase Dashboard
 # Go to Edge Functions → weekly-coin-distribution → Add Schedule
 # Cron expression: 0 1 * * 1 (every Monday at 1:00 AM UTC)
+# auto-start-marketplace is triggered by GitHub Actions twice daily.
 
 [functions.send-email]
 enabled = true
@@ -330,3 +331,13 @@ entrypoint = "./functions/send-email/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/send-email/*.html" ]
+
+# Account deletion. Requires a valid user JWT; the function derives the account to
+# delete from the caller's own token, so a user can only delete themselves.
+[functions.delete-account]
+enabled = true
+verify_jwt = true
+
+[functions.auto-start-marketplace]
+enabled = true
+verify_jwt = true

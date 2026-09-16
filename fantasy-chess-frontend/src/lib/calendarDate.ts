@@ -33,6 +33,16 @@ export function getTomorrowDateString(): string {
   return getLocalDateString(tomorrow)
 }
 
+/** Earliest allowed league start date: 7 days from today (local). */
+export function getMinLeagueStartDateString(): string {
+  return addDaysToYmd(getLocalDateString(), 7)
+}
+
+/** Calendar day the turn-based marketplace auto-starts if the owner has not started it. */
+export function getMarketplaceAutoStartDate(startDateYmd: string): string {
+  return addDaysToYmd(startDateYmd, -7)
+}
+
 /** Monday of the week containing `date` (local), as YYYY-MM-DD. */
 export function getWeekStartMonday(date: Date = new Date()): string {
   const d = new Date(date)

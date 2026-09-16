@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { League } from '../types'
 import { Users, Trophy, Calendar, Search, Copy } from 'lucide-react'
-import { getLeagueEndDateFromStart, getLocalDateString, getTomorrowDateString } from '../lib/calendarDate'
+import { getLeagueEndDateFromStart, getLocalDateString, getMinLeagueStartDateString } from '../lib/calendarDate'
 import { formatCalendarDate, isLeagueJoinClosed } from '../lib/leagueStatus'
 
 // Helper function to send league joined email
@@ -40,7 +40,7 @@ const JoinLeague: React.FC = () => {
   const [buyIn, setBuyIn] = useState(10)
   const [maxMembers, setMaxMembers] = useState(10)
   const [isPublic, setIsPublic] = useState(true)
-  const [startDate, setStartDate] = useState('')
+  const [startDate, setStartDate] = useState(getMinLeagueStartDateString())
 
   useEffect(() => {
     if (activeTab === 'public') {
@@ -98,10 +98,10 @@ const JoinLeague: React.FC = () => {
         return
       }
 
-      // Validate start date (must be at least tomorrow)
-      const tomorrowStr = getTomorrowDateString();
-      if (!startDate || startDate < tomorrowStr) {
-        setError('Start date must be at least tomorrow.')
+      // Validate start date (must be at least 7 days from today)
+      const minStartDate = getMinLeagueStartDateString()
+      if (!startDate || startDate < minStartDate) {
+        setError(`Start date must be at least a week from today (${formatCalendarDate(minStartDate)}).`)
         return
       }
 
@@ -497,11 +497,11 @@ const JoinLeague: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
               <div>
                 <label htmlFor="startDate" className="block text-sm font-medium text-neutral-700 mb-2 flex items-center gap-1 overflow-visible">
-                  Start Date (first of month) *
+                  Start Date *
                   <span className="relative group cursor-pointer align-middle">
                     <svg className="w-4 h-4 text-royalBlue inline-block" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
                     <span className="absolute left-1/2 top-full mt-2 -translate-x-1/2 w-64 bg-white text-neutral-900 text-xs rounded shadow-lg border border-royalBlue px-3 py-2 z-50 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-normal">
-                      The start date is when the league officially begins and points start accumulating. The draft must be completed before this date.
+                      The start date is when points start accumulating. Leagues must start at least 7 days from today. The turn-based marketplace starts one week before this date if the owner has not started it sooner. Players cannot join after the marketplace starts.
                     </span>
                   </span>
                 </label>
@@ -511,9 +511,12 @@ const JoinLeague: React.FC = () => {
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
                   required
-                  min={getTomorrowDateString()}
+                  min={getMinLeagueStartDateString()}
                   className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-royalBlue text-neutral-900"
                 />
+                <p className="text-xs text-neutral-500 mt-1">
+                  Must be at least 7 days from today. The turn-based marketplace auto-starts one week before this date.
+                </p>
               </div>
             </div>
 
