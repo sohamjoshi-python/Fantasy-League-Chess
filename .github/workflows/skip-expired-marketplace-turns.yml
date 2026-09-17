@@ -46,3 +46,8 @@ jobs:
             echo "Failed to skip expired marketplace turns"
             exit 1
           fi
+
+  send-turn-emails:
+    needs: skip-expired-turns
+    uses: ./.github/workflows/marketplace-turn-emails.yml
+    secrets: inherit

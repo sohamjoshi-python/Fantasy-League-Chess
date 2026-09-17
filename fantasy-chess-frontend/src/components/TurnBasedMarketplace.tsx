@@ -15,6 +15,7 @@ import {
   preserveMarketplaceTurn,
 } from '../lib/leagueStatus';
 import { calculatePlayerPrice } from '../types/coin-system';
+import { notifyMarketplaceTurnIfNeeded } from '../lib/marketplaceTurnEmail';
 import { useMarketplaceData } from '../hooks/useMarketplaceData';
 import { useDebounce } from '../hooks/useDebounce';
 import { LoadingSpinner } from './ui/LoadingSpinner';
@@ -296,6 +297,13 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
     league?.marketplace_turn_started_at,
     league?.current_marketplace_turn,
   ]);
+
+  useEffect(() => {
+    if (!league?.id || !league.marketplace_started || league.marketplace_completed) {
+      return;
+    }
+    void notifyMarketplaceTurnIfNeeded(league.id);
+  }, [league?.id, league?.marketplace_started, league?.marketplace_completed, league?.current_marketplace_turn]);
 
   // Check if only one human player remains
   useEffect(() => {

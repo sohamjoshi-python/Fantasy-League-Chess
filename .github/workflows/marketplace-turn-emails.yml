@@ -1,0 +1,26 @@
+name: Marketplace Turn Emails
+
+on:
+  schedule:
+    # Backup if nobody has the draft page open. Live picks also email from the app.
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  send-turn-emails:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Email current snake-draft pickers
+        env:
+          SB_URL: ${{ secrets.SB_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SB_KEY: ${{ secrets.SB_KEY }}
+        run: python scripts/send_marketplace_turn_emails.py

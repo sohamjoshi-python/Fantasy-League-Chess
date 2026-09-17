@@ -45,3 +45,8 @@ jobs:
     needs: trigger-auto-start
     uses: ./.github/workflows/league-lifecycle-emails.yml
     secrets: inherit
+
+  send-turn-emails:
+    needs: trigger-auto-start
+    uses: ./.github/workflows/marketplace-turn-emails.yml
+    secrets: inherit

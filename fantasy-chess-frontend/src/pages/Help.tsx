@@ -186,7 +186,7 @@ const Help: React.FC<HelpProps> = ({ variant }) => {
                     <strong>Why Snake Draft?</strong> This format ensures fairness - Player 1 gets first pick in odd rounds, but Player 4 gets first pick in even rounds. Everyone gets equal access to top talent!
                   </p>
                   <p className="text-neutral-700 text-sm">
-                    <strong>12-hour pick clock:</strong> Each manager has 12 hours to buy a player on their turn. If they don't pick, that turn is skipped and the next manager is up. Missed snake picks can still be filled later in the regular (non-turn-based) marketplace.
+                    <strong>12-hour pick clock:</strong> Each manager has 12 hours to buy a player on their turn. You'll get an email as soon as it's your turn. If you don't pick, that turn is skipped and the next manager is up. Missed snake picks can still be filled later in the regular (non-turn-based) marketplace.
                   </p>
                 </div>
               </div>
