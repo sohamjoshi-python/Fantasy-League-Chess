@@ -1,0 +1,48 @@
+name: Skip Expired Marketplace Turns
+
+on:
+  schedule:
+    # Check often enough that a 12-hour miss is skipped shortly after it expires.
+    - cron: "7,22,37,52 * * * *"
+  workflow_dispatch:
+    inputs:
+      timeout_hours:
+        description: "Hours a manager has to pick before the turn is skipped. Keep 12 unless you are intentionally testing one league from the SQL editor."
+        required: false
+        default: "12"
+
+jobs:
+  skip-expired-turns:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Skip expired snake-draft turns
+        env:
+          TIMEOUT_HOURS: ${{ github.event.inputs.timeout_hours || '12' }}
+        run: |
+          echo "Skipping marketplace turns idle longer than ${TIMEOUT_HOURS} hours..."
+
+          SERVICE_KEY="${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}"
+          if [ -z "$SERVICE_KEY" ]; then
+            SERVICE_KEY="${{ secrets.SB_KEY }}"
+          fi
+
+          response=$(curl -s -w "\n%{http_code}" -X POST \
+            "${{ secrets.SB_URL }}/rest/v1/rpc/skip_expired_marketplace_turns" \
+            -H "Authorization: Bearer ${SERVICE_KEY}" \
+            -H "apikey: ${SERVICE_KEY}" \
+            -H "Content-Type: application/json" \
+            -d "{\"p_timeout_hours\": ${TIMEOUT_HOURS}}")
+
+          http_code=$(echo "$response" | tail -n1)
+          response_body=$(echo "$response" | head -n -1)
+
+          echo "Response Status: $http_code"
+          echo "Response Body: $response_body"
+
+          if [ "$http_code" -eq 200 ]; then
+            echo "$response_body" | jq -r '"Skipped: \(.skipped_count) (timeout \(.timeout_hours)h)"'
+          else
+            echo "Failed to skip expired marketplace turns"
+            exit 1
+          fi

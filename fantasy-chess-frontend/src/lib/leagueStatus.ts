@@ -142,6 +142,30 @@ export function isCoinMarketplaceAvailable(league: League): boolean {
   return isTeamBuildingComplete(league) && !!league.marketplace_started
 }
 
+export const MARKETPLACE_TURN_TIMEOUT_HOURS = 12
+export const MARKETPLACE_TURN_TIMEOUT_MS = MARKETPLACE_TURN_TIMEOUT_HOURS * 60 * 60 * 1000
+
+/** Milliseconds until the current snake-draft pick is auto-skipped. Negative means expired. */
+export function getMarketplaceTurnMsRemaining(
+  turnStartedAt: string | null | undefined,
+  nowMs: number = Date.now()
+): number | null {
+  if (!turnStartedAt) return null
+  const startedMs = Date.parse(turnStartedAt)
+  if (Number.isNaN(startedMs)) return null
+  return startedMs + MARKETPLACE_TURN_TIMEOUT_MS - nowMs
+}
+
+export function formatMarketplaceTurnRemaining(ms: number): string {
+  const clamped = Math.max(0, Math.floor(ms / 1000))
+  const hours = Math.floor(clamped / 3600)
+  const minutes = Math.floor((clamped % 3600) / 60)
+  const seconds = clamped % 60
+  if (hours > 0) return `${hours}h ${minutes}m`
+  if (minutes > 0) return `${minutes}m ${seconds}s`
+  return `${seconds}s`
+}
+
 /** Keep the current picker when member_ids change but the draft is already underway. */
 export function preserveMarketplaceTurn(
   previousOrder: string[],

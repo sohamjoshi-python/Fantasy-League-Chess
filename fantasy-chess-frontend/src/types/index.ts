@@ -58,6 +58,7 @@ export interface League {
   current_marketplace_turn?: number
   marketplace_completed?: boolean
   marketplace_start_time?: string
+  marketplace_turn_started_at?: string
   max_players_per_team?: number
 }
 

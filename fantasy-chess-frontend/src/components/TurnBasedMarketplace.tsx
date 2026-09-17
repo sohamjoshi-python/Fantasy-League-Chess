@@ -5,10 +5,13 @@ import { useAuth } from '../contexts/AuthContext';
 import { ChessPlayer, League, CurrentMarketplaceTurn, MarketplaceTurn } from '../types';
 import {
   formatCalendarDate,
+  formatMarketplaceTurnRemaining,
   getMarketplaceAutoStartDate,
+  getMarketplaceTurnMsRemaining,
   isMarketplaceAutoStartDue,
   isPlayerAlreadyOwnedError,
   isTeamBuildingComplete,
+  MARKETPLACE_TURN_TIMEOUT_HOURS,
   preserveMarketplaceTurn,
 } from '../lib/leagueStatus';
 import { calculatePlayerPrice } from '../types/coin-system';
@@ -101,6 +104,9 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
   const [error, setError] = useState<string | null>(null);
   const botProcessingRef = useRef(false);
   const syncInProgressRef = useRef(false);
+  const skipExpiredRef = useRef(false);
+  const skipFailedRef = useRef(false);
+  const [turnMsRemaining, setTurnMsRemaining] = useState<number | null>(null);
 
   const isOwner = user?.id && league && user.id === league?.creator_id;
   const isUserTurn = currentTurn?.current_user_id === user?.id;
@@ -230,6 +236,66 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
   useEffect(() => {
     setMarketplaceDraftCompleted(isTeamBuildingComplete(league));
   }, [league]);
+
+  const skipExpiredTurns = async () => {
+    if (
+      skipExpiredRef.current ||
+      skipFailedRef.current ||
+      !league?.id ||
+      !league.marketplace_started ||
+      league.marketplace_completed
+    ) {
+      return;
+    }
+
+    skipExpiredRef.current = true;
+    try {
+      const { error: skipError } = await supabase.rpc('skip_expired_marketplace_turns', {
+        p_timeout_hours: MARKETPLACE_TURN_TIMEOUT_HOURS,
+        p_league_id: league.id,
+      });
+      if (skipError) {
+        console.error('Error skipping expired marketplace turns:', skipError);
+        skipFailedRef.current = true;
+        return;
+      }
+      skipFailedRef.current = false;
+      invalidateCache(league.id);
+      if (user?.id) invalidateCache(user.id);
+      refreshData();
+      onUpdate();
+    } finally {
+      setTimeout(() => {
+        skipExpiredRef.current = false;
+      }, 2000);
+    }
+  };
+
+  useEffect(() => {
+    if (!league?.marketplace_started || league.marketplace_completed) {
+      setTurnMsRemaining(null);
+      return;
+    }
+
+    skipFailedRef.current = false;
+    const tick = () => {
+      const remaining = getMarketplaceTurnMsRemaining(league.marketplace_turn_started_at);
+      setTurnMsRemaining(remaining);
+      if (remaining !== null && remaining <= 0) {
+        void skipExpiredTurns();
+      }
+    };
+
+    tick();
+    const timer = setInterval(tick, 1000);
+    return () => clearInterval(timer);
+  }, [
+    league?.id,
+    league?.marketplace_started,
+    league?.marketplace_completed,
+    league?.marketplace_turn_started_at,
+    league?.current_marketplace_turn,
+  ]);
 
   // Check if only one human player remains
   useEffect(() => {
@@ -1373,6 +1439,13 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
                 <span className="text-gray-600">Waiting on someone else...</span>
               )}
             </p>
+            {turnMsRemaining !== null && (
+              <p className={`text-sm ${turnMsRemaining <= 60 * 60 * 1000 ? 'text-red-700 font-semibold' : 'text-blue-800'}`}>
+                {turnMsRemaining > 0
+                  ? `${formatMarketplaceTurnRemaining(turnMsRemaining)} left to pick. After ${MARKETPLACE_TURN_TIMEOUT_HOURS} hours this turn is skipped.`
+                  : 'Time is up — skipping this turn...'}
+              </p>
+            )}
             {isUserTurn && (
               <div className="space-y-2">
               <p className="text-sm">

@@ -182,8 +182,11 @@ const Help: React.FC<HelpProps> = ({ variant }) => {
                     <div>Round 4: Player 4 → Player 3 → Player 2 → Player 1</div>
                     <div className="mt-1 text-xs text-neutral-600">...continues for 10 rounds total</div>
                   </div>
-                  <p className="text-neutral-700 text-sm">
+                  <p className="text-neutral-700 text-sm mb-2">
                     <strong>Why Snake Draft?</strong> This format ensures fairness - Player 1 gets first pick in odd rounds, but Player 4 gets first pick in even rounds. Everyone gets equal access to top talent!
+                  </p>
+                  <p className="text-neutral-700 text-sm">
+                    <strong>12-hour pick clock:</strong> Each manager has 12 hours to buy a player on their turn. If they don't pick, that turn is skipped and the next manager is up. Missed snake picks can still be filled later in the regular (non-turn-based) marketplace.
                   </p>
                 </div>
               </div>
@@ -264,8 +267,8 @@ const Help: React.FC<HelpProps> = ({ variant }) => {
                   <h3 className="font-semibold text-neutral-900">Two Marketplace Types</h3>
                   <p className="text-neutral-700">There are two ways to trade players:</p>
                   <ul className="list-disc list-inside text-neutral-700 mt-2 space-y-1">
-                    <li><strong>Turn-Based Marketplace:</strong> Take turns buying players. The owner can start this early; otherwise it starts automatically one week before the league start date.</li>
-                    <li><strong>Regular Marketplace:</strong> Buy and sell players freely throughout the season</li>
+                    <li><strong>Turn-Based Marketplace:</strong> Take turns buying players. Each turn has a 12-hour limit; if you don't pick, the turn is skipped. The owner can start this early; otherwise it starts automatically one week before the league start date.</li>
+                    <li><strong>Regular Marketplace:</strong> After the snake draft ends, buy and sell players freely throughout the season</li>
                   </ul>
                 </div>
               </div>
