@@ -83,6 +83,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
   const [lastActionTime, setLastActionTime] = useState(0);
   const [selectedPlayerForModal, setSelectedPlayerForModal] = useState<ChessPlayer | null>(null);
+  const [showLeaveDraftConfirm, setShowLeaveDraftConfirm] = useState(false);
   
   
   // Add state for draft completed - check both league state and marketplace order
@@ -113,12 +114,16 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
 
   const isOwner = user?.id && league && user.id === league?.creator_id;
   const isUserTurn = currentTurn?.current_user_id === user?.id;
+  const isUserInDraft = !!user?.id && (league.marketplace_order || []).includes(user.id);
   const maxPlayers = league.max_players_per_team || 10;
   const userTeamSize = userTeam.length;
   const canBuy = userTeamSize < maxPlayers;
 
   const getFundedParticipants = async (excludeId?: string): Promise<string[]> => {
-    const memberIds = (league.member_ids || []).filter(id => id !== excludeId);
+    const withdrawn = new Set(league.marketplace_withdrawn_ids || []);
+    const memberIds = (league.member_ids || []).filter(
+      id => id !== excludeId && !withdrawn.has(id)
+    );
 
     const { data: balances, error: balancesError } = await supabase
       .from('league_coin_balances')
@@ -175,15 +180,16 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
 
 
   // Initialize marketplace order if it is missing. Once the draft starts, marketplace_order
-  // may intentionally be a subset of member_ids because broke players are removed from turns.
+  // may intentionally be a subset of member_ids because broke or withdrawn players are removed from turns.
   useEffect(() => {
     const initializeMarketplaceOrder = async () => {
-      if (!league?.id || !league.marketplace_started || !league.marketplace_order || !league.member_ids || syncInProgressRef.current) {
+      if (!league?.id || !league.marketplace_started || league.marketplace_completed || !league.marketplace_order || !league.member_ids || syncInProgressRef.current) {
         return;
       }
 
       const currentOrder = league.marketplace_order || [];
-      const memberIds = league.member_ids || [];
+      const withdrawn = new Set(league.marketplace_withdrawn_ids || []);
+      const memberIds = (league.member_ids || []).filter(id => !withdrawn.has(id));
       
       if (currentOrder.length === 0 && memberIds.length > 0) {
         syncInProgressRef.current = true; // Prevent endless loop
@@ -378,7 +384,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
   // Do not add missing member_ids back into the order; those players may be out of GEMS.
   useEffect(() => {
     const repairMarketplaceOrder = async () => {
-      if (!league?.id || !league.marketplace_started || !league.marketplace_order || !league.member_ids || syncInProgressRef.current) {
+      if (!league?.id || !league.marketplace_started || league.marketplace_completed || !league.marketplace_order || !league.member_ids || syncInProgressRef.current) {
         return;
       }
 
@@ -430,7 +436,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
     };
 
     repairMarketplaceOrder();
-  }, [league?.id, league?.marketplace_started, league?.marketplace_order, league?.member_ids]); // Run when these change
+  }, [league?.id, league?.marketplace_started, league?.marketplace_order, league?.member_ids, league?.marketplace_withdrawn_ids]);
 
   // Simplified bot processing - only when it's actually a bot's turn
   useEffect(() => {
@@ -1067,6 +1073,86 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
     }
   };
 
+  const finishDraftAfterWithdrawal = async (
+    remainingOrder: string[],
+    nextTurn: number,
+    draftCompleted: boolean
+  ) => {
+    if (draftCompleted) {
+      showMarketplaceCompletionPopup();
+      return;
+    }
+
+    const remainingMembers = Array.from(new Set(remainingOrder));
+    if (remainingMembers.length === 0) {
+      showMarketplaceCompletionPopup();
+      return;
+    }
+
+    if (remainingMembers.length === 1) {
+      const remainingMember = remainingMembers[0];
+      const { data: botData } = await supabase
+        .from('bots')
+        .select('id')
+        .eq('id', remainingMember)
+        .maybeSingle();
+
+      if (botData) {
+        await finishBotTurnAndCloseMarketplace(remainingMember);
+      }
+      return;
+    }
+
+    const nextPicker = remainingOrder[nextTurn];
+    if (!nextPicker) return;
+
+    const { data: botData } = await supabase
+      .from('bots')
+      .select('id')
+      .eq('id', nextPicker)
+      .maybeSingle();
+    if (botData) {
+      await processBotTurnImmediately(nextPicker);
+    }
+  };
+
+  const leaveDraft = async () => {
+    if (!user?.id || !league?.id || loading) return;
+
+    setLoading(true);
+    setError(null);
+    try {
+      const { data, error: withdrawError } = await supabase.rpc('withdraw_from_marketplace_draft', {
+        p_league_id: league.id,
+      });
+
+      if (withdrawError) {
+        throw withdrawError;
+      }
+
+      setShowLeaveDraftConfirm(false);
+
+      const remainingOrder = (data?.marketplace_order || []) as string[];
+      const nextTurn = typeof data?.current_marketplace_turn === 'number'
+        ? data.current_marketplace_turn
+        : 0;
+      const draftCompleted = !!data?.marketplace_completed;
+
+      invalidateCache(league.id);
+      if (user.id) invalidateCache(user.id);
+      refreshData();
+      await loadCurrentTurn();
+      onUpdate();
+      await notifyMarketplaceTurnIfNeeded(league.id);
+      await finishDraftAfterWithdrawal(remainingOrder, nextTurn, draftCompleted);
+    } catch (err: any) {
+      console.error('Error leaving draft:', err);
+      setError(err?.message || 'Failed to leave the draft');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Function to remove bot from the active marketplace draft without deleting league membership.
   const removeBotFromDraft = async (botId: string) => {
     try {
@@ -1480,7 +1566,30 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
                     </p>
                   </div>
             )}
+                <button
+                  type="button"
+                  onClick={() => setShowLeaveDraftConfirm(true)}
+                  disabled={loading}
+                  className="mt-2 w-full sm:w-auto px-4 py-2 bg-white border border-orange-300 text-orange-800 rounded-md hover:bg-orange-50 disabled:opacity-50 text-sm font-medium"
+                >
+                  End turn
+                </button>
+                <p className="text-xs text-orange-700">
+                  Leave the rest of the snake draft and keep remaining GEMS for the regular marketplace.
+                </p>
           </div>
+            )}
+            {!isUserTurn && isUserInDraft && (
+              <div className="mt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowLeaveDraftConfirm(true)}
+                  disabled={loading}
+                  className="px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 disabled:opacity-50 text-sm"
+                >
+                  Leave draft
+                </button>
+              </div>
             )}
             {/* Bot turn indicator */}
             {currentTurn && !isUserTurn && isCurrentTurnBot && (
@@ -1531,8 +1640,8 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
 
         {/* Auto-remove info */}
         <div className="mt-2 p-2 bg-orange-50 border border-orange-200 rounded text-xs">
-          <p className="text-orange-700 font-semibold">💡 Auto-Remove Feature</p>
-          <p className="text-orange-600">Users with 0 GEMS are automatically removed from the draft entirely</p>
+          <p className="text-orange-700 font-semibold">💡 Leaving the draft</p>
+          <p className="text-orange-600">Use End turn to leave the snake draft even if you still have GEMS. You stay in the league and can spend leftover GEMS later in the regular marketplace. Users with 0 GEMS are removed automatically.</p>
           </div>
         </div>
 
@@ -1543,6 +1652,12 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
       {(error || dataError) && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
           {error || dataError}
+        </div>
+      )}
+
+      {!marketplaceDraftCompleted && user?.id && !isUserInDraft && (league.marketplace_withdrawn_ids || []).includes(user.id) && (
+        <div className="mb-4 p-3 bg-amber-50 border border-amber-200 text-amber-800 rounded">
+          You left the snake draft. Remaining GEMS stay on your balance for the regular marketplace after the draft ends.
         </div>
       )}
 
@@ -1675,6 +1790,38 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
                 className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
               >
                 Confirm Purchase
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showLeaveDraftConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-3">End turn and leave the draft?</h3>
+            <p className="text-sm text-gray-600 mb-3">
+              You will not get any more snake-draft picks. You stay in the league, keep players you already bought, and keep remaining GEMS for the regular marketplace after this draft ends.
+            </p>
+            <p className="text-sm text-gray-600 mb-4">
+              Current balance: {userCoinBalance ?? 0} 💎
+            </p>
+            <div className="flex space-x-3">
+              <button
+                type="button"
+                onClick={() => setShowLeaveDraftConfirm(false)}
+                disabled={loading}
+                className="flex-1 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void leaveDraft()}
+                disabled={loading}
+                className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:bg-orange-400"
+              >
+                {loading ? 'Leaving...' : 'End turn'}
               </button>
             </div>
           </div>

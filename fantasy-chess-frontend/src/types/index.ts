@@ -60,6 +60,7 @@ export interface League {
   marketplace_start_time?: string
   marketplace_turn_started_at?: string
   marketplace_turn_email_sent_for?: number | null
+  marketplace_withdrawn_ids?: string[]
   max_players_per_team?: number
 }
 

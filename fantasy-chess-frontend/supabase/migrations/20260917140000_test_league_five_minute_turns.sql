@@ -21,6 +21,8 @@ DECLARE
     skipped jsonb := '[]'::jsonb;
     skipped_ids uuid[] := ARRAY[]::uuid[];
     timeout_interval interval;
+    league_timeout interval;
+    test_league_id constant uuid := '1465e20b-f06b-4a89-8e3f-d675759af0c4';
 BEGIN
     IF p_timeout_hours IS NULL OR p_timeout_hours <= 0 THEN
         RAISE EXCEPTION 'Timeout must be greater than 0 hours';
@@ -40,10 +42,12 @@ BEGIN
                 marketplace_start_time,
                 updated_at,
                 created_at
-              ) <= NOW() - CASE
-                    WHEN id = '1465e20b-f06b-4a89-8e3f-d675759af0c4'::uuid THEN interval '5 minutes'
-                    ELSE timeout_interval
-                  END
+              ) <= NOW() - (
+                    CASE
+                        WHEN id = test_league_id THEN interval '5 minutes'
+                        ELSE timeout_interval
+                    END
+                  )
         FOR UPDATE SKIP LOCKED
     LOOP
         SELECT * INTO league_row
@@ -63,10 +67,13 @@ BEGIN
             league_row.created_at
         );
 
-        IF turn_clock IS NULL OR turn_clock > NOW() - CASE
-            WHEN league_row.id = '1465e20b-f06b-4a89-8e3f-d675759af0c4'::uuid THEN interval '5 minutes'
-            ELSE timeout_interval
-        END THEN
+        IF league_row.id = test_league_id THEN
+            league_timeout := interval '5 minutes';
+        ELSE
+            league_timeout := timeout_interval;
+        END IF;
+
+        IF turn_clock IS NULL OR turn_clock > NOW() - league_timeout THEN
             CONTINUE;
         END IF;
 

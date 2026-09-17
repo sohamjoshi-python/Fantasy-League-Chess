@@ -188,6 +188,9 @@ const Help: React.FC<HelpProps> = ({ variant }) => {
                   <p className="text-neutral-700 text-sm">
                     <strong>12-hour pick clock:</strong> Each manager has 12 hours to buy a player on their turn. You'll get an email as soon as it's your turn. If you don't pick, that turn is skipped and the next manager is up. Missed snake picks can still be filled later in the regular (non-turn-based) marketplace.
                   </p>
+                  <p className="text-neutral-700 text-sm mt-2">
+                    <strong>End turn:</strong> You can leave the snake draft even if you still have GEMS, for example to save them for a later purchase in the regular marketplace. You stay in the league and keep any players you already drafted.
+                  </p>
                 </div>
               </div>
               <div className="flex items-start">
@@ -267,7 +270,7 @@ const Help: React.FC<HelpProps> = ({ variant }) => {
                   <h3 className="font-semibold text-neutral-900">Two Marketplace Types</h3>
                   <p className="text-neutral-700">There are two ways to trade players:</p>
                   <ul className="list-disc list-inside text-neutral-700 mt-2 space-y-1">
-                    <li><strong>Turn-Based Marketplace:</strong> Take turns buying players. Each turn has a 12-hour limit; if you don't pick, the turn is skipped. The owner can start this early; otherwise it starts automatically one week before the league start date.</li>
+                    <li><strong>Turn-Based Marketplace:</strong> Take turns buying players. Each turn has a 12-hour limit; if you don't pick, the turn is skipped. You can also end your turn to leave the rest of the snake draft and keep remaining GEMS for later. The owner can start this early; otherwise it starts automatically one week before the league start date.</li>
                     <li><strong>Regular Marketplace:</strong> After the snake draft ends, buy and sell players freely throughout the season</li>
                   </ul>
                 </div>
@@ -380,7 +383,7 @@ const Help: React.FC<HelpProps> = ({ variant }) => {
                       <li>• <strong>Everyone gets exactly 50 GEMS when draft starts</strong></li>
                       <li>• <strong>High-rated players cost more GEMS (Magnus Carlsen = 50 GEMS)</strong></li>
                       <li>• <strong>Once spent, GEMS are gone forever - they don't regenerate</strong></li>
-                      <li>• <strong>When draft ends, all remaining GEMS disappear</strong></li>
+                      <li>• <strong>You can leave the snake draft early and keep leftover GEMS for the regular marketplace</strong></li>
                       <li>• Purpose: Fair team building during initial draft only</li>
                     </ul>
                   </div>
@@ -401,7 +404,7 @@ const Help: React.FC<HelpProps> = ({ variant }) => {
                 </div>
                 <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
                   <p className="text-sm text-yellow-800">
-                    <strong>Key Difference:</strong> GEMS are a one-time draft currency that disappears forever. COINS are your permanent trading currency that you earn weekly and use throughout the entire season.
+                    <strong>Key Difference:</strong> GEMS are a one-time draft currency. Leftover GEMS stay on your league balance for the regular marketplace. COINS are your weekly trading currency throughout the season.
                   </p>
                 </div>
               </div>

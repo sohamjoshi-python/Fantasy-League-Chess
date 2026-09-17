@@ -149,8 +149,19 @@ export const MARKETPLACE_TURN_TIMEOUT_MS = MARKETPLACE_TURN_TIMEOUT_HOURS * 60 *
 export const TEST_FIVE_MINUTE_DRAFT_LEAGUE_ID = '1465e20b-f06b-4a89-8e3f-d675759af0c4'
 const TEST_DRAFT_TIMEOUT_MS = 5 * 60 * 1000
 
+function normalizeLeagueId(leagueId?: string | null): string {
+  return String(leagueId || '').trim().toLowerCase()
+}
+
+export function isTestFiveMinuteDraftLeague(leagueId?: string | null): boolean {
+  if (normalizeLeagueId(leagueId) === TEST_FIVE_MINUTE_DRAFT_LEAGUE_ID) return true
+  if (typeof window === 'undefined') return false
+  const fromPath = window.location.pathname.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i)
+  return normalizeLeagueId(fromPath?.[0]) === TEST_FIVE_MINUTE_DRAFT_LEAGUE_ID
+}
+
 export function getMarketplaceTurnTimeoutMs(leagueId?: string | null): number {
-  if (leagueId === TEST_FIVE_MINUTE_DRAFT_LEAGUE_ID) return TEST_DRAFT_TIMEOUT_MS
+  if (isTestFiveMinuteDraftLeague(leagueId)) return TEST_DRAFT_TIMEOUT_MS
   return MARKETPLACE_TURN_TIMEOUT_MS
 }
 
@@ -159,7 +170,7 @@ export function getMarketplaceTurnTimeoutHours(leagueId?: string | null): number
 }
 
 export function getMarketplaceTurnTimeoutLabel(leagueId?: string | null): string {
-  if (leagueId === TEST_FIVE_MINUTE_DRAFT_LEAGUE_ID) return '5 minutes'
+  if (isTestFiveMinuteDraftLeague(leagueId)) return '5 minutes'
   return `${MARKETPLACE_TURN_TIMEOUT_HOURS} hours`
 }
 

@@ -48,10 +48,15 @@ export const SmoothTransition: React.FC<SmoothTransitionProps> = ({
   duration = 300,
   direction = 'fade'
 }) => {
-  const [isVisible, setIsVisible] = useState(false);
+  const [isVisible, setIsVisible] = useState(delay <= 0);
   const [isExiting] = useState(false);
 
   useEffect(() => {
+    if (delay <= 0) {
+      setIsVisible(true);
+      return;
+    }
+
     const timer = setTimeout(() => {
       setIsVisible(true);
     }, delay);
@@ -84,23 +89,32 @@ interface StaggeredTransitionProps {
   direction?: 'fade' | 'slideUp' | 'slideDown' | 'slideLeft' | 'slideRight';
 }
 
+// Cap stagger so jumping the scrollbar to the bottom does not show a blank list.
+const MAX_STAGGERED_ITEMS = 8;
+
 export const StaggeredTransition: React.FC<StaggeredTransitionProps> = ({
   children,
   className = '',
   staggerDelay = 100,
   direction = 'fade'
 }) => {
+  const items = React.Children.toArray(children);
+
   return (
     <div className={className}>
-      {children.map((child, index) => (
-        <SmoothTransition
-          key={index}
-          delay={index * staggerDelay}
-          direction={direction}
-        >
-          {child}
-        </SmoothTransition>
-      ))}
+      {items.map((child, index) =>
+        index < MAX_STAGGERED_ITEMS ? (
+          <SmoothTransition
+            key={index}
+            delay={index * staggerDelay}
+            direction={direction}
+          >
+            {child}
+          </SmoothTransition>
+        ) : (
+          <div key={index}>{child}</div>
+        )
+      )}
     </div>
   );
 };
