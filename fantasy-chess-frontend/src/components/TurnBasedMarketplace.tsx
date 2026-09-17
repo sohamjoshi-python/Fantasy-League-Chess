@@ -1078,28 +1078,18 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
     nextTurn: number,
     draftCompleted: boolean
   ) => {
-    if (draftCompleted) {
-      showMarketplaceCompletionPopup();
-      return;
-    }
-
     const remainingMembers = Array.from(new Set(remainingOrder));
-    if (remainingMembers.length === 0) {
-      showMarketplaceCompletionPopup();
-      return;
-    }
+    const shouldCompleteDraft = draftCompleted || remainingMembers.length < 2;
 
-    if (remainingMembers.length === 1) {
-      const remainingMember = remainingMembers[0];
-      const { data: botData } = await supabase
-        .from('bots')
-        .select('id')
-        .eq('id', remainingMember)
-        .maybeSingle();
-
-      if (botData) {
-        await finishBotTurnAndCloseMarketplace(remainingMember);
+    if (shouldCompleteDraft) {
+      if (!draftCompleted) {
+        await supabase
+          .from('leagues')
+          .update({ marketplace_completed: true, draft_completed: true })
+          .eq('id', league.id);
+        onUpdate();
       }
+      showMarketplaceCompletionPopup();
       return;
     }
 
@@ -1801,7 +1791,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
             <h3 className="text-lg font-semibold mb-3">End turn and leave the draft?</h3>
             <p className="text-sm text-gray-600 mb-3">
-              You will not get any more snake-draft picks. You stay in the league, keep players you already bought, and keep remaining GEMS for the regular marketplace after this draft ends.
+              You will not get any more snake-draft picks. If only one manager would remain, the turn-based marketplace ends. You stay in the league, keep players you already bought, and keep remaining GEMS for the regular marketplace.
             </p>
             <p className="text-sm text-gray-600 mb-4">
               Current balance: {userCoinBalance ?? 0} 💎

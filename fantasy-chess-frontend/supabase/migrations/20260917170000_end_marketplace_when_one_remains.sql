@@ -1,8 +1,5 @@
--- Let a manager leave the snake draft without leaving the league.
--- Remaining GEMS stay on their league balance for the regular marketplace.
-
-ALTER TABLE public.leagues
-    ADD COLUMN IF NOT EXISTS marketplace_withdrawn_ids uuid[] DEFAULT ARRAY[]::uuid[];
+-- Ending a turn with only one other manager left must close the snake draft.
+-- Unique remaining participants < 2 means the turn-based marketplace is over.
 
 CREATE OR REPLACE FUNCTION public.withdraw_from_marketplace_draft(p_league_id uuid)
 RETURNS jsonb
@@ -68,8 +65,6 @@ BEGIN
         FROM unnest(new_order) AS participant_id
     ), 0);
 
-    -- A one-person leftover snake is not a draft. End the whole turn-based
-    -- marketplace when fewer than two managers remain (e.g. 2 left, one ends turn).
     IF remaining_unique < 2 THEN
         new_turn := 0;
         completed := true;
@@ -113,33 +108,3 @@ BEGIN
     );
 END;
 $$;
-
-REVOKE ALL ON FUNCTION public.withdraw_from_marketplace_draft(uuid) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.withdraw_from_marketplace_draft(uuid) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.withdraw_from_marketplace_draft(uuid) TO service_role;
-
-DO $$
-BEGIN
-    IF EXISTS (
-        SELECT 1
-        FROM pg_proc p
-        JOIN pg_namespace n ON n.oid = p.pronamespace
-        WHERE n.nspname = 'public'
-          AND p.proname = 'dispatch_marketplace_turn_emails_from_league'
-    ) THEN
-        DROP TRIGGER IF EXISTS trg_dispatch_marketplace_turn_emails ON public.leagues;
-        CREATE TRIGGER trg_dispatch_marketplace_turn_emails
-            AFTER UPDATE ON public.leagues
-            FOR EACH ROW
-            WHEN (
-                COALESCE(NEW.marketplace_started, false) = true
-                AND COALESCE(NEW.marketplace_completed, false) = false
-                AND (
-                    NEW.current_marketplace_turn IS DISTINCT FROM OLD.current_marketplace_turn
-                    OR NEW.marketplace_order IS DISTINCT FROM OLD.marketplace_order
-                    OR COALESCE(NEW.marketplace_started, false) IS DISTINCT FROM COALESCE(OLD.marketplace_started, false)
-                )
-            )
-            EXECUTE PROCEDURE public.dispatch_marketplace_turn_emails_from_league();
-    END IF;
-END $$;
