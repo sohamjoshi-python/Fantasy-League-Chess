@@ -8,14 +8,16 @@ import {
   formatMarketplaceTurnRemaining,
   getMarketplaceAutoStartDate,
   getMarketplaceTurnMsRemaining,
+  getMarketplaceTurnTimeoutHours,
+  getMarketplaceTurnTimeoutLabel,
+  getMarketplaceTurnTimeoutMs,
   isMarketplaceAutoStartDue,
   isPlayerAlreadyOwnedError,
   isTeamBuildingComplete,
-  MARKETPLACE_TURN_TIMEOUT_HOURS,
   preserveMarketplaceTurn,
 } from '../lib/leagueStatus';
 import { calculatePlayerPrice } from '../types/coin-system';
-import { notifyMarketplaceTurnIfNeeded } from '../lib/marketplaceTurnEmail';
+import { notifyMarketplaceStartedIfNeeded, notifyMarketplaceTurnIfNeeded } from '../lib/marketplaceTurnEmail';
 import { useMarketplaceData } from '../hooks/useMarketplaceData';
 import { useDebounce } from '../hooks/useDebounce';
 import { LoadingSpinner } from './ui/LoadingSpinner';
@@ -252,7 +254,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
     skipExpiredRef.current = true;
     try {
       const { error: skipError } = await supabase.rpc('skip_expired_marketplace_turns', {
-        p_timeout_hours: MARKETPLACE_TURN_TIMEOUT_HOURS,
+        p_timeout_hours: getMarketplaceTurnTimeoutHours(league.id),
         p_league_id: league.id,
       });
       if (skipError) {
@@ -280,7 +282,11 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
 
     skipFailedRef.current = false;
     const tick = () => {
-      const remaining = getMarketplaceTurnMsRemaining(league.marketplace_turn_started_at);
+      const remaining = getMarketplaceTurnMsRemaining(
+        league.marketplace_turn_started_at,
+        Date.now(),
+        league.id
+      );
       setTurnMsRemaining(remaining);
       if (remaining !== null && remaining <= 0) {
         void skipExpiredTurns();
@@ -297,6 +303,13 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
     league?.marketplace_turn_started_at,
     league?.current_marketplace_turn,
   ]);
+
+  useEffect(() => {
+    if (!league?.id || !league.marketplace_started) {
+      return;
+    }
+    void notifyMarketplaceStartedIfNeeded(league.id);
+  }, [league?.id, league?.marketplace_started]);
 
   useEffect(() => {
     if (!league?.id || !league.marketplace_started || league.marketplace_completed) {
@@ -644,6 +657,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
         throw error;
       }
 
+      await notifyMarketplaceStartedIfNeeded(league.id);
       onUpdate();
     } catch (err) {
       console.error('Failed to start marketplace:', err);
@@ -1448,9 +1462,9 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
               )}
             </p>
             {turnMsRemaining !== null && (
-              <p className={`text-sm ${turnMsRemaining <= 60 * 60 * 1000 ? 'text-red-700 font-semibold' : 'text-blue-800'}`}>
+              <p className={`text-sm ${turnMsRemaining <= Math.min(60 * 1000, getMarketplaceTurnTimeoutMs(league.id) / 2) ? 'text-red-700 font-semibold' : 'text-blue-800'}`}>
                 {turnMsRemaining > 0
-                  ? `${formatMarketplaceTurnRemaining(turnMsRemaining)} left to pick. After ${MARKETPLACE_TURN_TIMEOUT_HOURS} hours this turn is skipped.`
+                  ? `${formatMarketplaceTurnRemaining(turnMsRemaining)} left to pick. After ${getMarketplaceTurnTimeoutLabel(league.id)} this turn is skipped.`
                   : 'Time is up — skipping this turn...'}
               </p>
             )}

@@ -1,8 +1,8 @@
-name: League Lifecycle Emails
+name: League Start Emails
 
 on:
   schedule:
-    # Owner-started drafts and league start dates: check often enough to send the same day.
+    # League start dates: check often enough to send the same day.
     - cron: "10 * * * *"
   workflow_dispatch:
   workflow_call:
@@ -18,7 +18,7 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Send marketplace-start and league-start emails
+      - name: Send league-start emails
         env:
           SB_URL: ${{ secrets.SB_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}

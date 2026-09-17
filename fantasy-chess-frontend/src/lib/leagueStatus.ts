@@ -145,15 +145,34 @@ export function isCoinMarketplaceAvailable(league: League): boolean {
 export const MARKETPLACE_TURN_TIMEOUT_HOURS = 12
 export const MARKETPLACE_TURN_TIMEOUT_MS = MARKETPLACE_TURN_TIMEOUT_HOURS * 60 * 60 * 1000
 
+/** Temporary: this league uses a 5-minute pick clock for skip testing. */
+export const TEST_FIVE_MINUTE_DRAFT_LEAGUE_ID = '1465e20b-f06b-4a89-8e3f-d675759af0c4'
+const TEST_DRAFT_TIMEOUT_MS = 5 * 60 * 1000
+
+export function getMarketplaceTurnTimeoutMs(leagueId?: string | null): number {
+  if (leagueId === TEST_FIVE_MINUTE_DRAFT_LEAGUE_ID) return TEST_DRAFT_TIMEOUT_MS
+  return MARKETPLACE_TURN_TIMEOUT_MS
+}
+
+export function getMarketplaceTurnTimeoutHours(leagueId?: string | null): number {
+  return getMarketplaceTurnTimeoutMs(leagueId) / (60 * 60 * 1000)
+}
+
+export function getMarketplaceTurnTimeoutLabel(leagueId?: string | null): string {
+  if (leagueId === TEST_FIVE_MINUTE_DRAFT_LEAGUE_ID) return '5 minutes'
+  return `${MARKETPLACE_TURN_TIMEOUT_HOURS} hours`
+}
+
 /** Milliseconds until the current snake-draft pick is auto-skipped. Negative means expired. */
 export function getMarketplaceTurnMsRemaining(
   turnStartedAt: string | null | undefined,
-  nowMs: number = Date.now()
+  nowMs: number = Date.now(),
+  leagueId?: string | null
 ): number | null {
   if (!turnStartedAt) return null
   const startedMs = Date.parse(turnStartedAt)
   if (Number.isNaN(startedMs)) return null
-  return startedMs + MARKETPLACE_TURN_TIMEOUT_MS - nowMs
+  return startedMs + getMarketplaceTurnTimeoutMs(leagueId) - nowMs
 }
 
 export function formatMarketplaceTurnRemaining(ms: number): string {

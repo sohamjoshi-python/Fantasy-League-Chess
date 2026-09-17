@@ -175,7 +175,7 @@ const baseTemplate = (content: string, title: string) => `
       ${content}
     </div>
     <div class="footer">
-      <p>2024 Fantasy League Chess. All rights reserved.</p>
+      <p>2026 Fantasy League Chess. All rights reserved.</p>
       <p>
         <a href="https://pawn-royale.vercel.app/unsubscribe" style="color: #6b7280;">Unsubscribe</a> | 
         <a href="https://pawn-royale.vercel.app/privacy" style="color: #6b7280;">Privacy Policy</a>

@@ -13,6 +13,7 @@ import {
   isTeamBuildingComplete,
   leagueSeasonHasStartedLocal,
 } from '../lib/leagueStatus'
+import { notifyMarketplaceStartedIfNeeded } from '../lib/marketplaceTurnEmail'
 import { isLineupChangeAllowed, lineupChangeBlockedMessage } from '../lib/lineupWindow'
 import { Crown, Trophy, Calendar, Edit, Check, X, RefreshCw, Bot as BotIcon, Plus, Trash2 } from 'lucide-react'
 import {
@@ -510,6 +511,9 @@ const LeaguePage: React.FC = () => {
             .single()
           if (refreshedLeague) {
             leagueRow = refreshedLeague as League
+          }
+          if (leagueRow.marketplace_started) {
+            void notifyMarketplaceStartedIfNeeded(leagueId)
           }
         }
       }

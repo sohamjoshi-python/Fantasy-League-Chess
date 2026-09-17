@@ -1,130 +1,5 @@
--- Skip a snake-draft pick if the current manager has not acted in 12 hours.
--- Clock resets whenever current_marketplace_turn changes (buy, skip, or bot pick).
--- Existing in-progress drafts: if nobody has picked yet, inherit marketplace_start_time
--- so a days-old stall expires immediately. Later turns start a fresh 12-hour clock
--- so we do not skip someone who just received the pick.
-
-ALTER TABLE public.leagues
-    ADD COLUMN IF NOT EXISTS marketplace_turn_started_at timestamptz;
-
-UPDATE public.leagues
-SET marketplace_turn_started_at = CASE
-    WHEN COALESCE(current_marketplace_turn, 0) = 0 THEN COALESCE(
-        marketplace_start_time,
-        updated_at,
-        created_at,
-        NOW()
-    )
-    ELSE NOW()
-END
-WHERE COALESCE(marketplace_started, false) = true
-  AND COALESCE(marketplace_completed, false) = false
-  AND marketplace_turn_started_at IS NULL;
-
-CREATE OR REPLACE FUNCTION public.reset_marketplace_turn_clock()
-RETURNS trigger
-LANGUAGE plpgsql
-SET search_path = public
-AS $$
-BEGIN
-    IF TG_OP = 'UPDATE' THEN
-        IF COALESCE(OLD.marketplace_started, false) = false
-           AND COALESCE(NEW.marketplace_started, false) = true THEN
-            NEW.marketplace_turn_started_at := COALESCE(NEW.marketplace_turn_started_at, NOW());
-        ELSIF NEW.current_marketplace_turn IS DISTINCT FROM OLD.current_marketplace_turn THEN
-            NEW.marketplace_turn_started_at := NOW();
-        END IF;
-    END IF;
-
-    RETURN NEW;
-END;
-$$;
-
-DROP TRIGGER IF EXISTS trg_reset_marketplace_turn_clock ON public.leagues;
-CREATE TRIGGER trg_reset_marketplace_turn_clock
-    BEFORE UPDATE ON public.leagues
-    FOR EACH ROW
-    EXECUTE PROCEDURE public.reset_marketplace_turn_clock();
-
-CREATE OR REPLACE FUNCTION public.start_marketplace(p_league_id UUID)
-RETURNS void
-LANGUAGE plpgsql
-SET search_path = public
-AS $$
-DECLARE
-    league_record RECORD;
-    ordered_members UUID[];
-    marketplace_order UUID[];
-    member_count INTEGER;
-    total_rounds INTEGER;
-    round_num INTEGER;
-    player_index INTEGER;
-BEGIN
-    SELECT * INTO league_record
-    FROM public.leagues
-    WHERE id = p_league_id
-    FOR UPDATE;
-
-    IF NOT FOUND THEN
-        RAISE EXCEPTION 'League not found';
-    END IF;
-
-    IF COALESCE(league_record.marketplace_started, false)
-       OR COALESCE(league_record.marketplace_completed, false) THEN
-        RETURN;
-    END IF;
-
-    SELECT ARRAY(
-        SELECT sub.member_id
-        FROM (
-            SELECT DISTINCT ON (u.member_id)
-                u.member_id,
-                u.ord,
-                (b.id IS NOT NULL) AS is_bot
-            FROM unnest(COALESCE(league_record.member_ids, ARRAY[]::uuid[]))
-                WITH ORDINALITY AS u(member_id, ord)
-            LEFT JOIN public.bots b ON b.id = u.member_id
-            ORDER BY u.member_id, u.ord
-        ) sub
-        ORDER BY sub.is_bot, sub.ord
-    ) INTO ordered_members;
-
-    member_count := COALESCE(array_length(ordered_members, 1), 0);
-    IF member_count < 2 THEN
-        RAISE EXCEPTION 'Need at least 2 league members to start a snake draft';
-    END IF;
-
-    total_rounds := GREATEST(COALESCE(league_record.max_players_per_team, 10), 1);
-    marketplace_order := ARRAY[]::uuid[];
-
-    FOR round_num IN 0..(total_rounds - 1) LOOP
-        IF round_num % 2 = 0 THEN
-            FOR player_index IN 1..member_count LOOP
-                marketplace_order := marketplace_order || ordered_members[player_index];
-            END LOOP;
-        ELSE
-            FOR player_index IN REVERSE member_count..1 LOOP
-                marketplace_order := marketplace_order || ordered_members[player_index];
-            END LOOP;
-        END IF;
-    END LOOP;
-
-    UPDATE public.leagues
-    SET
-        marketplace_started = true,
-        marketplace_start_time = NOW(),
-        marketplace_order = marketplace_order,
-        current_marketplace_turn = 0,
-        marketplace_completed = false,
-        marketplace_turn_started_at = NOW()
-    WHERE id = p_league_id;
-END;
-$$;
-
-GRANT EXECUTE ON FUNCTION public.start_marketplace(UUID) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.start_marketplace(UUID) TO service_role;
-
-DROP FUNCTION IF EXISTS public.skip_expired_marketplace_turns(numeric);
+-- TEMP: 5-minute snake-draft clock for league 1465e20b-f06b-4a89-8e3f-d675759af0c4.
+-- Re-applies skip_expired_marketplace_turns if 20260917120000 was already run.
 
 CREATE OR REPLACE FUNCTION public.skip_expired_marketplace_turns(
     p_timeout_hours numeric DEFAULT 12,
@@ -166,7 +41,6 @@ BEGIN
                 updated_at,
                 created_at
               ) <= NOW() - CASE
-                    -- TEMP: 5-minute clock for skip testing
                     WHEN id = '1465e20b-f06b-4a89-8e3f-d675759af0c4'::uuid THEN interval '5 minutes'
                     ELSE timeout_interval
                   END
@@ -261,6 +135,3 @@ BEGIN
     );
 END;
 $$;
-
-GRANT EXECUTE ON FUNCTION public.skip_expired_marketplace_turns(numeric, uuid) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.skip_expired_marketplace_turns(numeric, uuid) TO service_role;
