@@ -5,8 +5,8 @@ import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { League } from '../types'
 import { Users, Trophy, Calendar, Search, Copy } from 'lucide-react'
-import { getLeagueEndDateFromStart, getLocalDateString, getMinLeagueStartDateString } from '../lib/calendarDate'
-import { formatCalendarDate, isLeagueJoinClosed } from '../lib/leagueStatus'
+import { getLeagueEndDateFromStart, getMinLeagueStartDateString } from '../lib/calendarDate'
+import { formatCalendarDate, hasBlockingLeagueOverlap, isLeagueJoinClosed } from '../lib/leagueStatus'
 
 // Helper function to send league joined email
 const sendLeagueJoinedEmail = async (userEmail: string, leagueName: string) => {
@@ -73,11 +73,6 @@ const JoinLeague: React.FC = () => {
     fetchUserLeagues();
   }, [user]);
 
-  // Helper to check for overlapping dates
-  function hasDateOverlap(startA: string, endA: string, startB: string, endB: string) {
-    return !(endA < startB || endB < startA);
-  }
-
   const loadPublicLeagues = async () => {
     try {
       const { data: leagues, error } = await supabase.rpc('list_joinable_public_leagues')
@@ -122,9 +117,10 @@ const JoinLeague: React.FC = () => {
       }
 
       // Check for overlapping active leagues
-      const newStart = startDate;
-      const newEnd = getLeagueEndDateFromStart(startDate);
-      const overlap = userLeagues.some(l => hasDateOverlap(newStart, newEnd, l.start_date, l.end_date) && l.end_date >= getLocalDateString());
+      const overlap = hasBlockingLeagueOverlap(
+        { start_date: startDate, end_date: getLeagueEndDateFromStart(startDate) },
+        userLeagues
+      )
       if (overlap) {
         setError('You cannot create a league that overlaps with another active league you are in.');
         return;
@@ -212,13 +208,14 @@ const JoinLeague: React.FC = () => {
       )
 
       if (leagueError) {
-        setError('Invalid join code')
+        console.error('lookup_league_by_join_code failed:', leagueError)
+        setError(getSupabaseErrorMessage(leagueError, 'Could not look up that join code.'))
         return
       }
 
       const league = Array.isArray(leagueRows) ? leagueRows[0] : leagueRows
       if (!league) {
-        setError('League not found')
+        setError('Invalid join code')
         return
       }
 
@@ -228,7 +225,7 @@ const JoinLeague: React.FC = () => {
       }
 
       // Check for overlapping active leagues
-      const overlap = userLeagues.some(l => hasDateOverlap(league.start_date, league.end_date, l.start_date, l.end_date) && l.end_date >= getLocalDateString());
+      const overlap = hasBlockingLeagueOverlap(league, userLeagues)
       if (overlap) {
         setError('You cannot join a league that overlaps with another active league you are in.');
         return;
@@ -316,7 +313,7 @@ const JoinLeague: React.FC = () => {
       }
 
       // Check for overlapping active leagues
-      const overlap = userLeagues.some(l => hasDateOverlap(league.start_date, league.end_date, l.start_date, l.end_date) && l.end_date >= getLocalDateString());
+      const overlap = hasBlockingLeagueOverlap(league, userLeagues)
       if (overlap) {
         setError('You cannot join a league that overlaps with another active league you are in.');
         return;

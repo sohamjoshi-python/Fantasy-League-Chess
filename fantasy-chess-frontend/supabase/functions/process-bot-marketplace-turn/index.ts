@@ -259,35 +259,40 @@ serve(async (req) => {
 
     for (const player of available) {
       const price = calculatePlayerPrice(player.elo)
-      if (price <= botCoins) {
+      if (price > botCoins) continue
+
+      const { error: buyError } = await supabase
+        .from("teams")
+        .update({
+          player_ids: [...(team.player_ids || []), player.id]
+        })
+        .eq("id", team.id)
+
+      if (!buyError) {
         selectedPlayer = player
         selectedPrice = price
         break
       }
+
+      const alreadyOwned = /already owned/i.test(String(buyError.message || "")) || buyError.code === "23505"
+      if (alreadyOwned) {
+        console.log(`Player ${player.name} was already taken, trying next`)
+        continue
+      }
+
+      console.error("Failed to add player to bot team:", buyError)
+      return new Response(
+        JSON.stringify({ success: false, error: "Failed to add player to bot team" }),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, "Content-Type": "application/json" } 
+        }
+      )
     }
 
     if (selectedPlayer && selectedPrice > 0) {
       console.log(`Bot will buy ${selectedPlayer.name} (ELO: ${selectedPlayer.elo}) for ${selectedPrice} coins`)
       
-      // Bot can buy a player
-      const { error: buyError } = await supabase
-        .from("teams")
-        .update({
-          player_ids: [...(team.player_ids || []), selectedPlayer.id]
-        })
-        .eq("id", team.id)
-
-      if (buyError) {
-        console.error("Failed to add player to bot team:", buyError)
-        return new Response(
-          JSON.stringify({ success: false, error: "Failed to add player to bot team" }),
-          { 
-            status: 500, 
-            headers: { ...corsHeaders, "Content-Type": "application/json" } 
-          }
-        )
-      }
-
       // Deduct coins from bot
       const { error: balanceUpdateError } = await supabase
         .from("league_coin_balances")

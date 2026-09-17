@@ -13,6 +13,7 @@ import { getTradeNotifications, markNotificationSeen } from '../lib/supabase';
 import { TradeNotificationWithDetails } from '../types';
 import PlayerDetailModal from './PlayerDetailModal';
 import { addDaysToYmd, getWeekStartMonday, leagueSeasonHasEndedLocal } from '../lib/calendarDate';
+import { isPlayerAlreadyOwnedError } from '../lib/leagueStatus';
 
 interface MarketplaceProps {
   leagueId: string;
@@ -213,11 +214,26 @@ export default function Marketplace({ leagueId, onTeamUpdate }: MarketplaceProps
     setCurrentPage(1);
   }, [debouncedSearchTerm]);
 
-  // Load owned player IDs when league changes
+  // Load owned player IDs when league changes, and keep them fresh if another manager buys.
   useEffect(() => {
-    if (leagueId) {
-      getOwnedPlayerIds();
-    }
+    if (!leagueId) return;
+
+    getOwnedPlayerIds();
+
+    const channel = supabase
+      .channel(`marketplace-owned-${leagueId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'teams', filter: `league_id=eq.${leagueId}` },
+        () => {
+          getOwnedPlayerIds();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [leagueId, getOwnedPlayerIds]);
 
   const loadPlayerTradeStatus = async () => {
@@ -391,13 +407,25 @@ export default function Marketplace({ leagueId, onTeamUpdate }: MarketplaceProps
 
       const currentPlayerIds = userTeam?.player_ids || [];
 
-      // Check if player is already owned
       if (currentPlayerIds.includes(playerId)) {
-        setError('Player is already owned');
+        setError('You already own this player');
         return;
       }
 
-      // Add player to team
+      const { data: claim, error: claimError } = await supabase
+        .from('league_player_ownership')
+        .select('player_id')
+        .eq('league_id', leagueId)
+        .eq('player_id', playerId)
+        .maybeSingle();
+
+      if (!claimError && claim) {
+        setError('This player was just taken by another manager.');
+        await getOwnedPlayerIds();
+        await loadData();
+        return;
+      }
+
       const newPlayerIds = [...currentPlayerIds, playerId];
       const { error: updateTeamError } = await supabase
         .from('teams')
@@ -406,6 +434,12 @@ export default function Marketplace({ leagueId, onTeamUpdate }: MarketplaceProps
         .eq('league_id', leagueId);
 
       if (updateTeamError) {
+        if (isPlayerAlreadyOwnedError(updateTeamError)) {
+          setError('This player was just taken by another manager.');
+          await getOwnedPlayerIds();
+          await loadData();
+          return;
+        }
         console.error('Failed to update team:', updateTeamError);
         throw updateTeamError;
       }
@@ -442,6 +476,7 @@ export default function Marketplace({ leagueId, onTeamUpdate }: MarketplaceProps
       }
 
       // Reload marketplace + parent league state so "My Team" updates immediately.
+      await getOwnedPlayerIds();
       await loadData();
       await onTeamUpdate?.();
       setError(null);

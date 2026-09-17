@@ -7,6 +7,7 @@ import {
   formatCalendarDate,
   getMarketplaceAutoStartDate,
   isMarketplaceAutoStartDue,
+  isPlayerAlreadyOwnedError,
   isTeamBuildingComplete,
   preserveMarketplaceTurn,
 } from '../lib/leagueStatus';
@@ -603,6 +604,24 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
         throw teamError;
       }
 
+      if ((team.player_ids || []).includes(playerId)) {
+        setError('You already own this player');
+        return;
+      }
+
+      const { data: claim, error: claimError } = await supabase
+        .from('league_player_ownership')
+        .select('player_id')
+        .eq('league_id', league.id)
+        .eq('player_id', playerId)
+        .maybeSingle();
+
+      if (!claimError && claim) {
+        setError('This player was just taken by another manager.');
+        refreshData();
+        return;
+      }
+
       // Add the new player to the array
       const newPlayerIds = [...(team.player_ids || []), playerId];
 
@@ -613,6 +632,11 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
         .eq('id', team.id);
 
       if (updateError) {
+        if (isPlayerAlreadyOwnedError(updateError)) {
+          setError('This player was just taken by another manager.');
+          refreshData();
+          return;
+        }
         console.error('❌ Team update error:', updateError);
         throw updateError;
       }

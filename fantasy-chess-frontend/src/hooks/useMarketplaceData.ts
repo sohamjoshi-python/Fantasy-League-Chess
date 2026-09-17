@@ -109,12 +109,6 @@ export function useMarketplaceData(leagueId: string, userId: string | undefined)
   }, []);
 
   const loadUserTeam = useCallback(async (leagueId: string, userId: string): Promise<ChessPlayer[]> => {
-    const cacheKey = `user-team-${userId}-${leagueId}`;
-    const cached = cache.get(cacheKey);
-    if (cached) {
-      return cached;
-    }
-
     const { data: userTeam, error: teamError } = await supabase
       .from('teams')
       .select('player_ids')
@@ -129,7 +123,6 @@ export function useMarketplaceData(leagueId: string, userId: string | undefined)
     const userPlayerIds = userTeam?.player_ids || [];
     
     if (userPlayerIds.length === 0) {
-      cache.set(cacheKey, [], 2 * 60 * 1000); // Cache empty team for 2 minutes
       return [];
     }
 
@@ -141,9 +134,7 @@ export function useMarketplaceData(leagueId: string, userId: string | undefined)
 
     if (playersError) throw playersError;
 
-    const teamPlayers = players || [];
-    cache.set(cacheKey, teamPlayers, 2 * 60 * 1000); // Cache for 2 minutes
-    return teamPlayers;
+    return players || [];
   }, []);
 
   const loadUserCoinBalance = useCallback(async (leagueId: string, userId: string): Promise<number> => {
@@ -249,6 +240,25 @@ export function useMarketplaceData(leagueId: string, userId: string | undefined)
       }
     };
   }, [loadData]);
+
+  useEffect(() => {
+    if (!leagueId) return;
+
+    const channel = supabase
+      .channel(`marketplace-teams-${leagueId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'teams', filter: `league_id=eq.${leagueId}` },
+        () => {
+          loadData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [leagueId, loadData]);
 
   return {
     ...data,

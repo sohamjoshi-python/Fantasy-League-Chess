@@ -5,6 +5,7 @@ import {
   getLeagueLineupWeekBounds,
   mondayYmdToTuesdayDot,
 } from './calendarDate'
+import { isPlayerAlreadyOwnedError } from './leagueStatus'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
@@ -601,20 +602,32 @@ export async function autoDraftForBot(botId: string, leagueId: string): Promise<
       return { success: true };
     }
 
-    // --- Get highest ELO available player ---
-    const { success, player, error: playerError } = await getHighestEloAvailablePlayer(leagueId);
-    if (!success || !player) {
-      return { success: false, error: playerError };
+    // --- Add the highest-ELO available player; retry if another manager just claimed them ---
+    let addedPlayer = false
+    for (let attempt = 0; attempt < 8; attempt++) {
+      const { success, player, error: playerError } = await getHighestEloAvailablePlayer(leagueId);
+      if (!success || !player) {
+        return { success: false, error: playerError };
+      }
+
+      const newPlayerIds = [...(team.player_ids || []), player.id];
+      const { error: teamUpdateError } = await supabase
+        .from('teams')
+        .update({ player_ids: newPlayerIds })
+        .eq('id', team.id);
+
+      if (!teamUpdateError) {
+        addedPlayer = true
+        break
+      }
+
+      if (!isPlayerAlreadyOwnedError(teamUpdateError)) {
+        return { success: false, error: teamUpdateError };
+      }
     }
 
-    // --- Add player to bot's team ---
-    const newPlayerIds = [...(team.player_ids || []), player.id];
-    const { error: teamUpdateError } = await supabase
-      .from('teams')
-      .update({ player_ids: newPlayerIds })
-      .eq('id', team.id);
-    if (teamUpdateError) {
-      return { success: false, error: teamUpdateError };
+    if (!addedPlayer) {
+      return { success: false, error: 'No available players could be claimed' };
     }
 
     // --- Advance draft turn and check for completion ---

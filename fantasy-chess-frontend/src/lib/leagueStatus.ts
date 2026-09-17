@@ -14,6 +14,48 @@ export {
   leagueSeasonHasStartedLocal,
 } from './calendarDate'
 
+/** Leagues allowed to overlap other leagues you're in. Add IDs here as needed. */
+export const CONCURRENT_LEAGUE_IDS = new Set([
+  'b0f5950a-fc9a-48a5-9f57-6651dcc1eae1',
+])
+
+export function isPlayerAlreadyOwnedError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false
+  const message = String((error as { message?: string }).message || '')
+  const code = String((error as { code?: string }).code || '')
+  return (
+    code === '23505' ||
+    /already owned in this league|already owned/i.test(message)
+  )
+}
+
+export function isConcurrentLeague(leagueId: string | undefined | null): boolean {
+  return !!leagueId && CONCURRENT_LEAGUE_IDS.has(leagueId)
+}
+
+function hasDateOverlap(startA: string, endA: string, startB: string, endB: string): boolean {
+  return !(endA < startB || endB < startA)
+}
+
+/** True when joining/creating `candidate` should be blocked by another active league. */
+export function hasBlockingLeagueOverlap(
+  candidate: Pick<League, 'start_date' | 'end_date'> & { id?: string },
+  userLeagues: Pick<League, 'id' | 'start_date' | 'end_date'>[],
+  today: string = getLocalDateString()
+): boolean {
+  if (isConcurrentLeague(candidate.id)) return false
+  return userLeagues.some((league) => {
+    if (isConcurrentLeague(league.id)) return false
+    if (!league.end_date || league.end_date < today) return false
+    return hasDateOverlap(
+      candidate.start_date,
+      candidate.end_date,
+      league.start_date,
+      league.end_date
+    )
+  })
+}
+
 /** Display a YYYY-MM-DD string in the user's locale without UTC day shift. */
 export function formatCalendarDate(ymd: string): string {
   if (!ymd) return ''
