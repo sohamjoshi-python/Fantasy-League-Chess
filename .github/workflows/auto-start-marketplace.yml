@@ -40,3 +40,8 @@ jobs:
             echo "Failed to auto-start marketplaces"
             exit 1
           fi
+
+  send-lifecycle-emails:
+    needs: trigger-auto-start
+    uses: ./.github/workflows/league-lifecycle-emails.yml
+    secrets: inherit

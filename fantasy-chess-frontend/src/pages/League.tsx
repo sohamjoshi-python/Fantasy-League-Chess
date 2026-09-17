@@ -23,7 +23,6 @@ import {
   fetchUserLeagueDisplayWeeks,
   fetchLineupParticipantBreakdownByRounds,
   fetchLineupParticipantDisplayWeeks,
-  notifyLeagueLifecycle,
 } from '../lib/supabase';
 import Confetti from 'react-confetti';
 import { resolveAvatarUrl } from '../lib/avatars';
@@ -269,7 +268,6 @@ const LeaguePage: React.FC = () => {
   const { user } = useAuth()
   const navigate = useNavigate();
   const marketplaceAutoStartAttempted = useRef(false)
-  const leagueStartEmailAttempted = useRef(false)
 
   // React Query for league data
   // Remove: const {
@@ -505,7 +503,6 @@ const LeaguePage: React.FC = () => {
         marketplaceAutoStartAttempted.current = true
         const { error: autoStartError } = await supabase.rpc('auto_start_due_marketplaces')
         if (!autoStartError) {
-          void notifyLeagueLifecycle('marketplace_started', leagueId)
           const { data: refreshedLeague } = await supabase
             .from('leagues')
             .select('*')
@@ -518,10 +515,6 @@ const LeaguePage: React.FC = () => {
       }
 
       setLeague(leagueRow);
-      if (!leagueStartEmailAttempted.current && leagueSeasonHasStartedLocal(leagueRow.start_date)) {
-        leagueStartEmailAttempted.current = true
-        void notifyLeagueLifecycle('league_started', leagueId)
-      }
       // Combine all relevant user IDs
       const allUserIds = Array.from(new Set([
         ...(leagueRow.member_ids || []),
