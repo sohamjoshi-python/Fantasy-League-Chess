@@ -14,11 +14,14 @@ from html import escape
 SITE_URL = "https://fantasyleaguechess.com"
 LOGO_URL = f"{SITE_URL}/assets/fantasy-league-chess-logo-updated.png"
 TURN_TIMEOUT_HOURS = 12
-TEST_FIVE_MINUTE_DRAFT_LEAGUE_ID = "1465e20b-f06b-4a89-8e3f-d675759af0c4"
+TEST_FIVE_MINUTE_DRAFT_LEAGUE_IDS = {
+    "1465e20b-f06b-4a89-8e3f-d675759af0c4",
+    "2f17a311-69ef-40ed-b7ad-10ce95dc0210",
+}
 
 
 def timeout_label(league_id: str | None) -> str:
-    if league_id == TEST_FIVE_MINUTE_DRAFT_LEAGUE_ID:
+    if league_id in TEST_FIVE_MINUTE_DRAFT_LEAGUE_IDS:
         return "5 minutes"
     return f"{TURN_TIMEOUT_HOURS} hours"
 

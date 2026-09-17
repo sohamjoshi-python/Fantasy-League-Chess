@@ -145,8 +145,12 @@ export function isCoinMarketplaceAvailable(league: League): boolean {
 export const MARKETPLACE_TURN_TIMEOUT_HOURS = 12
 export const MARKETPLACE_TURN_TIMEOUT_MS = MARKETPLACE_TURN_TIMEOUT_HOURS * 60 * 60 * 1000
 
-/** Temporary: this league uses a 5-minute pick clock for skip testing. */
+/** Temporary: these leagues use a 5-minute pick clock for skip testing. */
 export const TEST_FIVE_MINUTE_DRAFT_LEAGUE_ID = '1465e20b-f06b-4a89-8e3f-d675759af0c4'
+export const TEST_FIVE_MINUTE_DRAFT_LEAGUE_IDS = new Set([
+  TEST_FIVE_MINUTE_DRAFT_LEAGUE_ID,
+  '2f17a311-69ef-40ed-b7ad-10ce95dc0210',
+])
 const TEST_DRAFT_TIMEOUT_MS = 5 * 60 * 1000
 
 function normalizeLeagueId(leagueId?: string | null): string {
@@ -154,10 +158,10 @@ function normalizeLeagueId(leagueId?: string | null): string {
 }
 
 export function isTestFiveMinuteDraftLeague(leagueId?: string | null): boolean {
-  if (normalizeLeagueId(leagueId) === TEST_FIVE_MINUTE_DRAFT_LEAGUE_ID) return true
+  if (TEST_FIVE_MINUTE_DRAFT_LEAGUE_IDS.has(normalizeLeagueId(leagueId))) return true
   if (typeof window === 'undefined') return false
   const fromPath = window.location.pathname.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i)
-  return normalizeLeagueId(fromPath?.[0]) === TEST_FIVE_MINUTE_DRAFT_LEAGUE_ID
+  return TEST_FIVE_MINUTE_DRAFT_LEAGUE_IDS.has(normalizeLeagueId(fromPath?.[0]))
 }
 
 export function getMarketplaceTurnTimeoutMs(leagueId?: string | null): number {
