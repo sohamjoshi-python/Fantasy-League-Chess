@@ -40,30 +40,3 @@ jobs:
             echo "Failed to auto-start marketplaces"
             exit 1
           fi
-
-      - name: Send marketplace and league-start emails
-        continue-on-error: true
-        run: |
-          SERVICE_KEY="${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}"
-          if [ -z "$SERVICE_KEY" ]; then
-            SERVICE_KEY="${{ secrets.SB_KEY }}"
-          fi
-
-          email_response=$(curl -s -w "\n%{http_code}" -X POST \
-            "${{ secrets.SB_URL }}/functions/v1/notify-league-lifecycle" \
-            -H "Authorization: Bearer ${SERVICE_KEY}" \
-            -H "Content-Type: application/json" \
-            -d '{"event":"scan"}')
-
-          email_http_code=$(echo "$email_response" | tail -n1)
-          email_body=$(echo "$email_response" | head -n -1)
-
-          echo "Email Response Status: $email_http_code"
-          echo "Email Response Body: $email_body"
-
-          if [ "$email_http_code" -eq 200 ]; then
-            echo "$email_body" | jq -r '"Emails sent: \(.emailsSent)"'
-          else
-            echo "Failed to send league lifecycle emails"
-            exit 1
-          fi

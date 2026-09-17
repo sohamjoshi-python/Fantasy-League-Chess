@@ -32,19 +32,6 @@ serve(async (req) => {
       )
     }
 
-    try {
-      await fetch(`${supabaseUrl}/functions/v1/notify-league-lifecycle`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${supabaseServiceKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ event: "marketplace_started" }),
-      })
-    } catch (notifyError) {
-      console.error("Failed to send marketplace-started emails:", notifyError)
-    }
-
     return new Response(
       JSON.stringify({
         success: true,

@@ -505,7 +505,7 @@ const LeaguePage: React.FC = () => {
         marketplaceAutoStartAttempted.current = true
         const { error: autoStartError } = await supabase.rpc('auto_start_due_marketplaces')
         if (!autoStartError) {
-          void notifyLeagueLifecycle('marketplace_started')
+          void notifyLeagueLifecycle('marketplace_started', leagueId)
           const { data: refreshedLeague } = await supabase
             .from('leagues')
             .select('*')
