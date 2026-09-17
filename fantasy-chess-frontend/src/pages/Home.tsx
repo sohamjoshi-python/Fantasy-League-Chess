@@ -38,7 +38,7 @@ const Home: React.FC = () => {
             The ultimate fantasy sports experience for chess fans. Draft titled players, set your lineup, trade in the marketplace, and compete for glory every Titled Tuesday.</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to="/join-league" className="px-8 py-3 rounded-lg bg-[#1e293b] hover:bg-royalBlue text-white font-semibold text-lg shadow-lg transition-all duration-200">Join a League</Link>
-            <Link to="/onboarding" className="px-8 py-3 rounded-lg bg-white border-2 border-royalBlue text-royalBlue font-semibold text-lg shadow-lg hover:bg-royalBlue hover:text-white transition-all duration-200 flex items-center">
+            <Link to="/help" className="px-8 py-3 rounded-lg bg-white border-2 border-royalBlue text-royalBlue font-semibold text-lg shadow-lg hover:bg-royalBlue hover:text-white transition-all duration-200 flex items-center">
               <HelpCircle className="w-5 h-5 mr-2" />
               How to Play
             </Link>

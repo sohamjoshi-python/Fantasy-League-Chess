@@ -107,7 +107,7 @@ const Navbar: React.FC = () => {
                   Leaderboard
                 </Link>
                 <Link
-                  to="/onboarding"
+                  to="/help"
                   className="text-neutral-700 hover:text-royalBlue hover:underline hover:underline-offset-4 px-3 py-2 rounded-md text-sm font-medium flex items-center transition-colors"
                 >
                   <HelpCircle className="h-4 w-4 mr-1" />
@@ -229,7 +229,7 @@ const Navbar: React.FC = () => {
                   Leaderboard
                 </Link>
                 <Link
-                  to="/onboarding"
+                  to="/help"
                   className="block px-4 py-2 text-neutral-700 hover:bg-gray-100 hover:text-royalBlue rounded-md transition-colors"
                   onClick={() => setShowMobileMenu(false)}
                 >

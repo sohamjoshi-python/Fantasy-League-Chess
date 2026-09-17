@@ -5,11 +5,15 @@ import logo from '../assets/fantasy-league-chess-logo-updated.png'
 import { getBrandName, getBrandNameFull } from '../utils/browserDetection';
 import { useAuth } from '../contexts/AuthContext';
 
-const Help: React.FC = () => {
+export type HelpVariant = 'guest' | 'signedIn' | 'onboarding'
+
+interface HelpProps {
+  variant?: HelpVariant
+}
+
+const Help: React.FC<HelpProps> = ({ variant }) => {
   const { user, loading } = useAuth();
-  
-  // Debug logging
-  console.log('Help page - user:', user, 'loading:', loading);
+  const resolvedVariant: HelpVariant = variant ?? (user ? 'signedIn' : 'guest')
   
   return (
     <div className="min-h-screen bg-white py-10">
@@ -500,49 +504,63 @@ const Help: React.FC = () => {
         <div className="bg-gradient-to-r from-royalBlue to-purple rounded-xl shadow-lg p-6 mt-8 text-white">
           <h2 className="text-2xl font-bold mb-4 flex items-center">
             <Play className="w-6 h-6 mr-2" />
-            Ready to Start?
+            {resolvedVariant === 'guest' ? 'Ready to Start?' : 'Ready to Play?'}
           </h2>
           <p className="text-lg mb-4">
-            Now that you understand how to play, it's time to join your first league!
+            {resolvedVariant === 'guest'
+              ? "Now that you understand how to play, it's time to create an account and join your first league!"
+              : "Now that you understand how to play, it's time to join a league or head to your dashboard."}
           </p>
           <div className="flex flex-col sm:flex-row gap-4">
-            {loading ? (
-              // Show loading state
+            {loading && !variant ? (
               <div className="flex items-center justify-center py-3">
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white mr-2"></div>
                 <span>Loading...</span>
               </div>
-            ) : user ? (
-              // Show authenticated user options
+            ) : resolvedVariant === 'onboarding' ? (
               <>
-                <a
-                  href="/join-league"
+                <Link
+                  to="/dashboard"
+                  className="bg-white text-neutral-900 px-6 py-3 rounded-lg font-semibold hover:bg-neutral-100 transition-colors text-center border border-white shadow-lg"
+                >
+                  Continue to Dashboard
+                </Link>
+                <Link
+                  to="/join-league"
+                  className="bg-transparent border-2 border-white text-white px-6 py-3 rounded-lg font-semibold hover:bg-white hover:text-neutral-900 transition-colors text-center"
+                >
+                  Join a League
+                </Link>
+              </>
+            ) : resolvedVariant === 'signedIn' ? (
+              <>
+                <Link
+                  to="/join-league"
                   className="bg-white text-neutral-900 px-6 py-3 rounded-lg font-semibold hover:bg-neutral-100 transition-colors text-center border border-white shadow-lg"
                 >
                   Join a League
-                </a>
-                <a
-                  href="/dashboard"
+                </Link>
+                <Link
+                  to="/dashboard"
                   className="bg-transparent border-2 border-white text-white px-6 py-3 rounded-lg font-semibold hover:bg-white hover:text-neutral-900 transition-colors text-center"
                 >
                   Go to Dashboard
-                </a>
+                </Link>
               </>
             ) : (
-              // Show unauthenticated user options
               <>
-                <a
-                  href="/signup"
+                <Link
+                  to="/signup"
                   className="bg-white text-neutral-900 px-6 py-3 rounded-lg font-semibold hover:bg-neutral-100 transition-colors text-center border border-white shadow-lg"
                 >
                   Create Account & Start Playing
-                </a>
-                <a
-                  href="/signin"
+                </Link>
+                <Link
+                  to="/signin"
                   className="bg-transparent border-2 border-white text-white px-6 py-3 rounded-lg font-semibold hover:bg-white hover:text-neutral-900 transition-colors text-center"
                 >
                   Sign In
-                </a>
+                </Link>
               </>
             )}
           </div>

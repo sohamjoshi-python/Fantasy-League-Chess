@@ -160,4 +160,4 @@ DROP TRIGGER IF EXISTS trg_enforce_league_min_start_lead_time ON public.leagues;
 CREATE TRIGGER trg_enforce_league_min_start_lead_time
     BEFORE INSERT ON public.leagues
     FOR EACH ROW
-    EXECUTE FUNCTION public.enforce_league_min_start_lead_time();
+    EXECUTE PROCEDURE public.enforce_league_min_start_lead_time();

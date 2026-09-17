@@ -24,6 +24,19 @@ const sendLeagueJoinedEmail = async (userEmail: string, leagueName: string) => {
   }
 }
 
+function getSupabaseErrorMessage(error: unknown, fallback = 'Failed to create league'): string {
+  if (!error) return fallback
+  if (typeof error === 'string' && error.trim()) return error
+  if (typeof error === 'object') {
+    const e = error as { message?: string; details?: string; hint?: string }
+    const parts = [e.message, e.details, e.hint].filter(
+      (part): part is string => typeof part === 'string' && part.trim().length > 0
+    )
+    if (parts.length) return parts.join(' ')
+  }
+  return fallback
+}
+
 const JoinLeague: React.FC = () => {
   const { user } = useAuth()
   const navigate = useNavigate()
@@ -86,7 +99,10 @@ const JoinLeague: React.FC = () => {
 
   const createLeague = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!user) return
+    if (!user) {
+      setError('You must be signed in to create a league.')
+      return
+    }
 
     try {
       setLoading(true)
@@ -126,21 +142,6 @@ const JoinLeague: React.FC = () => {
         return
       }
 
-      // Get user's username from users table
-      try {
-        const { data: userData } = await supabase
-          .from('users')
-          .select('username')
-          .eq('id', user.id)
-          .single();
-        
-        if (userData?.username) {
-          // displayName = userData.username;
-        }
-      } catch (err) {
-        console.error('Error getting user username:', err);
-      }
-
       const joinCode = generateJoinCode()
 
       const { data: league, error: leagueError } = await supabase
@@ -164,39 +165,32 @@ const JoinLeague: React.FC = () => {
         .single()
 
       if (leagueError) throw leagueError
+      if (!league?.id) throw new Error('League was created but no league ID was returned.')
 
-      // Create league data for the user (teams, coin balance, lineups)
       try {
         const { error: createDataError } = await supabase.rpc('create_league_data_for_user', {
           user_id_input: user.id,
           league_id_input: league.id
         });
         if (createDataError) {
-          // Error creating league data (will be created automatically)
+          console.error('Error creating league data:', createDataError)
         }
       } catch (err) {
-        // League data creation failed (will be created automatically)
+        console.error('League data creation failed:', err)
       }
 
-      // Note: Creator is already added to member_ids array in the league creation above
-      // No need to insert into league_members table since it doesn't exist anymore
-
-      // Deduct coins from user
       await supabase
         .from('users')
         .update({ coins: userData.coins - buyIn })
         .eq('id', user.id)
 
-      // Send league joined email
       if (user.email) {
-        await sendLeagueJoinedEmail(user.email, leagueName)
+        void sendLeagueJoinedEmail(user.email, leagueName)
       }
-
-
 
       navigate(`/league/${league.id}`)
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Failed to create league')
+      setError(getSupabaseErrorMessage(error))
     } finally {
       setLoading(false)
     }
@@ -430,7 +424,12 @@ const JoinLeague: React.FC = () => {
       {activeTab === 'create' && (
         <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6 border-2 border-royalBlue">
           <h2 className="text-xl lg:text-2xl font-bold mb-4 lg:mb-6 text-neutral-900">Create Your Own League</h2>
-          <form onSubmit={createLeague} className="space-y-4 lg:space-y-6">
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+              {error}
+            </div>
+          )}
+          <form onSubmit={createLeague} noValidate className="space-y-4 lg:space-y-6">
             <div>
               <label htmlFor="leagueName" className="block text-sm font-medium text-neutral-700 mb-2">
                 League Name *
@@ -511,11 +510,10 @@ const JoinLeague: React.FC = () => {
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
                   required
-                  min={getMinLeagueStartDateString()}
                   className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-royalBlue text-neutral-900"
                 />
                 <p className="text-xs text-neutral-500 mt-1">
-                  Must be at least 7 days from today. The turn-based marketplace auto-starts one week before this date.
+                  Earliest allowed start date: {formatCalendarDate(getMinLeagueStartDateString())}. The turn-based marketplace auto-starts one week before this date.
                 </p>
               </div>
             </div>
