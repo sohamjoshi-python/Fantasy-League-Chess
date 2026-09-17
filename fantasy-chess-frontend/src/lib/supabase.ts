@@ -947,6 +947,23 @@ async function notifyLeagueMembersOfAcceptedTrade({ tradeId }: { tradeId: string
   }
 }
 
+export async function notifyLeagueLifecycle(
+  event: 'marketplace_started' | 'league_started' | 'scan' = 'scan',
+  leagueId?: string
+): Promise<void> {
+  try {
+    const { error } = await supabase.functions.invoke('notify-league-lifecycle', {
+      body: { event, leagueId }
+    });
+
+    if (error) {
+      console.error('League lifecycle email function failed:', error);
+    }
+  } catch (error) {
+    console.error('Error sending league lifecycle emails:', error);
+  }
+}
+
 export async function cancelTrade(
   tradeId: string,
   userId: string

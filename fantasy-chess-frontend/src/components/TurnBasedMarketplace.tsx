@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import { autoMarketplaceForBot } from '../lib/supabase';
+import { autoMarketplaceForBot, notifyLeagueLifecycle } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { ChessPlayer, League, CurrentMarketplaceTurn, MarketplaceTurn } from '../types';
 import {
@@ -569,7 +569,8 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
         console.error('Failed to start marketplace:', error);
         throw error;
       }
-      
+
+      void notifyLeagueLifecycle('marketplace_started', league.id);
       onUpdate();
     } catch (err) {
       console.error('Failed to start marketplace:', err);
