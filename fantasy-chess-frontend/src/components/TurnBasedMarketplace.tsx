@@ -92,6 +92,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
     loading: dataLoading,
     error: dataError,
     refresh: refreshData,
+    refreshAvailablePlayers,
     invalidateCache
   } = useMarketplaceData(league.id, user?.id);
 
@@ -159,8 +160,9 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
   useEffect(() => {
     if (league?.id && !league.marketplace_completed) {
       loadCurrentTurn();
+      refreshAvailablePlayers();
     }
-  }, [league?.current_marketplace_turn]);
+  }, [league?.current_marketplace_turn, refreshAvailablePlayers]);
 
 
   // Initialize marketplace order if it is missing. Once the draft starts, marketplace_order

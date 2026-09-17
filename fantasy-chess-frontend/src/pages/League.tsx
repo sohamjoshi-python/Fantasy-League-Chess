@@ -440,6 +440,13 @@ const LeaguePage: React.FC = () => {
           loadLeagueData()
         }
       )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'leagues', filter: `id=eq.${leagueId}` },
+        () => {
+          loadLeagueData()
+        }
+      )
       .subscribe()
 
     return () => {

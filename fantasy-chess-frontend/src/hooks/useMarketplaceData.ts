@@ -160,6 +160,35 @@ export function useMarketplaceData(leagueId: string, userId: string | undefined)
     return coinBalance;
   }, []);
 
+  const loadOwnedPlayerIds = useCallback(async (targetLeagueId: string): Promise<Set<string>> => {
+    const { data: allTeams, error: teamsError } = await supabase
+      .from('teams')
+      .select('player_ids')
+      .eq('league_id', targetLeagueId);
+
+    if (teamsError) throw teamsError;
+
+    const ownedPlayerIds = new Set<string>();
+    allTeams?.forEach(team => {
+      team.player_ids?.forEach((id: string) => ownedPlayerIds.add(id));
+    });
+    return ownedPlayerIds;
+  }, []);
+
+  const refreshAvailablePlayers = useCallback(async () => {
+    if (!leagueId) return;
+
+    try {
+      const ownedPlayerIds = await loadOwnedPlayerIds(leagueId);
+      setData(prev => ({
+        ...prev,
+        availablePlayers: prev.allPlayers.filter(player => !ownedPlayerIds.has(player.id)),
+      }));
+    } catch (error) {
+      console.error('Error refreshing available players:', error);
+    }
+  }, [leagueId, loadOwnedPlayerIds]);
+
   const loadData = useCallback(async () => {
     if (!leagueId || !userId) return;
 
@@ -170,35 +199,22 @@ export function useMarketplaceData(leagueId: string, userId: string | undefined)
     abortControllerRef.current = new AbortController();
 
     try {
-      setData(prev => ({ ...prev, loading: true, error: null }));
+      setData(prev => ({
+        ...prev,
+        loading: prev.allPlayers.length === 0,
+        error: null
+      }));
 
-      // Load all data in parallel
-      const [allPlayers, userTeam, userCoinBalance] = await Promise.all([
+      const [allPlayers, userTeam, userCoinBalance, ownedPlayerIds] = await Promise.all([
         loadAllPlayers(),
         loadUserTeam(leagueId, userId),
-        loadUserCoinBalance(leagueId, userId)
+        loadUserCoinBalance(leagueId, userId),
+        loadOwnedPlayerIds(leagueId)
       ]);
-
-      // Get all teams to determine available players
-      const { data: allTeams, error: teamsError } = await supabase
-        .from('teams')
-        .select('player_ids')
-        .eq('league_id', leagueId);
-
-      if (teamsError) throw teamsError;
-
-      // Create set of owned player IDs
-      const ownedPlayerIds = new Set<string>();
-      allTeams?.forEach(team => {
-        team.player_ids?.forEach((id: string) => ownedPlayerIds.add(id));
-      });
-
-      // Filter available players
-      const availablePlayers = allPlayers.filter(player => !ownedPlayerIds.has(player.id));
 
       setData({
         allPlayers,
-        availablePlayers,
+        availablePlayers: allPlayers.filter(player => !ownedPlayerIds.has(player.id)),
         userTeam,
         userCoinBalance,
         loading: false,
@@ -217,7 +233,7 @@ export function useMarketplaceData(leagueId: string, userId: string | undefined)
         error: error.message || 'Failed to load marketplace data'
       }));
     }
-  }, [leagueId, userId, loadAllPlayers, loadUserTeam, loadUserCoinBalance]);
+  }, [leagueId, userId, loadAllPlayers, loadUserTeam, loadUserCoinBalance, loadOwnedPlayerIds]);
 
   // Refresh function to invalidate cache and reload
   const refresh = useCallback(() => {
@@ -250,7 +266,21 @@ export function useMarketplaceData(leagueId: string, userId: string | undefined)
         'postgres_changes',
         { event: '*', schema: 'public', table: 'teams', filter: `league_id=eq.${leagueId}` },
         () => {
-          loadData();
+          refreshAvailablePlayers();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'league_player_ownership', filter: `league_id=eq.${leagueId}` },
+        () => {
+          refreshAvailablePlayers();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'leagues', filter: `id=eq.${leagueId}` },
+        () => {
+          refreshAvailablePlayers();
         }
       )
       .subscribe();
@@ -258,11 +288,12 @@ export function useMarketplaceData(leagueId: string, userId: string | undefined)
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [leagueId, loadData]);
+  }, [leagueId, refreshAvailablePlayers]);
 
   return {
     ...data,
     refresh,
+    refreshAvailablePlayers,
     invalidateCache
   };
 }

@@ -91,7 +91,14 @@ WHERE EXISTS (
 INSERT INTO public.league_player_ownership (league_id, player_id)
 SELECT DISTINCT t.league_id, player_id
 FROM public.teams t
+JOIN public.leagues l ON l.id = t.league_id
 CROSS JOIN LATERAL unnest(COALESCE(t.player_ids, ARRAY[]::uuid[])) AS player_id
+WHERE player_id IS NOT NULL
+  AND EXISTS (
+      SELECT 1
+      FROM public.chess_players cp
+      WHERE cp.id = player_id
+  )
 ON CONFLICT DO NOTHING;
 
 CREATE OR REPLACE FUNCTION public.sync_league_player_ownership()
@@ -141,6 +148,15 @@ BEGIN
         EXCEPT
         SELECT unnest(old_ids)
     LOOP
+        IF added IS NULL THEN
+            CONTINUE;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM public.leagues WHERE id = NEW.league_id) THEN
+            CONTINUE;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM public.chess_players WHERE id = added) THEN
+            CONTINUE;
+        END IF;
         INSERT INTO public.league_player_ownership (league_id, player_id)
         VALUES (NEW.league_id, added);
     END LOOP;
@@ -180,3 +196,11 @@ CREATE POLICY league_player_ownership_select
 
 GRANT SELECT ON public.league_player_ownership TO authenticated;
 GRANT ALL ON public.league_player_ownership TO service_role;
+
+DO $$
+BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE public.league_player_ownership;
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+  WHEN undefined_object THEN NULL;
+END $$;
