@@ -272,6 +272,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
       invalidateCache(league.id);
       if (user?.id) invalidateCache(user.id);
       refreshData();
+      await notifyMarketplaceTurnIfNeeded(league.id);
       onUpdate();
     } finally {
       setTimeout(() => {
