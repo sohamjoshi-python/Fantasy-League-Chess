@@ -16,6 +16,7 @@ import {
   isTeamBuildingComplete,
   loadFiveMinuteDraftLeagueIds,
   preserveMarketplaceTurn,
+  SNAKE_DRAFT_ROUNDS,
 } from '../lib/leagueStatus';
 import { calculatePlayerPrice } from '../types/coin-system';
 import { notifyMarketplaceStartedIfNeeded, notifyMarketplaceTurnIfNeeded } from '../lib/marketplaceTurnEmail';
@@ -207,7 +208,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
         
         // Regenerate marketplace order using current member_ids
         const orderedParticipants = await orderParticipantsWithBotsLast(memberIds);
-        const newMarketplaceOrder = generateSnakeDraftOrder(orderedParticipants, 10);
+        const newMarketplaceOrder = generateSnakeDraftOrder(orderedParticipants, SNAKE_DRAFT_ROUNDS);
         
         supabase
           .from('leagues')
@@ -417,7 +418,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
         console.log('Funded participant IDs:', fundedParticipantIds);
         
         const orderedParticipants = await orderParticipantsWithBotsLast(fundedParticipantIds);
-        const newMarketplaceOrder = generateSnakeDraftOrder(orderedParticipants, 10);
+        const newMarketplaceOrder = generateSnakeDraftOrder(orderedParticipants, SNAKE_DRAFT_ROUNDS);
         const preservedTurn = preserveMarketplaceTurn(
           currentOrder,
           league.current_marketplace_turn ?? 0,
@@ -654,7 +655,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
       // Use the member_ids array directly (this should include bots if they were added properly)
       const participantIds = await orderParticipantsWithBotsLast(leagueData.member_ids);
       console.log('Marketplace participants:', participantIds);
-      const fullDraftOrder = generateSnakeDraftOrder(participantIds, 10);
+      const fullDraftOrder = generateSnakeDraftOrder(participantIds, SNAKE_DRAFT_ROUNDS);
       
       // Update league with marketplace settings
       const { error } = await supabase
@@ -1010,7 +1011,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
       );
       
       // Regenerate marketplace order without the user, but keep permanent member_ids unchanged.
-      const newMarketplaceOrder = generateSnakeDraftOrder(activeParticipantIds, 10);
+      const newMarketplaceOrder = generateSnakeDraftOrder(activeParticipantIds, SNAKE_DRAFT_ROUNDS);
       const preservedTurn = preserveMarketplaceTurn(
         currentOrder,
         league.current_marketplace_turn ?? 0,
@@ -1162,7 +1163,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
       );
       
       // Regenerate marketplace order without the bot
-      const newMarketplaceOrder = generateSnakeDraftOrder(activeParticipantIds, 10);
+      const newMarketplaceOrder = generateSnakeDraftOrder(activeParticipantIds, SNAKE_DRAFT_ROUNDS);
       const preservedTurn = preserveMarketplaceTurn(
         currentOrder,
         league.current_marketplace_turn ?? 0,

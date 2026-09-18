@@ -294,7 +294,7 @@ const ComprehensiveTutorial: React.FC = () => {
     {
       id: 'snake-draft-explanation',
       title: 'Snake Draft System',
-      description: 'The snake draft ensures fair player selection by reversing the order each round. Round 1: Players pick 1→2→3→4. Round 2: Players pick 4→3→2→1. This continues for 10 rounds, giving everyone equal opportunity to get top players!',
+      description: 'The snake draft ensures fair player selection by reversing the order each round. Round 1: Players pick 1→2→3→4. Round 2: Players pick 4→3→2→1. This continues for 3 rounds, then the open marketplace opens so you can keep adding players!',
       action: 'Click "Next" to complete the tutorial',
       target: 'next-step-button',
       page: 'leaderboard'

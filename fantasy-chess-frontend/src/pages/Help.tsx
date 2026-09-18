@@ -179,8 +179,7 @@ const Help: React.FC<HelpProps> = ({ variant }) => {
                     <div>Round 1: Player 1 → Player 2 → Player 3 → Player 4</div>
                     <div>Round 2: Player 4 → Player 3 → Player 2 → Player 1</div>
                     <div>Round 3: Player 1 → Player 2 → Player 3 → Player 4</div>
-                    <div>Round 4: Player 4 → Player 3 → Player 2 → Player 1</div>
-                    <div className="mt-1 text-xs text-neutral-600">...continues for 10 rounds total</div>
+                    <div className="mt-1 text-xs text-neutral-600">3 rounds total, then the open marketplace</div>
                   </div>
                   <p className="text-neutral-700 text-sm mb-2">
                     <strong>Why Snake Draft?</strong> This format ensures fairness - Player 1 gets first pick in odd rounds, but Player 4 gets first pick in even rounds. Everyone gets equal access to top talent!

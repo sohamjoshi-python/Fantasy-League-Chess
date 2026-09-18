@@ -144,6 +144,8 @@ export function isCoinMarketplaceAvailable(league: League): boolean {
 
 export const MARKETPLACE_TURN_TIMEOUT_HOURS = 12
 export const MARKETPLACE_TURN_TIMEOUT_MS = MARKETPLACE_TURN_TIMEOUT_HOURS * 60 * 60 * 1000
+/** Snake-draft picks each manager gets before the open marketplace. */
+export const SNAKE_DRAFT_ROUNDS = 3
 
 /**
  * Fallback 5-minute draft IDs until `five_minute_draft_leagues` is loaded.

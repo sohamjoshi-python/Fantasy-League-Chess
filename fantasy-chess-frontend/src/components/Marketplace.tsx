@@ -168,6 +168,20 @@ export default function Marketplace({ leagueId, onTeamUpdate }: MarketplaceProps
   // Get owned player IDs for filtering marketplace - memoized
   const getOwnedPlayerIds = useCallback(async () => {
     try {
+      const ownedPlayerIdsSet = new Set<string>();
+      const { data: claims, error: claimsError } = await supabase
+        .from('league_player_ownership')
+        .select('player_id')
+        .eq('league_id', leagueId);
+
+      if (claimsError) {
+        console.error('Error fetching league player ownership:', claimsError);
+      } else {
+        claims?.forEach((row) => {
+          if (row.player_id) ownedPlayerIdsSet.add(String(row.player_id).toLowerCase());
+        });
+      }
+
       const { data: allTeams, error: teamsError } = await supabase
         .from('teams')
         .select('player_ids')
@@ -175,14 +189,13 @@ export default function Marketplace({ leagueId, onTeamUpdate }: MarketplaceProps
 
       if (teamsError) {
         console.error('Error fetching teams:', teamsError);
-        return new Set<string>();
+      } else {
+        allTeams?.forEach(team => {
+          team.player_ids?.forEach((id: string) => {
+            if (id) ownedPlayerIdsSet.add(String(id).toLowerCase());
+          });
+        });
       }
-
-      // Create set of owned player IDs in this league
-      const ownedPlayerIdsSet = new Set<string>();
-      allTeams?.forEach(team => {
-        team.player_ids?.forEach((id: string) => ownedPlayerIdsSet.add(id));
-      });
 
       setOwnedPlayerIds(ownedPlayerIdsSet);
       return ownedPlayerIdsSet;
@@ -193,21 +206,21 @@ export default function Marketplace({ leagueId, onTeamUpdate }: MarketplaceProps
   }, [leagueId]);
 
   // Memoized marketplace listings to avoid expensive re-filtering
-  const marketplaceListings = useMemo(() => {
-    if (!allPlayers.length || !ownedPlayerIds.size) return [];
-    
-    const filtered = allPlayers.filter((p: ChessPlayer) => {
-      const isNotOwned = !ownedPlayerIds.has(p.id);
-      const matchesSearch = debouncedSearchTerm.trim() === '' || 
+  const availableMarketplacePlayers = useMemo(() => {
+    if (!allPlayers.length) return [];
+
+    return allPlayers.filter((p: ChessPlayer) => {
+      const isNotOwned = !ownedPlayerIds.has(String(p.id).toLowerCase());
+      const matchesSearch = debouncedSearchTerm.trim() === '' ||
         p.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
       return isNotOwned && matchesSearch;
     });
-    
-    if (showAllPlayers) return filtered;
-    
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    return filtered.slice(startIndex, startIndex + itemsPerPage);
-  }, [allPlayers, ownedPlayerIds, debouncedSearchTerm, showAllPlayers, currentPage, itemsPerPage]);
+  }, [allPlayers, ownedPlayerIds, debouncedSearchTerm]);
+
+  const marketplaceListings = useMemo(() => {
+    if (showAllPlayers) return availableMarketplacePlayers;
+    return availableMarketplacePlayers.slice(0, currentPage * itemsPerPage);
+  }, [availableMarketplacePlayers, showAllPlayers, currentPage, itemsPerPage]);
 
   // Reset page when search changes
   useEffect(() => {
@@ -220,14 +233,21 @@ export default function Marketplace({ leagueId, onTeamUpdate }: MarketplaceProps
 
     getOwnedPlayerIds();
 
+    const refreshOwned = () => {
+      getOwnedPlayerIds();
+    };
+
     const channel = supabase
       .channel(`marketplace-owned-${leagueId}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'teams', filter: `league_id=eq.${leagueId}` },
-        () => {
-          getOwnedPlayerIds();
-        }
+        refreshOwned
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'league_player_ownership', filter: `league_id=eq.${leagueId}` },
+        refreshOwned
       )
       .subscribe();
 
@@ -1002,9 +1022,9 @@ export default function Marketplace({ leagueId, onTeamUpdate }: MarketplaceProps
             </div>
             <div className="flex items-center space-x-2">
               <span className="text-sm text-gray-600">
-                Showing {marketplaceListings.length} of {allPlayers.length} players
+                Showing {marketplaceListings.length} of {availableMarketplacePlayers.length} available players
               </span>
-              {!showAllPlayers && allPlayers.length > 30 && (
+              {!showAllPlayers && availableMarketplacePlayers.length > itemsPerPage && (
                 <button
                   onClick={() => setShowAllPlayers(true)}
                   className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
@@ -1020,7 +1040,7 @@ export default function Marketplace({ leagueId, onTeamUpdate }: MarketplaceProps
                   Show Less
                 </button>
               )}
-              {!showAllPlayers && marketplaceListings.length === itemsPerPage && (
+              {!showAllPlayers && marketplaceListings.length < availableMarketplacePlayers.length && (
                 <button
                   onClick={() => setCurrentPage(prev => prev + 1)}
                   className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"

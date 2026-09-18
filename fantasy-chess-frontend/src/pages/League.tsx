@@ -12,6 +12,7 @@ import {
   isMarketplaceAutoStartDue,
   isTeamBuildingComplete,
   leagueSeasonHasStartedLocal,
+  SNAKE_DRAFT_ROUNDS,
 } from '../lib/leagueStatus'
 import { notifyMarketplaceStartedIfNeeded } from '../lib/marketplaceTurnEmail'
 import { isLineupChangeAllowed, lineupChangeBlockedMessage } from '../lib/lineupWindow'
@@ -999,12 +1000,12 @@ const LeaguePage: React.FC = () => {
 
         // Update league with bot_id using the latest member_ids so newer joins are preserved.
         const allDraftParticipants = await orderParticipantsWithBotsLast([...(latestLeague.member_ids || []), newBot.id])
-        const updatedDraftOrder = generateSnakeDraftOrder(allDraftParticipants, 10)
+        const updatedDraftOrder = generateSnakeDraftOrder(allDraftParticipants, SNAKE_DRAFT_ROUNDS)
         
         // Also regenerate marketplace order if marketplace has started
         let marketplaceOrderUpdate = {}
         if (latestLeague.marketplace_started && latestLeague.marketplace_order) {
-          const updatedMarketplaceOrder = generateSnakeDraftOrder(allDraftParticipants, 10)
+          const updatedMarketplaceOrder = generateSnakeDraftOrder(allDraftParticipants, SNAKE_DRAFT_ROUNDS)
           marketplaceOrderUpdate = {
             marketplace_order: updatedMarketplaceOrder,
             current_marketplace_turn: 0 // Reset marketplace turn
@@ -1064,10 +1065,10 @@ const LeaguePage: React.FC = () => {
         // Update league to remove bot while preserving any members who joined after this page loaded.
         const updatedMemberIds = (latestLeague.member_ids || []).filter((id: string) => id !== bot.id);
         const orderedParticipants = await orderParticipantsWithBotsLast(updatedMemberIds)
-        const updatedDraftOrder = generateSnakeDraftOrder(orderedParticipants, 10)
+        const updatedDraftOrder = generateSnakeDraftOrder(orderedParticipants, SNAKE_DRAFT_ROUNDS)
         
         // Also regenerate marketplace order if marketplace has started
-        const updatedMarketplaceOrder = latestLeague.marketplace_started ? generateSnakeDraftOrder(orderedParticipants, 10) : latestLeague.marketplace_order;
+        const updatedMarketplaceOrder = latestLeague.marketplace_started ? generateSnakeDraftOrder(orderedParticipants, SNAKE_DRAFT_ROUNDS) : latestLeague.marketplace_order;
         
         // Update the league to remove bot information
         await supabase
