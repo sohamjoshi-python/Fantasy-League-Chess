@@ -2,7 +2,7 @@ name: Skip Expired Marketplace Turns
 
 on:
   schedule:
-    # Check often enough that a 12-hour miss is skipped shortly after it expires.
+    # Backup if nobody has the draft page open. Server cron should usually get there first.
     - cron: "*/5 * * * *"
   workflow_dispatch:
     inputs:
@@ -12,42 +12,58 @@ on:
         default: "12"
 
 jobs:
-  skip-expired-turns:
+  process-marketplace-turns:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Skip expired snake-draft turns
+      - name: Skip expired turns and email the current picker
         env:
           TIMEOUT_HOURS: ${{ github.event.inputs.timeout_hours || '12' }}
         run: |
-          echo "Skipping marketplace turns idle longer than ${TIMEOUT_HOURS} hours..."
-
           SERVICE_KEY="${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}"
           if [ -z "$SERVICE_KEY" ]; then
             SERVICE_KEY="${{ secrets.SB_KEY }}"
           fi
+          BASE_URL="${{ secrets.SB_URL }}"
 
-          response=$(curl -s -w "\n%{http_code}" -X POST \
-            "${{ secrets.SB_URL }}/rest/v1/rpc/skip_expired_marketplace_turns" \
+          echo "Invoking process-marketplace-turns..."
+          function_response=$(curl -s -w "\n%{http_code}" -X POST \
+            "${BASE_URL}/functions/v1/process-marketplace-turns" \
+            -H "Authorization: Bearer ${SERVICE_KEY}" \
+            -H "apikey: ${SERVICE_KEY}" \
+            -H "Content-Type: application/json" \
+            -d '{}')
+          function_code=$(echo "$function_response" | tail -n1)
+          function_body=$(echo "$function_response" | head -n -1)
+          echo "Function status: $function_code"
+          echo "Function body: $function_body"
+
+          echo "Skipping marketplace turns idle longer than ${TIMEOUT_HOURS} hours..."
+          skip_response=$(curl -s -w "\n%{http_code}" -X POST \
+            "${BASE_URL}/rest/v1/rpc/skip_expired_marketplace_turns" \
             -H "Authorization: Bearer ${SERVICE_KEY}" \
             -H "apikey: ${SERVICE_KEY}" \
             -H "Content-Type: application/json" \
             -d "{\"p_timeout_hours\": ${TIMEOUT_HOURS}}")
-
-          http_code=$(echo "$response" | tail -n1)
-          response_body=$(echo "$response" | head -n -1)
-
-          echo "Response Status: $http_code"
-          echo "Response Body: $response_body"
-
-          if [ "$http_code" -eq 200 ]; then
-            echo "$response_body" | jq -r '"Skipped: \(.skipped_count) (timeout \(.timeout_hours)h)"'
-          else
+          skip_code=$(echo "$skip_response" | tail -n1)
+          skip_body=$(echo "$skip_response" | head -n -1)
+          echo "Skip status: $skip_code"
+          echo "Skip body: $skip_body"
+          if [ "$skip_code" -ne 200 ]; then
             echo "Failed to skip expired marketplace turns"
             exit 1
           fi
 
-  send-turn-emails:
-    needs: skip-expired-turns
-    uses: ./.github/workflows/marketplace-turn-emails.yml
-    secrets: inherit
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Email current snake-draft pickers
+        env:
+          SB_URL: ${{ secrets.SB_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SB_KEY: ${{ secrets.SB_KEY }}
+        run: python scripts/send_marketplace_turn_emails.py

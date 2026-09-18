@@ -341,3 +341,8 @@ verify_jwt = true
 [functions.auto-start-marketplace]
 enabled = true
 verify_jwt = true
+
+# Called by pg_cron / GitHub when nobody has the draft page open.
+[functions.process-marketplace-turns]
+enabled = true
+verify_jwt = false
