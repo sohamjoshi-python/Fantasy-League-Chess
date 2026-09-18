@@ -3,7 +3,7 @@ name: Skip Expired Marketplace Turns
 on:
   schedule:
     # Check often enough that a 12-hour miss is skipped shortly after it expires.
-    - cron: "7,22,37,52 * * * *"
+    - cron: "*/5 * * * *"
   workflow_dispatch:
     inputs:
       timeout_hours:

@@ -18,6 +18,31 @@ type MarketplaceTurnEmailClaim = LifecycleEmailClaim & {
   turn_number: number | null
 }
 
+type MarketplaceTurnEmailExtras = {
+  round?: number
+  roundLabel?: string
+  heading?: string
+  timeoutLabel?: string
+  picksHtml?: string
+  picksText?: string
+}
+
+function ordinalLabel(n: number): string {
+  const value = Math.max(1, Math.floor(n || 1))
+  const mod100 = value % 100
+  if (mod100 >= 11 && mod100 <= 13) return `${value}th`
+  switch (value % 10) {
+    case 1:
+      return `${value}st`
+    case 2:
+      return `${value}nd`
+    case 3:
+      return `${value}rd`
+    default:
+      return `${value}th`
+  }
+}
+
 function escapeHtml(value: unknown): string {
   return String(value ?? '')
     .replace(/&/g, '&amp;')
@@ -49,24 +74,39 @@ function wrapLeagueEmail(title: string, innerHtml: string) {
   `
 }
 
-export function createMarketplaceTurnEmail(recipientName: string, leagueName: string, leagueId: string) {
+export function createMarketplaceTurnEmail(
+  recipientName: string,
+  leagueName: string,
+  leagueId: string,
+  extras?: MarketplaceTurnEmailExtras | null
+) {
   const leagueUrl = `${SITE_URL}/league/${leagueId}`
-  const timeoutLabel = getMarketplaceTurnTimeoutLabel(leagueId)
-  const subject = `Your turn to draft in ${leagueName}`
+  const timeoutLabel = extras?.timeoutLabel || getMarketplaceTurnTimeoutLabel(leagueId)
+  const roundLabel = extras?.roundLabel || ordinalLabel(extras?.round || 1)
+  const heading = extras?.heading || `Your ${roundLabel} Round Pick`
+  const subject = `${heading} in ${leagueName}`
+  const picksText = extras?.picksText?.trim() || ''
+  const picksHtml = extras?.picksHtml?.trim() || ''
   const textContent = [
     `Hi ${recipientName},`,
-    `It's your turn to pick in the draft for ${leagueName}.`,
+    `${heading} in the draft for ${leagueName}.`,
     `You have ${timeoutLabel} to buy a player. If you don't pick, this turn is skipped and you can still add players later in the regular marketplace.`,
+    picksText ? `Picks so far:\n${picksText}` : '',
     `Make your pick: ${leagueUrl}`,
-  ].join('\n\n')
+  ].filter(Boolean).join('\n\n')
   const htmlContent = wrapLeagueEmail(
-    'Your Turn To Draft',
+    heading,
     `
       <p style="margin: 0 0 18px;">Hi ${escapeHtml(recipientName)},</p>
-      <p style="margin: 0 0 18px;">It's your turn to pick in the draft for <strong>${escapeHtml(leagueName)}</strong>.</p>
+      <p style="margin: 0 0 18px;">It's time for your pick in <strong>${escapeHtml(leagueName)}</strong>.</p>
       <div style="background-color: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; padding: 18px; margin: 22px 0;">
         <p style="margin: 0;"><strong>You have ${escapeHtml(timeoutLabel)}</strong> to buy a player. If you don't pick, this turn is skipped.</p>
       </div>
+      ${
+        picksHtml
+          ? `<div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 18px; margin: 0 0 22px;"><p style="margin: 0 0 12px; font-weight: bold;">Picks so far</p>${picksHtml}</div>`
+          : ''
+      }
       <p style="margin: 0 0 24px;">You can still add players later in the regular marketplace after the snake draft ends.</p>
       <p style="margin: 30px 0; text-align: center;">
         <a href="${leagueUrl}" style="display: inline-block; background-color: #4CAF50; color: #ffffff; padding: 12px 24px; border-radius: 5px; text-decoration: none; font-weight: bold;">Make Your Pick</a>
@@ -165,6 +205,23 @@ export async function notifyMarketplaceStartedIfNeeded(leagueId: string): Promis
   }
 }
 
+async function loadTurnEmailExtras(
+  leagueId: string,
+  userId: string,
+  turnNumber: number | null
+): Promise<MarketplaceTurnEmailExtras | null> {
+  const { data, error } = await supabase.rpc('get_marketplace_turn_email_extras', {
+    p_league_id: leagueId,
+    p_exclude_user_id: userId,
+    p_turn_number: turnNumber,
+  })
+  if (error) {
+    console.error('Error loading marketplace turn email extras:', error)
+    return null
+  }
+  return (data || null) as MarketplaceTurnEmailExtras | null
+}
+
 /** Claim and email the current picker once per turn. Safe to call on every turn change. */
 export async function notifyMarketplaceTurnIfNeeded(leagueId: string): Promise<void> {
   if (!leagueId) return
@@ -179,12 +236,36 @@ export async function notifyMarketplaceTurnIfNeeded(leagueId: string): Promise<v
       return
     }
 
-    await sendClaimedEmails(
-      (data || []) as MarketplaceTurnEmailClaim[],
-      createMarketplaceTurnEmail,
-      'marketplace_turn',
-      (recipient) => ({ turnNumber: (recipient as MarketplaceTurnEmailClaim).turn_number })
-    )
+    for (const recipient of (data || []) as MarketplaceTurnEmailClaim[]) {
+      if (!recipient.email) continue
+      const name = recipient.username || recipient.email.split('@')[0] || 'there'
+      const leagueName = recipient.league_name || 'your league'
+      const extras = await loadTurnEmailExtras(
+        recipient.league_id,
+        recipient.user_id,
+        recipient.turn_number
+      )
+      const payload = createMarketplaceTurnEmail(name, leagueName, recipient.league_id, extras)
+      const { error: emailError } = await supabase.functions.invoke('send-resend-email', {
+        body: {
+          to: recipient.email,
+          subject: payload.subject,
+          htmlContent: payload.htmlContent,
+          textContent: payload.textContent,
+          emailType: 'custom',
+          userId: recipient.user_id,
+          leagueId: recipient.league_id,
+          metadata: {
+            source: 'marketplace_turn',
+            turnNumber: recipient.turn_number,
+            roundLabel: extras?.roundLabel,
+          },
+        },
+      })
+      if (emailError) {
+        console.error('Error sending marketplace_turn email:', emailError)
+      }
+    }
   } catch (error) {
     console.error('Error notifying marketplace turn:', error)
   }

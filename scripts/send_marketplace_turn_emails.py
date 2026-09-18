@@ -51,21 +51,33 @@ def request_json(method: str, url: str, service_key: str, body: dict | None = No
         raise RuntimeError(f"{method} {url} failed ({error.code}): {details}") from error
 
 
-def create_email(recipient_name: str, league_name: str, league_id: str) -> dict:
+def create_email(recipient_name: str, league_name: str, league_id: str, extras: dict | None = None) -> dict:
+    extras = extras or {}
     league_url = f"{SITE_URL}/league/{league_id}"
-    turn_timeout = timeout_label(league_id)
-    subject = f"Your turn to draft in {league_name}"
-    text = "\n\n".join(
-        [
-            f"Hi {recipient_name},",
-            f"It's your turn to pick in the draft for {league_name}.",
-            (
-                f"You have {turn_timeout} to buy a player. If you don't pick, "
-                "this turn is skipped and you can still add players later in the regular marketplace."
-            ),
-            f"Make your pick: {league_url}",
-        ]
-    )
+    turn_timeout = extras.get("timeoutLabel") or timeout_label(league_id)
+    heading = extras.get("heading") or "Your 1st Round Pick"
+    picks_html = extras.get("picksHtml") or ""
+    picks_text = extras.get("picksText") or ""
+    subject = f"{heading} in {league_name}"
+    text_parts = [
+        f"Hi {recipient_name},",
+        f"{heading} in the draft for {league_name}.",
+        (
+            f"You have {turn_timeout} to buy a player. If you don't pick, "
+            "this turn is skipped and you can still add players later in the regular marketplace."
+        ),
+    ]
+    if picks_text.strip():
+        text_parts.append(f"Picks so far:\n{picks_text.strip()}")
+    text_parts.append(f"Make your pick: {league_url}")
+    text = "\n\n".join(text_parts)
+    picks_block = ""
+    if picks_html.strip():
+        picks_block = (
+            '<div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; '
+            'padding: 18px; margin: 0 0 22px;"><p style="margin: 0 0 12px; font-weight: bold;">Picks so far</p>'
+            f"{picks_html}</div>"
+        )
     html = f"""
     <!DOCTYPE html>
     <html lang="en">
@@ -73,14 +85,15 @@ def create_email(recipient_name: str, league_name: str, league_id: str) -> dict:
         <div style="max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); overflow: hidden;">
           <div style="background-color: #4CAF50; color: #ffffff; padding: 24px 20px; text-align: center;">
             <img src="{LOGO_URL}" alt="Fantasy League Chess" style="max-width: 200px; height: auto; margin-bottom: 12px;">
-            <h1 style="margin: 0; font-size: 24px; color: #ffffff;">Your Turn To Draft</h1>
+            <h1 style="margin: 0; font-size: 24px; color: #ffffff;">{escape(heading)}</h1>
           </div>
           <div style="padding: 28px 24px;">
             <p style="margin: 0 0 18px;">Hi {escape(recipient_name)},</p>
-            <p style="margin: 0 0 18px;">It's your turn to pick in the draft for <strong>{escape(league_name)}</strong>.</p>
+            <p style="margin: 0 0 18px;">It's time for your pick in <strong>{escape(league_name)}</strong>.</p>
             <div style="background-color: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; padding: 18px; margin: 22px 0;">
               <p style="margin: 0;"><strong>You have {escape(turn_timeout)}</strong> to buy a player. If you don't pick, this turn is skipped.</p>
             </div>
+            {picks_block}
             <p style="margin: 0 0 24px;">You can still add players later in the regular marketplace after the snake draft ends.</p>
             <p style="margin: 30px 0; text-align: center;">
               <a href="{league_url}" style="display: inline-block; background-color: #4CAF50; color: #ffffff; padding: 12px 24px; border-radius: 5px; text-decoration: none; font-weight: bold;">Make Your Pick</a>
@@ -134,7 +147,17 @@ def main() -> None:
             continue
         name = recipient.get("username") or email.split("@")[0] or "there"
         league_name = recipient.get("league_name") or "your league"
-        payload = create_email(name, league_name, recipient["league_id"])
+        extras = request_json(
+            "POST",
+            f"{base_url}/rest/v1/rpc/get_marketplace_turn_email_extras",
+            service_key,
+            {
+                "p_league_id": recipient["league_id"],
+                "p_exclude_user_id": recipient.get("user_id"),
+                "p_turn_number": recipient.get("turn_number"),
+            },
+        ) or {}
+        payload = create_email(name, league_name, recipient["league_id"], extras)
         try:
             send_email(base_url, service_key, recipient, payload)
         except Exception:
