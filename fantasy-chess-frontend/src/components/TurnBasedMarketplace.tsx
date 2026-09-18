@@ -14,6 +14,7 @@ import {
   isMarketplaceAutoStartDue,
   isPlayerAlreadyOwnedError,
   isTeamBuildingComplete,
+  loadFiveMinuteDraftLeagueIds,
   preserveMarketplaceTurn,
 } from '../lib/leagueStatus';
 import { calculatePlayerPrice } from '../types/coin-system';
@@ -111,6 +112,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
   const skipExpiredRef = useRef(false);
   const skipFailedRef = useRef(false);
   const [turnMsRemaining, setTurnMsRemaining] = useState<number | null>(null);
+  const [fiveMinuteIdsVersion, setFiveMinuteIdsVersion] = useState(0);
 
   const isOwner = user?.id && league && user.id === league?.creator_id;
   const isUserTurn = currentTurn?.current_user_id === user?.id;
@@ -167,6 +169,12 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
       loadTurnHistory();
     }
   }, [league?.id]);
+
+  useEffect(() => {
+    void loadFiveMinuteDraftLeagueIds().then(() => {
+      setFiveMinuteIdsVersion((version) => version + 1);
+    });
+  }, []);
 
 
 
@@ -309,6 +317,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
     league?.marketplace_completed,
     league?.marketplace_turn_started_at,
     league?.current_marketplace_turn,
+    fiveMinuteIdsVersion,
   ]);
 
   useEffect(() => {

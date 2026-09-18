@@ -145,16 +145,53 @@ export function isCoinMarketplaceAvailable(league: League): boolean {
 export const MARKETPLACE_TURN_TIMEOUT_HOURS = 12
 export const MARKETPLACE_TURN_TIMEOUT_MS = MARKETPLACE_TURN_TIMEOUT_HOURS * 60 * 60 * 1000
 
-/** Temporary: these leagues use a 5-minute pick clock for skip testing. */
+/**
+ * Fallback 5-minute draft IDs until `five_minute_draft_leagues` is loaded.
+ * The live list lives in that table — add/remove rows there, not here.
+ */
 export const TEST_FIVE_MINUTE_DRAFT_LEAGUE_ID = '1465e20b-f06b-4a89-8e3f-d675759af0c4'
-export const TEST_FIVE_MINUTE_DRAFT_LEAGUE_IDS = new Set([
+const FIVE_MINUTE_DRAFT_LEAGUE_FALLBACK_IDS = [
   TEST_FIVE_MINUTE_DRAFT_LEAGUE_ID,
   '2f17a311-69ef-40ed-b7ad-10ce95dc0210',
-])
+  'a354e52c-9c02-4c44-9c52-a5e3aa751c0d',
+]
+export const TEST_FIVE_MINUTE_DRAFT_LEAGUE_IDS = new Set(FIVE_MINUTE_DRAFT_LEAGUE_FALLBACK_IDS)
 const TEST_DRAFT_TIMEOUT_MS = 5 * 60 * 1000
+let fiveMinuteDraftLeaguesLoaded = false
+let fiveMinuteDraftLeaguesLoad: Promise<void> | null = null
 
 function normalizeLeagueId(leagueId?: string | null): string {
   return String(leagueId || '').trim().toLowerCase()
+}
+
+function replaceFiveMinuteDraftLeagueIds(ids: string[]) {
+  TEST_FIVE_MINUTE_DRAFT_LEAGUE_IDS.clear()
+  for (const id of ids) {
+    const normalized = normalizeLeagueId(id)
+    if (normalized) TEST_FIVE_MINUTE_DRAFT_LEAGUE_IDS.add(normalized)
+  }
+}
+
+/** Loads the 5-minute draft league list from `five_minute_draft_leagues`. */
+export async function loadFiveMinuteDraftLeagueIds(): Promise<void> {
+  if (fiveMinuteDraftLeaguesLoad) return fiveMinuteDraftLeaguesLoad
+  fiveMinuteDraftLeaguesLoad = (async () => {
+    try {
+      const { supabase } = await import('./supabase')
+      const { data, error } = await supabase.from('five_minute_draft_leagues').select('league_id')
+      if (error) {
+        console.error('Error loading five-minute draft leagues:', error)
+        return
+      }
+      replaceFiveMinuteDraftLeagueIds((data || []).map((row) => String(row.league_id || '')))
+      fiveMinuteDraftLeaguesLoaded = true
+    } catch (error) {
+      console.error('Error loading five-minute draft leagues:', error)
+    } finally {
+      if (!fiveMinuteDraftLeaguesLoaded) fiveMinuteDraftLeaguesLoad = null
+    }
+  })()
+  return fiveMinuteDraftLeaguesLoad
 }
 
 export function isTestFiveMinuteDraftLeague(leagueId?: string | null): boolean {

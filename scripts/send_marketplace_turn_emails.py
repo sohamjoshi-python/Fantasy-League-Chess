@@ -14,16 +14,33 @@ from html import escape
 SITE_URL = "https://fantasyleaguechess.com"
 LOGO_URL = f"{SITE_URL}/assets/fantasy-league-chess-logo-updated.png"
 TURN_TIMEOUT_HOURS = 12
-TEST_FIVE_MINUTE_DRAFT_LEAGUE_IDS = {
+FIVE_MINUTE_DRAFT_LEAGUE_IDS: set[str] = {
     "1465e20b-f06b-4a89-8e3f-d675759af0c4",
     "2f17a311-69ef-40ed-b7ad-10ce95dc0210",
+    "a354e52c-9c02-4c44-9c52-a5e3aa751c0d",
 }
 
 
 def timeout_label(league_id: str | None) -> str:
-    if league_id in TEST_FIVE_MINUTE_DRAFT_LEAGUE_IDS:
+    if league_id in FIVE_MINUTE_DRAFT_LEAGUE_IDS:
         return "5 minutes"
     return f"{TURN_TIMEOUT_HOURS} hours"
+
+
+def load_five_minute_draft_league_ids(base_url: str, service_key: str) -> None:
+    try:
+        rows = request_json(
+            "GET",
+            f"{base_url}/rest/v1/five_minute_draft_leagues?select=league_id",
+            service_key,
+        ) or []
+    except Exception as error:
+        print(f"Could not load five_minute_draft_leagues: {error}", file=sys.stderr)
+        return
+    ids = {str(row.get("league_id") or "") for row in rows if row.get("league_id")}
+    if ids:
+        FIVE_MINUTE_DRAFT_LEAGUE_IDS.clear()
+        FIVE_MINUTE_DRAFT_LEAGUE_IDS.update(ids)
 
 
 def require_env() -> tuple[str, str]:
@@ -132,6 +149,7 @@ def send_email(base_url: str, service_key: str, recipient: dict, payload: dict) 
 
 def main() -> None:
     base_url, service_key = require_env()
+    load_five_minute_draft_league_ids(base_url, service_key)
     recipients = request_json(
         "POST",
         f"{base_url}/rest/v1/rpc/claim_marketplace_turn_emails",

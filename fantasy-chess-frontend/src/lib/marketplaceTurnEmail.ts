@@ -1,5 +1,5 @@
 import { supabase } from './supabase'
-import { getMarketplaceTurnTimeoutLabel } from './leagueStatus'
+import { getMarketplaceTurnTimeoutLabel, loadFiveMinuteDraftLeagueIds } from './leagueStatus'
 
 const SITE_URL = 'https://fantasyleaguechess.com'
 const LOGO_URL = `${SITE_URL}/assets/fantasy-league-chess-logo-updated.png`
@@ -184,6 +184,8 @@ async function sendClaimedEmails(
 export async function notifyMarketplaceStartedIfNeeded(leagueId: string): Promise<void> {
   if (!leagueId) return
 
+  await loadFiveMinuteDraftLeagueIds()
+
   try {
     const { data, error } = await supabase.rpc('claim_league_lifecycle_emails', {
       p_event: 'marketplace_started',
@@ -225,6 +227,8 @@ async function loadTurnEmailExtras(
 /** Claim and email the current picker once per turn. Safe to call on every turn change. */
 export async function notifyMarketplaceTurnIfNeeded(leagueId: string): Promise<void> {
   if (!leagueId) return
+
+  await loadFiveMinuteDraftLeagueIds()
 
   try {
     const { data, error } = await supabase.rpc('claim_marketplace_turn_emails', {
