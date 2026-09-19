@@ -38,4 +38,4 @@ Copy `.env.example` files; gitignores block `.env`, `.env.*`, `*.pem`, and `*.ke
 
 ## License
 
-MIT
+[MIT](LICENSE)
