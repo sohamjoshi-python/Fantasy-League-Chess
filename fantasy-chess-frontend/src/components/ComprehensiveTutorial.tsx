@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Trophy, Users, Target, Coins, Store, CheckCircle, Crown, Calendar, Plus, Medal, User, Lightbulb, ChevronDown, ChevronUp } from 'lucide-react';
+import { X, Trophy, Users, Target, Coins, Store, CheckCircle, Crown, Calendar, Plus, Medal, User, ChevronDown, ChevronUp } from 'lucide-react';
+import TutorialCallout from './TutorialCallout';
+import TutorialMiniSite from './TutorialMiniSite';
 
 interface TutorialStep {
   id: string;
@@ -18,6 +20,7 @@ const ComprehensiveTutorial: React.FC = () => {
   const [showTutorial] = useState(true);
   const [sampleData, setSampleData] = useState<any>(null);
   const [showStepsDropdown, setShowStepsDropdown] = useState(false);
+  const [miniLeaderboardOpen, setMiniLeaderboardOpen] = useState(false);
   
   // Sample data initialization
   const initializeSampleData = () => {
@@ -83,233 +86,102 @@ const ComprehensiveTutorial: React.FC = () => {
     initializeSampleData();
   }, []);
 
-  // Scroll to top when step changes (but not for marketplace purchases)
-  useEffect(() => {
-    // Skip scroll on initial render
-    if (currentStep === 0) return;
-    
-    const currentStepData = tutorialSteps[currentStep];
-    if (currentStepData && !currentStepData.target.includes('buy-')) {
-      // Detect if mobile device
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
-      
-      // Use double requestAnimationFrame to ensure DOM has fully updated after state change
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          // For mobile, use more aggressive scrolling
-          if (isMobile) {
-            // Mobile browsers often use different scroll containers
-            // Scroll window first
-            window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
-            
-            // Force scroll on all possible containers
-            if (document.documentElement) {
-              document.documentElement.scrollTop = 0;
-              document.documentElement.scrollLeft = 0;
-            }
-            if (document.body) {
-              document.body.scrollTop = 0;
-              document.body.scrollLeft = 0;
-            }
-            
-            // Try scrolling the main content area
-            const mainContent = document.querySelector('.pt-32');
-            if (mainContent) {
-              mainContent.scrollTop = 0;
-              // Also try scrollIntoView for mobile
-              (mainContent as HTMLElement).scrollIntoView({ behavior: 'auto', block: 'start' });
-            }
-            
-            // Scroll the main container div as well
-            const mainContainer = document.querySelector('.max-w-7xl');
-            if (mainContainer) {
-              mainContainer.scrollTop = 0;
-              (mainContainer as HTMLElement).scrollIntoView({ behavior: 'auto', block: 'start' });
-            }
-            
-            // Multiple attempts for mobile browsers that might need retries
-            setTimeout(() => {
-              window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
-              if (document.documentElement) {
-                document.documentElement.scrollTop = 0;
-              }
-              if (document.body) {
-                document.body.scrollTop = 0;
-              }
-            }, 50);
-            
-            setTimeout(() => {
-              window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
-              if (document.documentElement) {
-                document.documentElement.scrollTop = 0;
-              }
-              if (document.body) {
-                document.body.scrollTop = 0;
-              }
-            }, 150);
-          } else {
-            // Desktop: standard scroll
-            window.scrollTo({ top: 0, behavior: 'auto' });
-            if (document.documentElement) {
-              document.documentElement.scrollTop = 0;
-            }
-            if (document.body) {
-              document.body.scrollTop = 0;
-            }
-          }
-        });
-      });
-    }
-  }, [currentStep]);
-
   const tutorialSteps: TutorialStep[] = [
     {
       id: 'welcome',
-      title: 'Welcome to Fantasy Chess!',
-      description: 'This comprehensive tutorial will walk you through the complete Fantasy Chess experience. You\'ll learn how to join leagues, draft players, manage your team, and compete for glory!',
-      action: 'Click the "Join a League" button below to start',
+      title: 'Join a league',
+      description: 'Leagues are where you draft a team and compete.',
+      action: 'Click Join a League',
       target: 'join-league-button',
       page: 'dashboard'
     },
     {
       id: 'league-selection',
-      title: 'Choose Your League',
-      description: 'Here you can see all available leagues. The "Tutorial Champions League" is perfect for beginners - it\'s free and designed for learning!',
-      action: 'Click "Join" on the Tutorial Champions League',
+      title: 'Pick this one',
+      description: 'The Tutorial Champions League is free.',
+      action: 'Click Join',
       target: 'join-tutorial-league',
       page: 'join-league'
     },
     {
       id: 'league-overview',
-      title: 'League Overview',
-      description: 'Welcome to your league! Here you can see all participants, league settings, and current standings. The turn-based marketplace is ready to begin!',
-      action: 'Click "Start Marketplace" to begin selecting players',
+      title: 'Your league',
+      description: 'Standings, lineup, and the draft all live here.',
+      action: 'Click Start Turn-Based Marketplace',
       target: 'start-marketplace-button',
       page: 'league'
     },
     {
       id: 'marketplace-start',
-      title: 'Turn-Based Marketplace Begins!',
-      description: 'This is Phase 1 - the Turn-Based Marketplace! You start with 50 GEMS and take turns selecting players. High-rated players like Magnus Carlsen cost 50 GEMS. After the turn-based marketplace, you\'ll get 50 coins per week for trading.',
-      action: 'Click "Buy Player" on Magnus Carlsen',
+      title: 'Draft with coins',
+      description: 'Everyone gets 50 coins. Magnus costs 50.',
+      action: 'Click Buy Player on Magnus',
       target: 'buy-magnus',
       page: 'league'
     },
     {
       id: 'team-building',
-      title: 'Building Your Team',
-      description: 'Great choice! You now have Magnus Carlsen and 0 GEMS remaining. The draft continues until all players are taken or everyone runs out of GEMS. Then Phase 2 begins with weekly trading.',
-      action: 'Click "Buy Player" on Ding Liren',
+      title: 'Keep drafting',
+      description: 'That spent your 50 coins. Add one more player to finish this example.',
+      action: 'Click Buy Player on Ding',
       target: 'buy-ding',
       page: 'league'
     },
     {
       id: 'marketplace-complete',
-      title: 'Marketplace Complete!',
-      description: 'The turn-based marketplace is finished! Your team: Magnus Carlsen, Fabiano Caruana, Ding Liren. Now you need to set your weekly lineup to start competing.',
-      action: 'Click "Set Lineup" to choose your starting players',
+      title: 'Set a lineup',
+      description: 'Pick who plays this week.',
+      action: 'Click Edit',
       target: 'set-lineup-button',
       page: 'league'
     },
     {
       id: 'lineup-selection',
-      title: 'Setting Your Lineup',
-      description: 'Choose which players from your team will compete this week. You can change your lineup before each round starts.',
-      action: 'Click "Save Lineup" to confirm your selection',
+      title: 'Save it',
+      description: 'You can change this before each round.',
+      action: 'Click Save Lineup',
       target: 'save-lineup-button',
       page: 'league'
     },
-      {
-        id: 'scoring-system',
-        title: 'Understanding Scoring',
-        description: 'After each tournament round, your players earn points based on their performance. You can use these points to draft additional players or trade existing ones.',
-        action: 'Click "View League Standings" to see your league rankings',
-        target: 'view-league-standings-button',
-        page: 'league'
-      },
-      {
-        id: 'league-standings',
-        title: 'League Standings',
-        description: 'Here you can see how you rank against other players in your specific league. Your position is based on total points earned from your lineups.',
-        action: 'Click "View Global Leaderboard" to see rankings across all leagues',
-        target: 'view-global-leaderboard-button',
-        page: 'league'
-      },
-      {
-        id: 'leaderboard',
-        title: 'Global Leaderboards',
-        description: 'Check out the leaderboards to see top performers across all leagues. You can compete for prizes and bragging rights!',
-        action: 'Click "View Profile" to see your stats',
-        target: 'view-profile-button',
-        page: 'leaderboard'
-      },
     {
-      id: 'bots-explanation',
-      title: 'Understanding Bots',
-      description: 'Fantasy Chess includes AI bots that serve as competitors when leagues don\'t have enough human players. Bots draft players automatically, set lineups, and compete just like human players. They ensure leagues always have full competition!',
-      action: 'Click "Next" to learn about league mechanics',
+      id: 'leaderboard',
+      title: 'Leaderboard',
+      description: 'League standings are on the league page. Global rankings are under Leaderboard.',
+      action: 'Click Leaderboard in the mini nav',
+      target: 'mini-leaderboard-link',
+      page: 'leaderboard'
+    },
+    {
+      id: 'how-it-works',
+      title: 'Scoring',
+      description: 'Leagues last a month. Bots fill empty seats. Points come from real Tuesday games — upsets score big.',
+      action: 'Click Next',
       target: 'next-step-button',
       page: 'leaderboard'
     },
     {
-      id: 'league-mechanics',
-      title: 'How Leagues Work',
-      description: 'Leagues run for one month (from start date to end of month) with weekly rounds. Each Tuesday, titled tournaments provide real games for scoring. You win by having the highest total points at the end. Entry fees create prize pools for winners!',
-      action: 'Click "Next" to learn about game timing',
-      target: 'next-step-button',
-      page: 'leaderboard'
-    },
-    {
-      id: 'game-timing',
-      title: 'Game Schedule & Scoring',
-      description: 'Games are based on real titled tournaments every Tuesday. Your players earn points from results, upsets vs Elo, and a smaller accuracy adjustment against their own usual ACL.',
-      action: 'Click "Next" to learn about marketplace trading',
-      target: 'next-step-button',
-      page: 'leaderboard'
-    },
-    {
-      id: 'normal-marketplace',
-      title: 'Normal Marketplace Trading',
-      description: 'After the draft ends, you get 50 COINS (🪙) every week for trading. You can buy new players, sell current ones, or trade with other league members. Prices fluctuate based on player performance and demand!',
-      action: 'Click "Next" to learn about currency types',
-      target: 'next-step-button',
-      page: 'leaderboard'
-    },
-    {
-      id: 'currency-explanation',
-      title: 'Two Types of Currency',
-      description: 'Fantasy Chess uses TWO completely different currencies: GEMS (💎) are ONLY used during the turn-based marketplace draft phase - everyone gets exactly 50 GEMS to build their initial team. Once the draft ends, GEMS disappear forever. COINS (🪙) are your main currency for trading players throughout the entire season - you earn 50 COINS every week.',
-      action: 'Click "Next" to learn about scoring formulas',
-      target: 'next-step-button',
-      page: 'leaderboard'
-    },
-    {
-      id: 'scoring-formulas',
-      title: 'Complete Scoring System',
-      description: 'Fantasy points are calculated per game. The main components are: a small win bonus (0.5× result), a large surprise bonus (7.0× result minus Elo expected score), a modest ACL adjustment (0.8× vs that player\'s own usual ACL), and +3 if the game is at least 5 ACL better than their average. Points are capped between −12 and +12.',
-      action: 'Click "Next" to learn about snake draft',
-      target: 'next-step-button',
-      page: 'leaderboard'
-    },
-    {
-      id: 'snake-draft-explanation',
-      title: 'Snake Draft System',
-      description: 'The snake draft ensures fair player selection by reversing the order each round. Round 1: Players pick 1→2→3→4. Round 2: Players pick 4→3→2→1. This continues for 3 rounds, then the open marketplace opens so you can keep adding players!',
-      action: 'Click "Next" to complete the tutorial',
+      id: 'currency-and-trading',
+      title: 'Gems vs coins',
+      description: 'Gems (💎) buy leagues, avatars, and prizes. Coins (🪙) stay in the league: 50 at draft, then 50 a week to trade.',
+      action: 'Click Next',
       target: 'next-step-button',
       page: 'leaderboard'
     },
     {
       id: 'profile',
-      title: 'Tutorial Complete!',
-      description: 'Congratulations! You\'ve completed the Fantasy Chess tutorial. Your profile shows your stats, achievements, and league history. You\'re now ready to join real leagues and compete against other players.',
-      action: 'Click "Start Playing" to join real leagues',
+      title: "You're in",
+      description: "That's the whole loop. Help has the rest of the rules.",
+      action: 'Click Start Playing',
       target: 'start-playing-button',
       page: 'profile'
     }
   ];
 
   const currentStepData = tutorialSteps[currentStep];
+  const activeTarget =
+    currentStepData.id === 'leaderboard' && miniLeaderboardOpen
+      ? 'next-step-button'
+      : currentStepData.target;
 
   const handleNext = () => {
     if (currentStep < tutorialSteps.length - 1) {
@@ -321,17 +193,24 @@ const ComprehensiveTutorial: React.FC = () => {
 
 
   const handleTargetClick = (targetId: string) => {
-    const currentStepData = tutorialSteps[currentStep];
-    if (currentStepData.target === targetId) {
-      // Special case: if this is the final step with "Start Playing" button, navigate to dashboard
+    if (targetId === 'mini-leaderboard-link' && currentStepData.id === 'leaderboard' && !miniLeaderboardOpen) {
+      setMiniLeaderboardOpen(true);
+      return;
+    }
+
+    if (activeTarget === targetId) {
       if (targetId === 'start-playing-button' && currentStep === tutorialSteps.length - 1) {
         navigate('/dashboard');
         return;
       }
-      
+
       handleNext();
     }
   };
+
+  useEffect(() => {
+    setMiniLeaderboardOpen(false);
+  }, [currentStep]);
 
   const handleSkipTutorial = () => {
     navigate('/join-league');
@@ -354,7 +233,7 @@ const ComprehensiveTutorial: React.FC = () => {
       case 'league':
         return renderLeague();
       case 'leaderboard':
-        return renderLeaderboard();
+        return renderLeaderboardMiniSite();
       case 'profile':
         return renderProfile();
       default:
@@ -432,7 +311,12 @@ const ComprehensiveTutorial: React.FC = () => {
       {/* Header */}
       <div className="bg-white rounded-lg shadow p-6">
         <h1 className="text-2xl font-bold text-gray-900">Join a League</h1>
-        <p className="text-gray-600">Choose from available leagues or create your own</p>
+        <p className="text-gray-600">Create a league, browse public leagues, or join with a code</p>
+        <div className="flex space-x-1 mt-4 bg-neutral-100 p-1 rounded-lg max-w-lg">
+          <div className="flex-1 py-2 px-3 rounded-md text-sm text-neutral-600 text-center">Create League</div>
+          <div className="flex-1 py-2 px-3 rounded-md text-sm font-medium bg-white text-royalBlue shadow-sm border border-royalBlue text-center">Public Leagues</div>
+          <div className="flex-1 py-2 px-3 rounded-md text-sm text-neutral-600 text-center">Join with Code</div>
+        </div>
       </div>
 
       {/* Available Leagues */}
@@ -459,11 +343,11 @@ const ComprehensiveTutorial: React.FC = () => {
                     </div>
                     <div className="flex items-center space-x-1">
                       <Coins className="w-4 h-4 flex-shrink-0" />
-                      <span>${league.entryFee}</span>
+                      <span>{league.entryFee} gems buy-in</span>
                     </div>
                     <div className="flex items-center space-x-1">
                       <Trophy className="w-4 h-4 flex-shrink-0" />
-                      <span>${league.prizePool}</span>
+                      <span>{league.prizePool} gem prize pool</span>
                     </div>
                     <div className="flex items-center space-x-1">
                       <Calendar className="w-4 h-4 flex-shrink-0" />
@@ -514,8 +398,8 @@ const ComprehensiveTutorial: React.FC = () => {
           </div>
           <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6 border-2 border-gold text-center">
             <Trophy className="h-8 w-8 text-gold mx-auto mb-2" />
-            <div className="text-2xl font-bold text-neutral-900">$0</div>
-            <div className="text-sm text-neutral-600">Prize Pool</div>
+            <div className="text-2xl font-bold text-neutral-900">0 gems</div>
+            <div className="text-sm text-neutral-600">Buy-in</div>
           </div>
           <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6 border-2 border-gold text-center">
             <Target className="h-8 w-8 text-green-600 mx-auto mb-2" />
@@ -525,14 +409,14 @@ const ComprehensiveTutorial: React.FC = () => {
         </div>
 
 
-                  {/* Marketplace Section - Only show AFTER start marketplace is clicked */}
+        {/* Marketplace Section - Only show AFTER start marketplace is clicked */}
                   {(currentStepData.page === 'league' && (currentStepData.id === 'marketplace-start' || 
                     currentStepData.target === 'buy-magnus' || currentStepData.target === 'buy-ding')) && (
-          <div className="bg-white rounded-lg shadow-lg p-4 border-2 border-blue-200 max-h-[80vh] overflow-y-auto">
+          <div className="bg-white rounded-lg shadow-lg p-4 border-2 border-blue-200 max-h-[80vh] overflow-y-auto overflow-x-hidden">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-bold text-gray-900">Turn-Based Marketplace</h3>
               <div className="text-lg font-semibold text-amber-700 bg-amber-100 px-4 py-2 rounded">
-                GEMS: {currentStepData.target === 'buy-ding' ? '0' : '50'} 💎
+                Coins: {currentStepData.target === 'buy-ding' ? '0' : '50'} 🪙
               </div>
             </div>
             
@@ -552,13 +436,8 @@ const ComprehensiveTutorial: React.FC = () => {
               </div>
             </div>
 
-            {/* Marketplace Explanation */}
-            <div className="bg-yellow-50 p-4 rounded-lg mb-6 border border-yellow-200">
-              <h4 className="font-semibold text-yellow-900 mb-2">📚 How the Marketplace Works</h4>
-              <div className="text-sm text-yellow-800 space-y-2">
-                <p><strong>Phase 1 - Turn-Based Marketplace:</strong> You start with 50 GEMS and take turns selecting players. High-rated players like Magnus Carlsen cost 50 GEMS.</p>
-                <p><strong>Phase 2 - Trading:</strong> After the turn-based marketplace, you get 50 coins per week to buy/sell/trade players in the regular marketplace.</p>
-              </div>
+            <div className="bg-yellow-50 p-3 rounded-lg mb-6 border border-yellow-200 text-sm text-yellow-800">
+              50 coins for the draft. Gems buy leagues, avatars, and prizes.
             </div>
 
             {/* Available Players */}
@@ -566,7 +445,7 @@ const ComprehensiveTutorial: React.FC = () => {
               <div className="flex justify-between items-center mb-3">
                 <h4 className="font-semibold text-gray-900">Available Players</h4>
                           <div className="text-sm text-gray-600">
-                            {currentStepData.target === 'buy-ding' ? '1 affordable • 2 total' : '3 affordable • 3 total'}
+                            {currentStepData.target === 'buy-ding' ? '0 affordable • 2 total' : '3 affordable • 3 total'}
                           </div>
               </div>
               
@@ -581,7 +460,7 @@ const ComprehensiveTutorial: React.FC = () => {
               </div>
 
               {/* Players List */}
-              <div className="space-y-3 max-h-96 overflow-y-auto">
+              <div className="space-y-3 max-h-96 overflow-y-auto overflow-x-hidden">
                 {/* Magnus Carlsen - Show as purchased in team-building step */}
                 {currentStepData.target === 'buy-ding' ? (
                   <div className="p-4 border rounded-lg bg-green-50 border-green-300 opacity-75">
@@ -597,7 +476,7 @@ const ComprehensiveTutorial: React.FC = () => {
                   </div>
                 ) : (
                   <div 
-                    className={`p-4 border rounded-lg transition-all duration-300 ease-in-out hover:shadow-lg transform hover:scale-[1.02] ${
+                    className={`p-4 border rounded-lg transition-shadow duration-300 ease-in-out hover:shadow-lg ${
                       currentStepData.target === 'buy-magnus'
                         ? 'border-blue-500 bg-blue-50 shadow-lg animate-pulse'
                         : 'border-gray-200 hover:border-gray-300'
@@ -609,11 +488,11 @@ const ComprehensiveTutorial: React.FC = () => {
                         <span className="text-gray-500 ml-2">ELO: 2850</span>
                       </div>
                       <div className="text-right relative">
-                        <div className="text-lg font-bold text-green-600">50 GEMS</div>
+                        <div className="text-lg font-bold text-green-600">50 coins</div>
                         <button 
                           id="buy-magnus"
                           onClick={() => handleTargetClick('buy-magnus')}
-                          className={`mt-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ease-in-out transform hover:scale-105 ${
+                          className={`mt-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors duration-200 ease-in-out ${
                             currentStepData.target === 'buy-magnus'
                               ? 'bg-green-600 text-white ring-4 ring-green-300 ring-opacity-50'
                               : 'bg-green-600 hover:bg-green-700 text-white'
@@ -633,7 +512,7 @@ const ComprehensiveTutorial: React.FC = () => {
                       <span className="text-gray-500 ml-2">ELO: 2780</span>
                     </div>
                     <div className="text-right">
-                      <div className="text-lg font-bold text-green-600">45 GEMS</div>
+                      <div className="text-lg font-bold text-green-600">15 coins</div>
                       <button className="mt-2 bg-gray-300 text-gray-500 px-4 py-2 rounded-lg text-sm font-semibold cursor-not-allowed">
                         Click to select
                       </button>
@@ -644,10 +523,10 @@ const ComprehensiveTutorial: React.FC = () => {
                 <div 
                   className={`p-4 border rounded-lg transition-all duration-300 ease-in-out ${
                     currentStepData.target === 'buy-ding'
-                      ? 'border-blue-500 bg-blue-50 shadow-lg animate-pulse hover:shadow-lg transform hover:scale-[1.02]'
+                      ? 'border-blue-500 bg-blue-50 shadow-lg animate-pulse hover:shadow-lg'
                       : currentStepData.target === 'buy-magnus'
                       ? 'border-gray-300 bg-gray-100 opacity-50 cursor-not-allowed'
-                      : 'border-gray-200 hover:border-gray-300 hover:shadow-lg transform hover:scale-[1.02]'
+                      : 'border-gray-200 hover:border-gray-300 hover:shadow-lg'
                   }`}
                 >
                   <div className="flex justify-between items-center">
@@ -668,17 +547,17 @@ const ComprehensiveTutorial: React.FC = () => {
                         currentStepData.target === 'buy-magnus'
                           ? 'text-gray-400'
                           : 'text-green-600'
-                      }`}>40 GEMS</div>
+                      }`}>15 coins</div>
                       <button 
                         id="buy-ding"
                         onClick={() => currentStepData.target === 'buy-ding' && handleTargetClick('buy-ding')}
                         disabled={currentStepData.target === 'buy-magnus'}
                         className={`mt-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ease-in-out ${
                           currentStepData.target === 'buy-ding'
-                            ? 'bg-green-600 text-white ring-4 ring-green-300 ring-opacity-50 transform hover:scale-105'
+                            ? 'bg-green-600 text-white ring-4 ring-green-300 ring-opacity-50'
                             : currentStepData.target === 'buy-magnus'
                             ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                            : 'bg-green-600 hover:bg-green-700 text-white transform hover:scale-105'
+                            : 'bg-green-600 hover:bg-green-700 text-white'
                         }`}
                       >
                         {currentStepData.target === 'buy-magnus' ? 'Locked' : 'Buy Player'}
@@ -706,10 +585,8 @@ const ComprehensiveTutorial: React.FC = () => {
                 )}
               </div>
 
-            {/* Auto-remove info */}
-            <div className="mt-2 p-2 bg-orange-50 border border-orange-200 rounded text-xs">
-              <p className="text-orange-700 font-semibold">💡 Auto-Remove Feature</p>
-              <p className="text-orange-600">Users with 0 GEMS are automatically removed from the draft entirely</p>
+            <div className="mt-2 p-2 bg-orange-50 border border-orange-200 rounded text-xs text-orange-700">
+              0 coins left? You're pulled from the rest of the draft.
             </div>
           </div>
         )}
@@ -717,8 +594,8 @@ const ComprehensiveTutorial: React.FC = () => {
         {/* Start Marketplace Button */}
         {currentStepData.target === 'start-marketplace-button' && (
           <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6 border-2 border-gold text-center">
-            <h3 className="text-lg lg:text-xl font-bold mb-4 text-neutral-900">Ready to Start?</h3>
-            <p className="text-neutral-600 mb-4">The turn-based marketplace is ready to begin!</p>
+            <h3 className="text-lg lg:text-xl font-bold mb-4 text-neutral-900">Start the draft</h3>
+            <p className="text-neutral-600 mb-4">This begins the snake draft.</p>
             <div className="relative">
               <button
                 id="start-marketplace-button"
@@ -730,7 +607,7 @@ const ComprehensiveTutorial: React.FC = () => {
                 }`}
               >
                 <Store className="w-5 h-5" />
-                <span>Start Marketplace</span>
+                <span>Start Turn-Based Marketplace</span>
               </button>
             </div>
           </div>
@@ -738,7 +615,7 @@ const ComprehensiveTutorial: React.FC = () => {
 
 
         {/* Your Team Section - shown after marketplace */}
-        {(currentStepData.target === 'set-lineup-button' || currentStepData.target === 'save-lineup-button' || currentStepData.target === 'view-league-standings-button' || currentStepData.target === 'view-global-leaderboard-button') && (
+        {(currentStepData.target === 'set-lineup-button' || currentStepData.target === 'save-lineup-button') && (
           <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6 border-2 border-gold">
             <h3 className="text-lg lg:text-xl font-bold mb-4 text-neutral-900">Your Team</h3>
             <div className="space-y-2">
@@ -767,22 +644,22 @@ const ComprehensiveTutorial: React.FC = () => {
         {/* Current Lineup Section */}
         {currentStepData.target === 'set-lineup-button' && (
           <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6 border-2 border-gold">
-            <h3 className="text-lg lg:text-xl font-bold mb-4 text-neutral-900">Current Lineup</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg lg:text-xl font-bold text-neutral-900">Current Lineup</h3>
+              <button
+                id="set-lineup-button"
+                onClick={() => handleTargetClick('set-lineup-button')}
+                className={`flex items-center space-x-1 text-royalBlue hover:text-purple text-sm lg:text-base transition-colors ${
+                  currentStepData.target === 'set-lineup-button'
+                    ? 'ring-4 ring-blue-300 ring-opacity-50 animate-pulse rounded px-2 py-1'
+                    : ''
+                }`}
+              >
+                Edit
+              </button>
+            </div>
             <div className="text-center py-8 text-neutral-500">
-              <p className="mb-4">No lineup set for this week</p>
-              <div className="relative">
-                <button 
-                  id="set-lineup-button"
-                  onClick={() => handleTargetClick('set-lineup-button')}
-                  className={`bg-[#1e293b] hover:bg-royalBlue text-white px-4 py-2 rounded-lg shadow-lg transition-colors ${
-                    currentStepData.target === 'set-lineup-button'
-                      ? 'ring-4 ring-blue-300 ring-opacity-50 animate-pulse'
-                      : ''
-                  }`}
-                >
-                  Set Lineup
-                </button>
-              </div>
+              <p>No lineup set for this week</p>
             </div>
           </div>
         )}
@@ -791,7 +668,7 @@ const ComprehensiveTutorial: React.FC = () => {
         {currentStepData.target === 'save-lineup-button' && (
           <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6 border-2 border-blue-200">
             <h3 className="text-lg lg:text-xl font-bold mb-4 text-gray-900">Set Your Lineup</h3>
-            <p className="text-gray-600 mb-6">Select which players will compete this week. You can change your lineup before each round.</p>
+            <p className="text-gray-600 mb-6">Who plays this week.</p>
             
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -828,100 +705,101 @@ const ComprehensiveTutorial: React.FC = () => {
           </div>
         )}
 
-        {/* Scoring System Explanation */}
-        {currentStepData.target === 'view-league-standings-button' && (
-          <div className="bg-white rounded-lg shadow-lg p-6 border-2 border-green-200">
-            <div className="text-center">
-              <h3 className="text-xl font-bold text-green-600 mb-4">🎯 Understanding Scoring</h3>
-              <p className="text-gray-600 mb-6">Your players earn points based on their tournament performance. Use these points to draft more players or make strategic trades!</p>
-              
-              <div className="bg-yellow-50 p-4 rounded-lg mb-6 border border-yellow-200">
-                <h4 className="font-semibold text-yellow-900 mb-2">💡 How Scoring Actually Works</h4>
-                <div className="text-sm text-yellow-800 space-y-2">
-                  <p><strong>Surprise Factor:</strong> The largest term — extra points for beating higher-rated opponents</p>
-                  <p><strong>Playing Quality (ACL):</strong> A smaller bonus or penalty vs that player's own usual accuracy</p>
-                  <p><strong>Win Bonus:</strong> Small bonus (0.5 × result) for winning or drawing</p>
-                  <p><strong>Consistency Bonus:</strong> +3 if the game is at least 5 ACL better than their usual play</p>
-                  <p><strong>Cap:</strong> Each game is capped between −12 and +12</p>
-                </div>
-              </div>
-
-                        <div className="relative">
-                          <button
-                            id="view-league-standings-button"
-                            onClick={() => handleTargetClick('view-league-standings-button')}
-                            className={`inline-flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold shadow-lg transition-colors ${
-                              currentStepData.target === 'view-league-standings-button'
-                                ? 'ring-4 ring-blue-300 ring-opacity-50 animate-pulse'
-                                : ''
-                            }`}
-                          >
-                            <Trophy className="w-5 h-5" />
-                            <span>View League Standings</span>
-                          </button>
-                        </div>
-            </div>
-          </div>
-        )}
-
-          {/* League Standings Section */}
-          {currentStepData.target === 'view-global-leaderboard-button' && (
-            <div className="bg-white rounded-lg shadow-lg p-6 border-2 border-yellow-500">
-              <div className="text-center">
-                <h3 className="text-xl font-bold text-yellow-600 mb-4">🏆 League Standings</h3>
-                <p className="text-gray-600 mb-6">Current rankings in Tutorial Champions League</p>
-                
-                <div className="space-y-3 mb-6">
-                  <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border-2 border-blue-500">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center text-white font-bold">1</div>
-                      <div className="w-8 h-8 rounded-full bg-gray-200"></div>
-                      <span className="font-semibold text-blue-900">You</span>
-                    </div>
-                    <div className="font-bold text-blue-600">1250 pts</div>
-                  </div>
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 bg-gray-400 rounded-full flex items-center justify-center text-white font-bold">2</div>
-                      <div className="w-8 h-8 rounded-full bg-gray-200"></div>
-                      <span className="font-medium">ChessWizard92</span>
-                    </div>
-                    <div className="font-bold text-gray-600">1190 pts</div>
-                  </div>
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 bg-amber-600 rounded-full flex items-center justify-center text-white font-bold">3</div>
-                      <div className="w-8 h-8 rounded-full bg-gray-200"></div>
-                      <span className="font-medium">KnightRider 🤖</span>
-                    </div>
-                    <div className="font-bold text-gray-600">1150 pts</div>
-                  </div>
-                </div>
-
-                <div className="relative">
-                  <button
-                    id="view-global-leaderboard-button"
-                    onClick={() => handleTargetClick('view-global-leaderboard-button')}
-                    className={`inline-flex items-center space-x-2 bg-purple-600 hover:bg-purple-700 text-black px-6 py-3 rounded-lg font-semibold shadow-lg transition-colors ${
-                      currentStepData.target === 'view-global-leaderboard-button'
-                        ? 'ring-4 ring-purple-300 ring-opacity-50 animate-pulse'
-                        : ''
-                    }`}
-                  >
-                    <Trophy className="w-5 h-5" />
-                    <span>View Global Leaderboard</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
       </div>
     </div>
   );
 
 
+  const renderLeaderboardMiniSite = () => {
+    const onLeaderboardStep = currentStepData.id === 'leaderboard';
+    const showingLeaderboard = !onLeaderboardStep || miniLeaderboardOpen;
+
+    return (
+      <TutorialMiniSite
+        path={showingLeaderboard ? '/leaderboard' : '/league'}
+        highlightLeaderboard={onLeaderboardStep && !miniLeaderboardOpen}
+        leaderboardActive={showingLeaderboard}
+        onLeaderboardClick={() => handleTargetClick('mini-leaderboard-link')}
+      >
+        {showingLeaderboard ? renderLeaderboard() : renderMiniLeaguePage()}
+      </TutorialMiniSite>
+    );
+  };
+
+  const renderMiniLeaguePage = () => (
+    <div className="bg-white p-4 sm:p-6">
+      <h1 className="text-2xl sm:text-3xl font-extrabold text-neutral-900 mb-6 text-center tracking-tight font-serif relative">
+        Tutorial Champions League
+        <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-24 h-1 bg-gradient-to-r from-royalBlue to-gold rounded-full"></div>
+      </h1>
+
+      <div className="grid grid-cols-3 gap-3 mb-6">
+        <div className="bg-white rounded-lg shadow p-3 border-2 border-gold text-center">
+          <Users className="h-5 w-5 text-royalBlue mx-auto mb-1" />
+          <div className="text-lg font-bold text-neutral-900">8</div>
+          <div className="text-xs text-neutral-600">Members</div>
+        </div>
+        <div className="bg-white rounded-lg shadow p-3 border-2 border-gold text-center">
+          <Trophy className="h-5 w-5 text-gold mx-auto mb-1" />
+          <div className="text-lg font-bold text-neutral-900">0 gems</div>
+          <div className="text-xs text-neutral-600">Buy-in</div>
+        </div>
+        <div className="bg-white rounded-lg shadow p-3 border-2 border-gold text-center">
+          <Target className="h-5 w-5 text-green-600 mx-auto mb-1" />
+          <div className="text-lg font-bold text-neutral-900">Beginner</div>
+          <div className="text-xs text-neutral-600">Difficulty</div>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-lg shadow p-4 border-2 border-gold mb-4">
+        <h2 className="text-base font-bold mb-3 text-neutral-900">Standings</h2>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between p-2 rounded-lg bg-royalBlue bg-opacity-10 border border-royalBlue">
+            <div className="flex items-center space-x-2">
+              <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold bg-royalBlue text-white">1</div>
+              <span className="font-semibold text-sm text-neutral-900">You</span>
+            </div>
+            <div className="font-semibold text-sm text-neutral-900">12.50 pts</div>
+          </div>
+          <div className="flex items-center justify-between p-2 rounded-lg bg-neutral-50">
+            <div className="flex items-center space-x-2">
+              <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold bg-neutral-300 text-neutral-700">2</div>
+              <span className="font-medium text-sm">ChessWizard92</span>
+            </div>
+            <div className="font-semibold text-sm text-neutral-900">11.90 pts</div>
+          </div>
+          <div className="flex items-center justify-between p-2 rounded-lg bg-neutral-50">
+            <div className="flex items-center space-x-2">
+              <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold bg-neutral-300 text-neutral-700">3</div>
+              <span className="font-medium text-sm">KnightRider</span>
+            </div>
+            <div className="font-semibold text-sm text-neutral-900">11.50 pts</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-lg shadow p-4 border-2 border-gold">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-base font-bold text-neutral-900">Current Lineup</h3>
+          <span className="text-sm text-royalBlue">Edit</span>
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          <div className="bg-neutral-50 rounded-lg p-2 text-center border border-gold">
+            <div className="text-xs font-medium">Magnus Carlsen</div>
+          </div>
+          <div className="bg-neutral-50 rounded-lg p-2 text-center border border-gold">
+            <div className="text-xs font-medium">Fabiano Caruana</div>
+          </div>
+          <div className="bg-neutral-50 rounded-lg p-2 text-center border border-gold">
+            <div className="text-xs font-medium">Ding Liren</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   const renderLeaderboard = () => (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 to-purple-900">
+    <div className="bg-gradient-to-br from-blue-600 to-purple-900">
       <div className="max-w-6xl mx-auto p-6">
         {/* Header */}
         <div className="text-center mb-8">
@@ -955,184 +833,44 @@ const ComprehensiveTutorial: React.FC = () => {
         {/* Content */}
         <div className="bg-white rounded-lg shadow-xl overflow-hidden">
           <div className="p-6">
-            {/* Tutorial Content Based on Current Step */}
-            {currentStepData.id === 'bots-explanation' && (
-              <div className="text-center">
-                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Users className="w-8 h-8 text-blue-600" />
-                </div>
-                <h2 className="text-2xl font-bold mb-4 text-gray-900">Understanding Bots</h2>
-                <div className="max-w-2xl mx-auto space-y-4 text-gray-700">
-                  <p>Fantasy Chess includes AI bots that serve as competitors when leagues don't have enough human players.</p>
-                  <div className="bg-blue-50 p-4 rounded-lg">
-                    <h3 className="font-semibold mb-2">How Bots Work:</h3>
-                    <ul className="text-left space-y-2">
-                      <li>• Bots draft players automatically using smart algorithms</li>
-                      <li>• They set competitive lineups each week</li>
-                      <li>• They compete just like human players</li>
-                      <li>• They ensure leagues always have full competition</li>
-                    </ul>
+            <h2 className="text-2xl font-bold mb-6 flex items-center">
+              <Crown className="w-6 h-6 mr-2 text-yellow-500" />
+              Most League Wins
+            </h2>
+            <div className="space-y-4">
+              {sampleData.leaderboard.map((entry: any, index: number) => (
+                <div key={entry.user_id} className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                  <div className="flex items-center justify-center w-6 sm:w-8 flex-shrink-0">
+                    {index === 0 ? <Crown className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500" /> :
+                     index === 1 ? <Medal className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" /> :
+                     index === 2 ? <Medal className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600" /> :
+                     <span className="text-base sm:text-lg font-bold text-gray-600">{index + 1}</span>}
                   </div>
-                  <p className="text-sm text-gray-600">Bots make leagues more exciting and ensure you always have opponents to compete against!</p>
-                </div>
-              </div>
-            )}
-
-            {currentStepData.id === 'league-mechanics' && (
-              <div className="text-center">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Trophy className="w-8 h-8 text-green-600" />
-                </div>
-                <h2 className="text-2xl font-bold mb-4 text-gray-900">How Leagues Work</h2>
-                <div className="max-w-2xl mx-auto space-y-4 text-gray-700">
-                  <p>Leagues are competitive tournaments that run for <strong>one month</strong> (from start date to end of month) with weekly scoring rounds.</p>
-                  <div className="bg-green-50 p-4 rounded-lg">
-                    <h3 className="font-semibold mb-2">League Structure:</h3>
-                    <ul className="text-left space-y-2">
-                      <li>• <strong>Duration:</strong> One month (start date to end of month)</li>
-                      <li>• <strong>Team Size:</strong> 10 players per team (drafted)</li>
-                      <li>• <strong>Lineup:</strong> 5 players compete each week</li>
-                      <li>• <strong>Scoring:</strong> Weekly rounds based on real tournaments</li>
-                      <li>• <strong>Winning:</strong> Highest total points at the end</li>
-                      <li>• <strong>Prizes:</strong> Entry fees create prize pools for winners</li>
-                    </ul>
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-yellow-500 bg-gray-200 flex-shrink-0"></div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-base sm:text-lg truncate">{entry.username}</h3>
+                    <p className="text-xs sm:text-sm text-gray-600">{entry.total_leagues} leagues played</p>
                   </div>
-                  <p className="text-sm text-gray-600">Each league has different entry fees, prize pools, and difficulty levels!</p>
-                </div>
-              </div>
-            )}
-
-            {currentStepData.id === 'game-timing' && (
-              <div className="text-center">
-                <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Calendar className="w-8 h-8 text-purple-600" />
-                </div>
-                <h2 className="text-2xl font-bold mb-4 text-gray-900">Game Schedule & Scoring</h2>
-                <div className="max-w-2xl mx-auto space-y-4 text-gray-700">
-                  <p>Games are based on real titled tournaments that happen every Tuesday.</p>
-                  <div className="bg-purple-50 p-4 rounded-lg">
-                    <h3 className="font-semibold mb-2">Scoring System:</h3>
-                    <ul className="text-left space-y-2">
-                      <li>• <strong>Tournaments:</strong> Real titled tournaments every Tuesday</li>
-                      <li>• <strong>Upsets:</strong> Beating a higher-rated opponent is the largest source of points</li>
-                      <li>• <strong>ACL:</strong> Average Centipawn Loss vs that player's own usual accuracy (lower is better)</li>
-                      <li>• <strong>Cap:</strong> Each game is capped between −12 and +12 points</li>
-                    </ul>
+                  <div className="text-right flex-shrink-0">
+                    <div className="text-lg sm:text-2xl font-bold text-yellow-500 whitespace-nowrap">{entry.wins} wins</div>
+                    <div className="text-xs sm:text-sm text-gray-600">0 gems</div>
                   </div>
-                  <p className="text-sm text-gray-600">Your players earn points based on their actual chess performance in real tournaments!</p>
                 </div>
-              </div>
-            )}
+              ))}
+            </div>
 
-            {currentStepData.id === 'normal-marketplace' && (
-              <div className="text-center">
-                <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Store className="w-8 h-8 text-orange-600" />
-                </div>
-                <h2 className="text-2xl font-bold mb-4 text-gray-900">Normal Marketplace Trading</h2>
-                <div className="max-w-2xl mx-auto space-y-4 text-gray-700">
-                  <p>After the draft, you get 50 coins weekly for trading and managing your team.</p>
-                  <div className="bg-orange-50 p-4 rounded-lg">
-                    <h3 className="font-semibold mb-2">Trading Features:</h3>
-                    <ul className="text-left space-y-2">
-                      <li>• <strong>Buy:</strong> Purchase new players with your weekly coins</li>
-                      <li>• <strong>Sell:</strong> Trade current players for coins</li>
-                      <li>• <strong>Trade:</strong> Exchange players with other league members</li>
-                      <li>• <strong>Prices:</strong> Fluctuate based on performance and demand</li>
-                    </ul>
-                  </div>
-                  <p className="text-sm text-gray-600">Strategic trading can give you an edge over your competitors!</p>
-                </div>
+            {activeTarget === 'next-step-button' && (
+              <div className="text-center pt-6 mt-6 border-t border-gray-100">
+                <button
+                  id="next-step-button"
+                  onClick={() => handleTargetClick('next-step-button')}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition-all duration-300 shadow-lg ring-2 ring-blue-300 animate-pulse"
+                >
+                  Next
+                </button>
               </div>
-            )}
-
-            {currentStepData.id === 'scoring-formulas' && (
-              <div className="text-center">
-                <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Target className="w-8 h-8 text-purple-600" />
-                </div>
-                <h2 className="text-2xl font-bold mb-4 text-gray-900">Complete Scoring System</h2>
-                <div className="max-w-2xl mx-auto space-y-4 text-gray-700">
-                  <p>Each game scores fantasy points from results, Elo surprise, and a modest accuracy adjustment against that player's own usual ACL.</p>
-                  <div className="bg-purple-50 p-4 rounded-lg text-left text-sm font-mono">
-                    <div className="font-semibold mb-2 font-sans">Raw Points =</div>
-                    <div>0.5 × Game Result</div>
-                    <div>+ 7.0 × (Result − Expected Score)</div>
-                    <div>+ 0.8 × (Player's Usual ACL − This Game's ACL)</div>
-                    <div>+ 3.0 if the game is at least 5 ACL better than their usual ACL</div>
-                    <div className="mt-2">Final Points = capped between −12 and +12</div>
-                  </div>
-                  <p className="text-sm text-gray-600">A CM who upsets a much higher-rated opponent can outscore a Super GM who wins as expected. Super GMs are judged against their own accuracy, not against the field.</p>
-                </div>
-              </div>
-            )}
-
-            {/* Default Leaderboard Content */}
-            {!['bots-explanation', 'league-mechanics', 'game-timing', 'normal-marketplace', 'scoring-formulas'].includes(currentStepData.id) && (
-              <>
-                <h2 className="text-2xl font-bold mb-6 flex items-center">
-                  <Crown className="w-6 h-6 mr-2 text-yellow-500" />
-                  Most League Wins
-                </h2>
-                <div className="space-y-4">
-                  {sampleData.leaderboard.map((entry: any, index: number) => (
-                    <div key={entry.user_id} className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                      <div className="flex items-center justify-center w-6 sm:w-8 flex-shrink-0">
-                        {index === 0 ? <Crown className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500" /> :
-                         index === 1 ? <Medal className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" /> :
-                         index === 2 ? <Medal className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600" /> :
-                         <span className="text-base sm:text-lg font-bold text-gray-600">{index + 1}</span>}
-                      </div>
-                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-yellow-500 bg-gray-200 flex-shrink-0"></div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-base sm:text-lg truncate">{entry.username}</h3>
-                        <p className="text-xs sm:text-sm text-gray-600">{entry.total_leagues} leagues played</p>
-                      </div>
-                      <div className="text-right flex-shrink-0">
-                        <div className="text-lg sm:text-2xl font-bold text-yellow-500 whitespace-nowrap">{entry.wins} wins</div>
-                        <div className="text-xs sm:text-sm text-gray-600">$0</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </>
             )}
           </div>
-        </div>
-      </div>
-
-      {/* Next Step Button for Tutorial Steps */}
-      {['bots-explanation', 'league-mechanics', 'game-timing', 'normal-marketplace', 'currency-explanation', 'scoring-formulas', 'snake-draft-explanation'].includes(currentStepData.id) && (
-        <div className="bg-white border border-gray-300 rounded-lg shadow-lg p-6 text-center mb-4">
-          <div className="relative">
-            <button
-              id="next-step-button"
-              onClick={() => handleTargetClick('next-step-button')}
-              className={`bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition-all duration-300 shadow-lg ${
-                currentStepData.target === 'next-step-button' ? 'ring-2 ring-blue-300 animate-pulse' : ''
-              }`}
-            >
-              Next Step
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* View Profile Button */}
-      <div className="bg-white border border-gray-300 rounded-lg shadow-lg p-6 text-center">
-        <div className="relative">
-          <button
-            id="view-profile-button"
-            onClick={() => handleTargetClick('view-profile-button')}
-            className={`inline-flex items-center space-x-2 bg-purple-600 hover:bg-purple-700 text-black px-6 py-3 rounded-lg font-semibold shadow-lg transition-colors ${
-              currentStepData.target === 'view-profile-button'
-                ? 'ring-4 ring-purple-300 ring-opacity-50 animate-pulse'
-                : ''
-            }`}
-          >
-            <User className="w-5 h-5" />
-            <span>View Profile</span>
-          </button>
         </div>
       </div>
     </div>
@@ -1237,7 +975,7 @@ const ComprehensiveTutorial: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Tutorial Steps - Mobile Dropdown / Desktop Sidebar */}
-          <div className="lg:col-span-1 order-2 lg:order-1">
+          <div id="tutorial-sidebar" className="lg:col-span-1 order-2 lg:order-1">
             <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-xl border border-gray-200/50 p-6">
               {/* Mobile: Collapsible Header */}
               <button
@@ -1331,24 +1069,25 @@ const ComprehensiveTutorial: React.FC = () => {
           </div>
 
           {/* Main Content */}
-          <div className="lg:col-span-2 order-1 lg:order-2">
+          <div id="tutorial-main-panel" className="lg:col-span-2 order-1 lg:order-2">
             <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-xl border border-gray-200/50 p-8">
-              <div className="text-center mb-8">
-                <h2 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-4">
-                  {currentStepData.title}
-                </h2>
-                <p className="text-gray-600 text-lg mb-6 leading-relaxed">
-                  {currentStepData.description}
-                </p>
-                {currentStepData.action && (
-                  <div className="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-4 mb-6 shadow-sm">
-                    <p className="text-blue-800 font-medium flex items-center justify-center">
-                      <Lightbulb className="w-5 h-5 text-blue-600 mr-2 flex-shrink-0" />
-                      {currentStepData.action}
-                    </p>
-                  </div>
-                )}
-              </div>
+              <TutorialCallout
+                key={`${currentStepData.id}-${activeTarget}`}
+                targetId={activeTarget}
+                title={currentStepData.title}
+                description={
+                  currentStepData.id === 'leaderboard' && miniLeaderboardOpen
+                    ? 'Wins, points, and weekly leaders across every league.'
+                    : currentStepData.description
+                }
+                action={
+                  currentStepData.id === 'leaderboard' && miniLeaderboardOpen
+                    ? 'Click Next'
+                    : currentStepData.action
+                }
+                stepNumber={currentStep + 1}
+                totalSteps={tutorialSteps.length}
+              />
 
               {/* Render current page */}
               <div className="relative z-50">

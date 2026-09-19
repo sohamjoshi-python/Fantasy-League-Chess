@@ -90,28 +90,28 @@ const Home: React.FC = () => {
         <div className="max-w-4xl w-full">
           <div className="text-center mb-8">
             <Coins className="w-16 h-16 mx-auto mb-4 text-royalBlue" />
-            <h2 className="text-3xl font-bold mb-4 text-neutral-900">Coin System</h2>
-            <p className="text-lg mb-6 text-neutral-700">Earn coins weekly and through league performance!</p>
+            <h2 className="text-3xl font-bold mb-4 text-neutral-900">Gems and Coins</h2>
+            <p className="text-lg mb-6 text-neutral-700">Gems are your account. Coins stay inside each league.</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="bg-white rounded-xl p-6 shadow-lg border-2 border-royalBlue">
-              <h3 className="text-xl font-semibold mb-3 text-neutral-900">Weekly Rewards</h3>
-              <p className="mb-4 text-neutral-700">Every week, all active players receive <strong>50 coins</strong> automatically.</p>
+              <h3 className="text-xl font-semibold mb-3 text-neutral-900">Coins (in a league)</h3>
+              <p className="mb-4 text-neutral-700">Every week, league members receive <strong>50 coins</strong> to buy, sell, and trade players.</p>
               <ul className="space-y-2 text-neutral-700">
-                <li>• Join leagues with buy-ins</li>
-                <li>• Buy players in marketplace</li>
-                <li>• Purchase avatar customizations</li>
+                <li>• 50 coins at the start of the draft</li>
+                <li>• Buy and sell players in the marketplace</li>
+                <li>• Leftover draft coins carry into weekly trading</li>
               </ul>
             </div>
             <div className="bg-white rounded-xl p-6 shadow-lg border-2 border-royalBlue">
-              <h3 className="text-xl font-semibold mb-3 text-neutral-900">Standings Bonus</h3>
-              <p className="mb-4 text-neutral-700">End-of-league bonus coins based on final rank:</p>
+              <h3 className="text-xl font-semibold mb-3 text-neutral-900">Gems (your account)</h3>
+              <p className="mb-4 text-neutral-700">End-of-league bonus gems based on final rank:</p>
               <ul className="space-y-1 text-neutral-700">
-                <li>• <strong>1st Place:</strong> 50 bonus coins</li>
-                <li>• <strong>2nd Place:</strong> 40 bonus coins</li>
-                <li>• <strong>3rd Place:</strong> 30 bonus coins</li>
-                <li>• <strong>4th Place:</strong> 20 bonus coins</li>
-                <li>• <strong>5th+ Place:</strong> 10 bonus coins</li>
+                <li>• <strong>1st Place:</strong> 50 bonus gems</li>
+                <li>• <strong>2nd Place:</strong> 40 bonus gems</li>
+                <li>• <strong>3rd Place:</strong> 30 bonus gems</li>
+                <li>• <strong>4th Place:</strong> 20 bonus gems</li>
+                <li>• <strong>5th+ Place:</strong> 10 bonus gems</li>
               </ul>
             </div>
           </div>
@@ -160,7 +160,7 @@ const Home: React.FC = () => {
             <Coins className="w-8 h-8 text-gold" />
             <div>
               <h4 className="font-semibold text-base mb-1 text-neutral-900">Weekly Rewards</h4>
-              <p className="text-neutral-700 text-sm">Earn 50 coins every week automatically.</p>
+              <p className="text-neutral-700 text-sm">Earn 50 coins every week inside each league.</p>
             </div>
           </div>
         </div>

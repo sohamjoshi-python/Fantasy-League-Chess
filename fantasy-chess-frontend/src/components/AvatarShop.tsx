@@ -43,7 +43,7 @@ const AvatarShop: React.FC<AvatarShopProps> = ({ onClose, onBalanceChange }) => 
       )
       onBalanceChange?.()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Purchase failed')
+      setError((e instanceof Error ? e.message : 'Purchase failed').replace(/coins/gi, 'gems'))
     } finally {
       setBusyId(null)
     }
@@ -85,7 +85,7 @@ const AvatarShop: React.FC<AvatarShopProps> = ({ onClose, onBalanceChange }) => 
         )}
       </div>
       <p className="text-sm text-neutral-600 mb-4">
-        Spend coins on profile avatars. Equipped avatars appear on leaderboards and standings.
+        Spend gems on profile avatars. Equipped avatars appear on leaderboards and standings.
       </p>
 
       {error && (
@@ -113,7 +113,7 @@ const AvatarShop: React.FC<AvatarShopProps> = ({ onClose, onBalanceChange }) => 
                 className="w-16 h-16 rounded-full object-cover border border-gold mb-2"
               />
               <p className="text-sm font-semibold text-neutral-900 text-center">{avatar.name}</p>
-              <p className="text-xs text-neutral-500 mb-2">{avatar.price} coins</p>
+              <p className="text-xs text-neutral-500 mb-2">{avatar.price} gems</p>
               {avatar.equipped ? (
                 <span className="text-xs font-medium text-royalBlue">Equipped</span>
               ) : avatar.owned ? (

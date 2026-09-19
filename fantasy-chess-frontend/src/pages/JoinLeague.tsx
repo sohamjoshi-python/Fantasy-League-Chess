@@ -92,7 +92,7 @@ const JoinLeague: React.FC = () => {
 
       // Validate buy-in
       if (buyIn < 1) {
-        setError('Buy-in must be at least 1 coin')
+        setError('Buy-in must be at least 1 gem')
         return
       }
 
@@ -111,7 +111,7 @@ const JoinLeague: React.FC = () => {
         .single()
 
       if (!userData || userData.coins < buyIn) {
-        setError('You don\'t have enough coins for this buy-in')
+        setError('You don\'t have enough gems for this buy-in')
         return
       }
 
@@ -220,7 +220,7 @@ const JoinLeague: React.FC = () => {
         .single()
 
       if (!userData || userData.coins < league.buy_in) {
-        setError('You don\'t have enough coins for this league')
+        setError('You don\'t have enough gems for this league')
         return
       }
 
@@ -302,7 +302,7 @@ const JoinLeague: React.FC = () => {
         .single()
 
       if (!userData || userData.coins < league.buy_in) {
-        setError('You don\'t have enough coins for this league')
+        setError('You don\'t have enough gems for this league')
         return
       }
 
@@ -422,7 +422,7 @@ const JoinLeague: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
               <div>
                 <label htmlFor="buyIn" className="block text-sm font-medium text-neutral-700 mb-2">
-                  Buy-in (coins) *
+                  Buy-in (gems) *
                 </label>
                 <input
                   type="number"
@@ -548,7 +548,7 @@ const JoinLeague: React.FC = () => {
                       <div className="flex items-center space-x-2">
                         <Trophy className="h-4 w-4 text-royalBlue" />
                         <span className="text-xs lg:text-sm text-neutral-600">
-                          {league.buy_in} coins buy-in
+                          {league.buy_in} gems buy-in
                         </span>
                       </div>
                       <div className="flex items-center space-x-2">

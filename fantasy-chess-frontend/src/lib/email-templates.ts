@@ -279,7 +279,7 @@ export const leagueStartTemplate = (data: EmailTemplateData & {
       </div>
       <div class="stat-card">
         <div class="stat-value">${data.buyIn}</div>
-        <div class="stat-label">Buy-in (coins)</div>
+        <div class="stat-label">Buy-in (gems)</div>
       </div>
       <div class="stat-card">
         <div class="stat-value">${data.startDate}</div>
@@ -381,14 +381,14 @@ export const leagueEndTemplate = (data: EmailTemplateData & {
       </div>
       <div class="stat-card">
         <div class="stat-value">${data.prizeAmount}</div>
-        <div class="stat-label">Prize (coins)</div>
+        <div class="stat-label">Prize (gems)</div>
       </div>
     </div>
 
     <div class="highlight ${data.isWinner ? 'success' : 'warning'}">
       <strong>${data.isWinner ? '🎉 You are the champion!' : '💪 Great effort!'}</strong>
       ${data.isWinner 
-        ? `You've won ${data.prizeAmount} coins! Your winnings have been added to your account.`
+        ? `You've won ${data.prizeAmount} gems! Your winnings have been added to your account.`
         : `You finished #${data.finalRank} with ${data.totalPoints} points. Keep improving for next time!`
       }
     </div>
@@ -429,15 +429,17 @@ export const coinDistributionTemplate = (data: EmailTemplateData & {
   distributionType: 'weekly' | 'standings_bonus' | 'league_win';
   leagueName?: string;
 }) => {
+  const isGems = data.distributionType !== 'weekly';
+  const unit = isGems ? 'gems' : 'coins';
   const content = `
-    <h2>🪙 Coins Received!</h2>
+    <h2>${isGems ? '💎 Gems Received!' : '🪙 Coins Received!'}</h2>
     <p>Hi ${data.userName},</p>
-    <p>You've received <strong>${data.coinsReceived} coins</strong>!</p>
+    <p>You've received <strong>${data.coinsReceived} ${unit}</strong>!</p>
     
     <div class="stats-grid">
       <div class="stat-card">
         <div class="stat-value">+${data.coinsReceived}</div>
-        <div class="stat-label">Coins Received</div>
+        <div class="stat-label">${isGems ? 'Gems' : 'Coins'} Received</div>
       </div>
       <div class="stat-card">
         <div class="stat-value">${data.newBalance}</div>
@@ -450,7 +452,7 @@ export const coinDistributionTemplate = (data: EmailTemplateData & {
     </div>
 
     <div class="highlight success">
-      <strong>🎉 Coins added to your account!</strong>
+      <strong>🎉 ${isGems ? 'Gems added to your account!' : 'Coins added to your league balance!'}</strong>
       ${data.distributionType === 'weekly' 
         ? 'Weekly coin distribution for active leagues.'
         : data.distributionType === 'standings_bonus'
@@ -459,12 +461,13 @@ export const coinDistributionTemplate = (data: EmailTemplateData & {
       }
     </div>
 
-    <h3>💡 What you can do with your coins:</h3>
+    <h3>💡 What you can do with your ${unit}:</h3>
     <ul>
-      <li>Join new leagues with buy-ins</li>
-      <li>Buy players in the marketplace</li>
+      ${isGems ? `<li>Join new leagues with buy-ins</li>
       <li>Purchase avatar customizations</li>
-      <li>Save for future opportunities</li>
+      <li>Save for future leagues</li>` : `<li>Buy players in the marketplace</li>
+      <li>Trade with other league members</li>
+      <li>Save coins for later in the season</li>`}
     </ul>
 
     <div style="text-align: center; margin: 30px 0;">
@@ -473,7 +476,7 @@ export const coinDistributionTemplate = (data: EmailTemplateData & {
     </div>
   `;
   
-  return baseTemplate(content, `Coins Received - +${data.coinsReceived} coins`);
+  return baseTemplate(content, `${isGems ? 'Gems' : 'Coins'} Received - +${data.coinsReceived} ${unit}`);
 };
 
 // 6. Marketplace Alert Email
@@ -587,7 +590,7 @@ export const welcomeTemplate = (data: EmailTemplateData & {
     <div class="stats-grid">
       <div class="stat-card">
         <div class="stat-value">${data.initialCoins}</div>
-        <div class="stat-label">Starting Coins</div>
+        <div class="stat-label">Starting Gems</div>
       </div>
       <div class="stat-card">
         <div class="stat-value">50</div>
@@ -609,7 +612,7 @@ export const welcomeTemplate = (data: EmailTemplateData & {
       <li><strong>Draft Players:</strong> Pick 10 chess players in the snake draft</li>
       <li><strong>Set Lineups:</strong> Choose 5 players each week</li>
       <li><strong>Trade Players:</strong> Use the marketplace to improve your team</li>
-      <li><strong>Win Prizes:</strong> Compete for coins and glory!</li>
+      <li><strong>Win Prizes:</strong> Compete for gems and glory!</li>
     </ol>
 
     <div style="text-align: center; margin: 30px 0;">
@@ -635,7 +638,7 @@ export const leagueCreatedTemplate = (data: EmailTemplateData & {
     <div class="stats-grid">
       <div class="stat-card">
         <div class="stat-value">${data.buyIn}</div>
-        <div class="stat-label">Buy-in (coins)</div>
+        <div class="stat-label">Buy-in (gems)</div>
       </div>
       <div class="stat-card">
         <div class="stat-value">${data.startDate}</div>
@@ -685,7 +688,7 @@ export const leagueJoinedTemplate = (data: EmailTemplateData & {
       </div>
       <div class="stat-card">
         <div class="stat-value">${data.buyIn}</div>
-        <div class="stat-label">Buy-in (coins)</div>
+        <div class="stat-label">Buy-in (gems)</div>
       </div>
       <div class="stat-card">
         <div class="stat-value">🎯</div>

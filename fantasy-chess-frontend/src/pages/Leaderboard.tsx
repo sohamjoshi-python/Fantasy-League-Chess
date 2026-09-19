@@ -107,8 +107,8 @@ const Leaderboard: React.FC = () => {
     return `Week of ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
   };
 
-  const formatCoins = (amount: number) => {
-    return `${Math.floor(amount)} 🪙`;
+  const formatGems = (amount: number) => {
+    return `${Math.floor(amount)} 💎`;
   };
 
   const formatPoints = (amount?: number) => {
@@ -239,7 +239,7 @@ const Leaderboard: React.FC = () => {
                       <div className="text-right">
                         <div className="text-2xl font-bold text-gold">{entry.wins} wins</div>
                         <div className="text-sm text-neutral-600">
-                          {formatCoins(entry.total_prize_money || 0)}
+                          {formatGems(entry.total_prize_money || 0)}
                         </div>
                       </div>
                     </div>
@@ -328,7 +328,7 @@ const Leaderboard: React.FC = () => {
                         <p className="text-sm text-neutral-600">{winner.league_name}</p>
                       </div>
                       <div className="text-right">
-                        <div className="text-lg font-bold text-gold">{formatCoins(winner.prize_amount)}</div>
+                        <div className="text-lg font-bold text-gold">{formatGems(winner.prize_amount)}</div>
                         <div className="text-sm text-neutral-600">
                           {formatDate(winner.won_date)}
                         </div>

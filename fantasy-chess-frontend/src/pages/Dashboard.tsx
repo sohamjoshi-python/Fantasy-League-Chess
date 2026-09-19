@@ -411,7 +411,7 @@ const Dashboard: React.FC = () => {
                   <Trophy className="h-5 w-5 lg:h-6 lg:w-6 text-royalBlue" />
                   <div>
                     <p className="text-xs lg:text-sm text-neutral-500">Buy-in</p>
-                    <p className="font-semibold text-sm lg:text-base text-neutral-900">{currentLeague.buy_in} coins</p>
+                    <p className="font-semibold text-sm lg:text-base text-neutral-900">{currentLeague.buy_in} gems</p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-3">
@@ -636,7 +636,7 @@ const Dashboard: React.FC = () => {
                     Ends: {formatCalendarDate(league.end_date)}
                   </p>
                   <p className="text-sm text-neutral-500">
-                    Buy-in: {league.buy_in} coins
+                    Buy-in: {league.buy_in} gems
                   </p>
                 </div>
                 <Link

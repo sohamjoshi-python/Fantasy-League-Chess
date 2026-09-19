@@ -257,7 +257,7 @@ const FinalPodiumCard: React.FC<{
               : 'bg-red-100 text-red-700'
           }`}>
             {(standing.coin_delta || 0) >= 0 ? '+' : ''}
-            {Number(standing.coin_delta || 0).toFixed(0)} coins
+            {Number(standing.coin_delta || 0).toFixed(0)} gems
           </span>
         </div>
       </div>
@@ -1619,7 +1619,7 @@ const LeaguePage: React.FC = () => {
                   {league?.member_ids.length} members
                 </div>
                 <div className="text-xs lg:text-sm text-neutral-600">
-                  {league?.buy_in} coins buy-in
+                  {league?.buy_in} gems buy-in
                 </div>
               </div>
             </div>
@@ -1635,12 +1635,12 @@ const LeaguePage: React.FC = () => {
                 </h3>
                 {payout ? (
                   <>
-                    <p className="text-green-700">Prize: {payout.amount} coins</p>
+                    <p className="text-green-700">Prize: {payout.amount} gems</p>
                     <p className="text-green-700">Payout processed: {new Date(payout.processed_at).toLocaleString()}</p>
                   </>
                 ) : league?.payout_processed ? (
                   <>
-                    <p className="text-green-700">Prize: {computedPrizeAmount} coins</p>
+                    <p className="text-green-700">Prize: {computedPrizeAmount} gems</p>
                     <p className="text-green-700">Payout processed.</p>
                   </>
                 ) : (
@@ -1875,7 +1875,7 @@ const LeaguePage: React.FC = () => {
                                   : 'bg-red-100 text-red-700'
                               }`}>
                                 {(standing.coin_delta || 0) >= 0 ? '+' : ''}
-                                {Number(standing.coin_delta || 0).toFixed(0)} coins
+                                {Number(standing.coin_delta || 0).toFixed(0)} gems
                               </span>
                               {isOwner && !seasonStarted && standing.user_id !== user?.id && (
                                 <button
@@ -1933,7 +1933,7 @@ const LeaguePage: React.FC = () => {
                               : 'bg-red-100 text-red-700'
                           }`}>
                             {(standing.coin_delta || 0) >= 0 ? '+' : ''}
-                            {Number(standing.coin_delta || 0).toFixed(0)} coins
+                            {Number(standing.coin_delta || 0).toFixed(0)} gems
                           </span>
                         )}
                         {isOwner && !seasonStarted && standing.user_id !== user?.id && (

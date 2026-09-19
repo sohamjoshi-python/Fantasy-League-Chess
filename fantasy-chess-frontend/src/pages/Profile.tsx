@@ -152,7 +152,7 @@ const Profile: React.FC<ProfileProps> = ({ showOnlyShop = false, onCloseShop }) 
             <p className="text-xs text-neutral-500 mt-1">This is your display name that will appear in leagues and leaderboards</p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-2">Coins</label>
+            <label className="block text-sm font-medium text-neutral-700 mb-2">Gems</label>
             <input
               type="text"
               value={profile?.coins ?? 0}

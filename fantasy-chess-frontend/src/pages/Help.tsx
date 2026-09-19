@@ -56,37 +56,37 @@ const Help: React.FC<HelpProps> = ({ variant }) => {
             <div className="text-center p-4 bg-neutral-50 rounded-lg border border-royalBlue">
               <Trophy className="w-8 h-8 mx-auto mb-2 text-royalBlue" />
               <h3 className="font-semibold text-neutral-900">Win Prizes</h3>
-              <p className="text-sm text-neutral-700">Compete for coin rewards</p>
+              <p className="text-sm text-neutral-700">Compete for gem rewards</p>
             </div>
           </div>
         </div>
 
-        {/* Coin System Overview */}
+        {/* Currency System Overview */}
         <div className="bg-white rounded-xl shadow-lg p-6 mb-8 border-2 border-royalBlue">
           <h2 className="text-2xl font-bold mb-4 flex items-center text-neutral-900">
             <Coins className="w-6 h-6 mr-2 text-royalBlue" />
-            Coin System
+            Gems and Coins
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <h3 className="font-semibold mb-2 text-neutral-900">Weekly Rewards</h3>
-              <p className="text-sm mb-2 text-neutral-700">Every week, all active players receive <strong>50 coins</strong> automatically.</p>
-              <p className="text-sm text-neutral-700">Coins are used to:</p>
+              <h3 className="font-semibold mb-2 text-neutral-900">Gems (💎) — your account</h3>
+              <p className="text-sm mb-2 text-neutral-700">Gems are used outside a league:</p>
               <ul className="text-sm mt-2 space-y-1 text-neutral-700">
-                <li>• Join leagues (buy-in costs)</li>
-                <li>• Buy players in the marketplace</li>
-                <li>• Purchase avatar customizations</li>
+                <li>• Join or create leagues (buy-in)</li>
+                <li>• Buy avatars</li>
+                <li>• Collect league prizes and rank bonuses</li>
               </ul>
             </div>
             <div>
-              <h3 className="font-semibold mb-2 text-neutral-900">Standings Bonus</h3>
-              <p className="text-sm mb-2 text-neutral-700">At the end of each league, players receive bonus coins based on their final rank:</p>
+              <h3 className="font-semibold mb-2 text-neutral-900">Coins (🪙) — inside a league</h3>
+              <p className="text-sm mb-2 text-neutral-700">Everyone starts the draft with 50 coins. You also get <strong>50 coins</strong> each week to buy, sell, and trade players.</p>
+              <p className="text-sm mb-2 text-neutral-700">End-of-league gem bonuses:</p>
               <ul className="text-sm mt-2 space-y-1 text-neutral-700">
-                <li>• <strong>1st Place:</strong> 50 bonus coins</li>
-                <li>• <strong>2nd Place:</strong> 40 bonus coins</li>
-                <li>• <strong>3rd Place:</strong> 30 bonus coins</li>
-                <li>• <strong>4th Place:</strong> 20 bonus coins</li>
-                <li>• <strong>5th+ Place:</strong> 10 bonus coins</li>
+                <li>• <strong>1st Place:</strong> 50 bonus gems</li>
+                <li>• <strong>2nd Place:</strong> 40 bonus gems</li>
+                <li>• <strong>3rd Place:</strong> 30 bonus gems</li>
+                <li>• <strong>4th Place:</strong> 20 bonus gems</li>
+                <li>• <strong>5th+ Place:</strong> 10 bonus gems</li>
               </ul>
             </div>
           </div>
@@ -108,7 +108,7 @@ const Help: React.FC<HelpProps> = ({ variant }) => {
                   <p className="text-neutral-700">Click "Create League" and set your league details:</p>
                   <ul className="list-disc list-inside text-neutral-700 mt-2 space-y-1">
                     <li>League name and description</li>
-                    <li>Buy-in amount (in coins)</li>
+                    <li>Buy-in amount (in gems)</li>
                     <li>Start date (must be at least 7 days from today)</li>
                     <li>Maximum number of players (up to 20)</li>
                   </ul>
@@ -123,7 +123,7 @@ const Help: React.FC<HelpProps> = ({ variant }) => {
               </div>
               <div className="bg-neutral-50 p-4 rounded-lg border border-royalBlue">
                 <p className="text-sm text-neutral-700">
-                  <strong>Tip:</strong> You can join as many leagues as you want at the same time. Each league costs coins to join!
+                  <strong>Tip:</strong> You can join as many leagues as you want at the same time. Each league costs gems to join!
                 </p>
               </div>
               <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 my-4">
@@ -188,7 +188,7 @@ const Help: React.FC<HelpProps> = ({ variant }) => {
                     <strong>12-hour pick clock:</strong> Each manager has 12 hours to buy a player on their turn. You'll get an email as soon as it's your turn. If you don't pick, that turn is skipped and the next manager is up. Missed snake picks can still be filled later in the regular (non-turn-based) marketplace.
                   </p>
                   <p className="text-neutral-700 text-sm mt-2">
-                    <strong>End turn:</strong> You can leave the snake draft even if you still have GEMS, for example to save them for a later purchase in the regular marketplace. You stay in the league and keep any players you already drafted.
+                    <strong>End turn:</strong> You can leave the snake draft even if you still have coins, for example to save them for a later purchase in the regular marketplace. You stay in the league and keep any players you already drafted.
                   </p>
                 </div>
               </div>
@@ -269,7 +269,7 @@ const Help: React.FC<HelpProps> = ({ variant }) => {
                   <h3 className="font-semibold text-neutral-900">Two Marketplace Types</h3>
                   <p className="text-neutral-700">There are two ways to trade players:</p>
                   <ul className="list-disc list-inside text-neutral-700 mt-2 space-y-1">
-                    <li><strong>Turn-Based Marketplace:</strong> Take turns buying players. Each turn has a 12-hour limit; if you don't pick, the turn is skipped. You can also end your turn to leave the rest of the snake draft and keep remaining GEMS for later. The owner can start this early; otherwise it starts automatically one week before the league start date.</li>
+                    <li><strong>Turn-Based Marketplace:</strong> Take turns buying players. Each turn has a 12-hour limit; if you don't pick, the turn is skipped. You can also end your turn to leave the rest of the snake draft and keep remaining coins for later. The owner can start this early; otherwise it starts automatically one week before the league start date.</li>
                     <li><strong>Regular Marketplace:</strong> After the snake draft ends, buy and sell players freely throughout the season</li>
                   </ul>
                 </div>
@@ -367,44 +367,33 @@ const Help: React.FC<HelpProps> = ({ variant }) => {
                 </div>
               </div>
               <div className="bg-neutral-50 p-4 rounded-lg border border-royalBlue mb-4">
-                <h4 className="font-semibold text-neutral-900 mb-2">Two Completely Different Currencies</h4>
+                <h4 className="font-semibold text-neutral-900 mb-2">Two Currencies</h4>
                 <p className="text-sm text-neutral-700 mb-3">
-                  Fantasy Chess uses TWO separate currencies to avoid confusion between the draft phase and trading phase:
+                  Gems and coins are separate. Gems are your account. Coins stay inside a league.
                 </p>
                 <div className="space-y-3">
                   <div className="bg-blue-50 p-3 rounded border">
                     <div className="flex items-center mb-2">
                       <span className="text-2xl mr-2">💎</span>
-                      <h5 className="font-semibold text-blue-900">GEMS - Draft-Only Currency</h5>
+                      <h5 className="font-semibold text-blue-900">GEMS — account currency</h5>
                     </div>
                     <ul className="text-sm text-blue-800 space-y-1">
-                      <li>• <strong>ONLY used during turn-based marketplace (draft phase)</strong></li>
-                      <li>• <strong>Everyone gets exactly 50 GEMS when draft starts</strong></li>
-                      <li>• <strong>High-rated players cost more GEMS (Magnus Carlsen = 50 GEMS)</strong></li>
-                      <li>• <strong>Once spent, GEMS are gone forever - they don't regenerate</strong></li>
-                      <li>• <strong>You can leave the snake draft early and keep leftover GEMS for the regular marketplace</strong></li>
-                      <li>• Purpose: Fair team building during initial draft only</li>
+                      <li>• Join leagues (buy-in)</li>
+                      <li>• Buy avatars</li>
+                      <li>• Earn prizes and rank bonuses when a league ends</li>
                     </ul>
                   </div>
                   <div className="bg-green-50 p-3 rounded border">
                     <div className="flex items-center mb-2">
                       <span className="text-2xl mr-2">🪙</span>
-                      <h5 className="font-semibold text-green-900">COINS - Season Trading Currency</h5>
+                      <h5 className="font-semibold text-green-900">COINS — in-league currency</h5>
                     </div>
                     <ul className="text-sm text-green-800 space-y-1">
-                      <li>• <strong>Used for ALL trading after the draft ends</strong></li>
-                      <li>• <strong>You earn 50 COINS every week throughout the season</strong></li>
-                      <li>• <strong>Buy/sell/trade players with other league members</strong></li>
-                      <li>• <strong>Prices fluctuate based on player performance and demand</strong></li>
-                      <li>• <strong>COINS accumulate - you keep them week to week</strong></li>
-                      <li>• Purpose: Ongoing team management and strategy throughout the season</li>
+                      <li>• 50 coins at the start of the draft</li>
+                      <li>• 50 more coins every week to buy, sell, and trade</li>
+                      <li>• Leftover draft coins stay available in the regular marketplace</li>
                     </ul>
                   </div>
-                </div>
-                <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
-                  <p className="text-sm text-yellow-800">
-                    <strong>Key Difference:</strong> GEMS are a one-time draft currency. Leftover GEMS stay on your league balance for the regular marketplace. COINS are your weekly trading currency throughout the season.
-                  </p>
                 </div>
               </div>
               <div className="bg-neutral-50 p-4 rounded-lg border border-royalBlue">
@@ -433,14 +422,14 @@ const Help: React.FC<HelpProps> = ({ variant }) => {
                 <ArrowRight className="w-5 h-5 text-royalBlue mt-0.5 mr-3 flex-shrink-0" />
                 <div>
                   <h3 className="font-semibold text-neutral-900">Prize Pool</h3>
-                  <p className="text-neutral-700">The winner receives coins equal to the total buy-ins from all league members.</p>
+                  <p className="text-neutral-700">The winner receives gems equal to the total buy-ins from all league members.</p>
                 </div>
               </div>
               <div className="flex items-start">
                 <ArrowRight className="w-5 h-5 text-royalBlue mt-0.5 mr-3 flex-shrink-0" />
                 <div>
                   <h3 className="font-semibold text-neutral-900">Standings Bonus</h3>
-                  <p className="text-neutral-700">All players receive bonus coins based on their final rank (1st: 50 coins, 2nd: 40 coins, etc.).</p>
+                  <p className="text-neutral-700">All players receive bonus gems based on their final rank (1st: 50 gems, 2nd: 40 gems, etc.).</p>
                 </div>
               </div>
               <div className="flex items-start">
@@ -452,7 +441,7 @@ const Help: React.FC<HelpProps> = ({ variant }) => {
               </div>
               <div className="bg-neutral-50 p-4 rounded-lg border border-royalBlue">
                 <p className="text-sm text-neutral-700">
-                  <strong>Example:</strong> In a 10-player league with 100 coin buy-ins, the winner gets 1000 coins plus 50 bonus coins for 1st place!
+                  <strong>Example:</strong> In a 10-player league with 100 gem buy-ins, the winner gets 1000 gems plus 50 bonus gems for 1st place!
                 </p>
               </div>
             </div>
@@ -579,8 +568,8 @@ const Help: React.FC<HelpProps> = ({ variant }) => {
           </h2>
           <div className="space-y-4">
             <div>
-              <h3 className="font-semibold text-neutral-900">How do I get coins?</h3>
-              <p className="text-neutral-700">New users start with 1000 coins. You earn 50 coins every week automatically, plus bonus coins based on league standings!</p>
+              <h3 className="font-semibold text-neutral-900">How do I get gems and coins?</h3>
+              <p className="text-neutral-700">New users start with 1000 gems for buy-ins, avatars, and prizes. Inside a league you get 50 coins at draft, then 50 coins every week to trade.</p>
             </div>
             <div>
               <h3 className="font-semibold text-neutral-900">What happens if I don't set a lineup?</h3>
@@ -612,7 +601,7 @@ const Help: React.FC<HelpProps> = ({ variant }) => {
             <div className="bg-gold-50 p-4 rounded-lg border border-gold-200 my-4">
               <h4 className="font-semibold text-gold-900 mb-1">Profile & Avatar Customizations</h4>
               <p className="text-sm text-gold-900">
-                You can spend your coins to unlock and equip unique avatars for your profile! Visit your profile page and open the Avatar Shop to browse, purchase, and equip new looks. Show off your style in the standings and on the leaderboard!
+                You can spend gems to unlock and equip unique avatars for your profile! Visit your profile page and open the Avatar Shop to browse, purchase, and equip new looks. Show off your style in the standings and on the leaderboard!
               </p>
             </div>
           </div>

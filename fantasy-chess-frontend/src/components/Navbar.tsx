@@ -1,7 +1,7 @@
 import * as React from 'react'
 import * as ReactDOM from 'react-dom'
 import { useState, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { LogIn, UserPlus, HelpCircle, Bell, Menu, X } from 'lucide-react'
 import { getUnreadNotificationCount, supabase } from '../lib/supabase'
@@ -11,6 +11,8 @@ import { useResponsiveBrandName } from '../utils/browserDetection';
 
 const Navbar: React.FC = () => {
   const { user, signOut } = useAuth();
+  const location = useLocation();
+  const isTutorial = location.pathname === '/tutorial';
   const [showDropdown, setShowDropdown] = useState(false);
   const [showInbox, setShowInbox] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
@@ -68,6 +70,12 @@ const Navbar: React.FC = () => {
     }
   };
 
+  const handleTutorialNav = (event: React.MouseEvent) => {
+    if (!isTutorial) return;
+    event.preventDefault();
+    setShowMobileMenu(false);
+  };
+
   const handleSignOut = async () => {
     try {
       await signOut()
@@ -102,6 +110,7 @@ const Navbar: React.FC = () => {
                 </Link>
                 <Link
                   to="/leaderboard"
+                  onClick={handleTutorialNav}
                   className="text-neutral-700 hover:text-royalBlue hover:underline hover:underline-offset-4 px-3 py-2 rounded-md text-sm font-medium transition-colors"
                 >
                   Leaderboard
@@ -224,7 +233,7 @@ const Navbar: React.FC = () => {
                 <Link
                   to="/leaderboard"
                   className="block px-4 py-2 text-neutral-700 hover:bg-gray-100 hover:text-royalBlue rounded-md transition-colors"
-                  onClick={() => setShowMobileMenu(false)}
+                  onClick={handleTutorialNav}
                 >
                   Leaderboard
                 </Link>
