@@ -1,0 +1,61 @@
+name: Weekly Coin Distribution
+
+on:
+  schedule:
+    # Run every Monday at 1:00 AM UTC (Sunday 8:00 PM EST)
+    - cron: '0 1 * * 1'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  trigger-supabase-function:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Trigger Supabase Edge Function
+      run: |
+        echo "🚀 Triggering weekly coin distribution via Supabase Edge Function..."
+        
+        # Call the Supabase Edge Function
+        response=$(curl -s -w "\n%{http_code}" -X POST \
+          "${{ secrets.SB_URL }}/functions/v1/weekly-coin-distribution" \
+          -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+          -H "Content-Type: application/json")
+        
+        # Extract status code and response body
+        http_code=$(echo "$response" | tail -n1)
+        response_body=$(echo "$response" | head -n -1)
+        
+        echo "📊 Response Status: $http_code"
+        echo "📄 Response Body: $response_body"
+        
+        # Check if the request was successful
+        if [ "$http_code" -eq 200 ]; then
+          echo "✅ Weekly coin distribution triggered successfully!"
+          
+          # Parse and display the result
+          echo "$response_body" | jq -r '.result | "📈 Active Leagues: \(.active_leagues_processed)"'
+          echo "$response_body" | jq -r '.result | "🪙 Total Coins Distributed: \(.total_coins_distributed)"'
+          echo "$response_body" | jq -r '.result | "⏰ Timestamp: \(.timestamp)"'
+          
+          # Display recent history if available
+          echo "$response_body" | jq -r '.history[]? | "📅 \(.distribution_date): \(.active_leagues_count) leagues, \(.total_coins_distributed) coins"'
+          
+        else
+          echo "❌ Failed to trigger weekly coin distribution!"
+          echo "HTTP Status: $http_code"
+          echo "Error Response: $response_body"
+          exit 1
+        fi
+        
+    - name: Send notification on success
+      if: success()
+      run: |
+        echo "✅ Weekly coin distribution completed successfully!"
+        echo "The Supabase Edge Function has processed all active leagues."
+        
+    - name: Send notification on failure
+      if: failure()
+      run: |
+        echo "❌ Weekly coin distribution failed!"
+        echo "Check the logs above for error details."
+        echo "You may need to check the Supabase Edge Function logs for more information." 

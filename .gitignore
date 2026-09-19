@@ -1,0 +1,52 @@
+# Secrets — never commit these
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+*.p12
+credentials.json
+service-account*.json
+secrets.json
+
+# Node
+node_modules/
+dist/
+dist-ssr/
+.vercel
+*.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+.venv/
+venv/
+ENV/
+env/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Game dumps / local data
+*.pgn
+pgn_archive/
+
+# Supabase CLI local state
+**/.temp/
+**/.branches/
+**/.env.keys
+
+# Logs / OS / editors
+logs/
+*.log
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+*.swo

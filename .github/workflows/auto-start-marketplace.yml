@@ -1,0 +1,47 @@
+name: Auto-Start Turn-Based Marketplace
+
+on:
+  schedule:
+    # Twice daily so leagues open on the calendar day one week before start_date (PT).
+    - cron: "0 9 * * *"
+    - cron: "0 17 * * *"
+  workflow_dispatch:
+
+jobs:
+  trigger-auto-start:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Auto-start due marketplaces
+        run: |
+          echo "Starting due turn-based marketplaces..."
+
+          SERVICE_KEY="${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}"
+          if [ -z "$SERVICE_KEY" ]; then
+            SERVICE_KEY="${{ secrets.SB_KEY }}"
+          fi
+
+          response=$(curl -s -w "\n%{http_code}" -X POST \
+            "${{ secrets.SB_URL }}/rest/v1/rpc/auto_start_due_marketplaces" \
+            -H "Authorization: Bearer ${SERVICE_KEY}" \
+            -H "apikey: ${SERVICE_KEY}" \
+            -H "Content-Type: application/json" \
+            -d '{}')
+
+          http_code=$(echo "$response" | tail -n1)
+          response_body=$(echo "$response" | head -n -1)
+
+          echo "Response Status: $http_code"
+          echo "Response Body: $response_body"
+
+          if [ "$http_code" -eq 200 ]; then
+            echo "$response_body" | jq -r '"Started: \(.started_count) as of \(.as_of)"'
+          else
+            echo "Failed to auto-start marketplaces"
+            exit 1
+          fi
+
+  send-turn-emails:
+    needs: trigger-auto-start
+    uses: ./.github/workflows/marketplace-turn-emails.yml
+    secrets: inherit

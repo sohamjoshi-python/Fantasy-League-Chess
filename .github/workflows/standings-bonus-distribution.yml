@@ -1,0 +1,47 @@
+name: Standings Bonus Distribution
+
+on:
+  schedule:
+    # Run every Monday at 2:00 AM UTC (Sunday 9:00 PM EST)
+    # This runs after the weekly coin distribution to ensure leagues are processed
+    - cron: '0 2 * * 1'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  trigger-standings-bonus:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Trigger Standings Bonus Distribution
+      run: |
+        echo "🏆 Triggering standings bonus distribution via Supabase Edge Function..."
+        
+        # Call the Supabase Edge Function
+        response=$(curl -s -w "\n%{http_code}" -X POST \
+          "${{ secrets.SB_URL }}/functions/v1/award-standings-bonus" \
+          -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+          -H "Content-Type: application/json")
+        
+        # Extract status code and response body
+        http_code=$(echo "$response" | tail -n1)
+        response_body=$(echo "$response" | head -n -1)
+        
+        # Check if the request was successful
+        if [ "$http_code" -eq 200 ]; then
+          echo "✅ Standings bonus distribution triggered successfully!"
+          
+          # Parse and display the result
+          echo "$response_body" | jq -r '.result | "🏆 Leagues Processed: \(.leagues_processed)"'
+          echo "$response_body" | jq -r '.result | "🪙 Total Bonus Points Awarded: \(.total_bonus_awarded)"'
+          echo "$response_body" | jq -r '.result | "👥 Total Participants: \(.total_participants)"'
+          echo "$response_body" | jq -r '.result | "⏰ Timestamp: \(.timestamp)"'
+          
+          # Display individual league results if available
+          echo "$response_body" | jq -r '.result.league_results[]? | "📋 \(.league_name): \(.participants_count) participants, \(.total_bonus_awarded) bonus points"'
+          
+        else
+          echo "❌ Failed to trigger standings bonus distribution!"
+          echo "HTTP Status: $http_code"
+          echo "Error Response: $response_body"
+          exit 1
+        fi

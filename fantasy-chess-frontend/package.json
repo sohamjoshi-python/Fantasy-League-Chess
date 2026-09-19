@@ -1,0 +1,49 @@
+{
+  "name": "fantasy-chess-frontend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "preview": "vite preview",
+    "distribute-coins": "node scripts/distribute-weekly-coins.js",
+    "bot-ai": "node scripts/bot-marketplace-ai.js",
+    "send-feedback-campaign": "node scripts/send-feedback-campaign.js",
+    "populate-marketplace": "node scripts/populate-marketplace.js",
+    "populate-marketplace-direct": "node scripts/populate-marketplace-direct.js",
+    "populate-marketplace-complete": "node scripts/populate-marketplace-complete.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "@tanstack/react-query": "^5.82.0",
+    "@vercel/analytics": "^1.5.0",
+    "@vercel/speed-insights": "^1.2.0",
+    "axios": "^1.10.0",
+    "date-fns": "^2.30.0",
+    "dotenv": "^16.3.1",
+    "lucide-react": "^0.525.0",
+    "react": "^18.2.0",
+    "react-confetti": "^6.4.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.20.1",
+    "supabase": "^2.30.4"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.37",
+    "@types/react-dom": "^18.2.15",
+    "@typescript-eslint/eslint-plugin": "^8.35.1",
+    "@typescript-eslint/parser": "^8.35.1",
+    "@vitejs/plugin-react": "^4.1.1",
+    "autoprefixer": "^10.4.0",
+    "eslint": "^8.53.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-react-refresh": "^0.4.4",
+    "postcss": "^8.4.0",
+    "rollup": "^3.29.4",
+    "tailwindcss": "^3.4.0",
+    "typescript": "^5.2.2",
+    "vite": "^7.0.3"
+  }
+}

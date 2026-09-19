@@ -1,0 +1,8 @@
+requests
+supabase
+python-dotenv
+pandas
+aiohttp==3.9.1
+brotli
+python-chess
+pandas
