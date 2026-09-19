@@ -6,7 +6,7 @@ import { supabase } from '../lib/supabase'
 import { League } from '../types'
 import { Users, Trophy, Calendar, Search, Copy } from 'lucide-react'
 import { getLeagueEndDateFromStart, getMinLeagueStartDateString } from '../lib/calendarDate'
-import { formatCalendarDate, hasBlockingLeagueOverlap, isLeagueJoinClosed } from '../lib/leagueStatus'
+import { formatCalendarDate, isLeagueJoinClosed } from '../lib/leagueStatus'
 
 // Helper function to send league joined email
 const sendLeagueJoinedEmail = async (userEmail: string, leagueName: string) => {
@@ -45,7 +45,6 @@ const JoinLeague: React.FC = () => {
   const [joinCode, setJoinCode] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [userLeagues, setUserLeagues] = useState<League[]>([]);
 
   // Create league form state
   const [leagueName, setLeagueName] = useState('')
@@ -60,18 +59,6 @@ const JoinLeague: React.FC = () => {
       loadPublicLeagues()
     }
   }, [activeTab])
-
-  useEffect(() => {
-    async function fetchUserLeagues() {
-      if (!user) return;
-      const { data: leagues } = await supabase
-        .from('leagues')
-        .select('*')
-        .contains('member_ids', [user.id]);
-      if (leagues) setUserLeagues(leagues);
-    }
-    fetchUserLeagues();
-  }, [user]);
 
   const loadPublicLeagues = async () => {
     try {
@@ -114,16 +101,6 @@ const JoinLeague: React.FC = () => {
       if (!startDate || startDate < minStartDate) {
         setError(`Start date must be at least a week from today (${formatCalendarDate(minStartDate)}).`)
         return
-      }
-
-      // Check for overlapping active leagues
-      const overlap = hasBlockingLeagueOverlap(
-        { start_date: startDate, end_date: getLeagueEndDateFromStart(startDate) },
-        userLeagues
-      )
-      if (overlap) {
-        setError('You cannot create a league that overlaps with another active league you are in.');
-        return;
       }
 
       // Check if user has enough coins
@@ -224,13 +201,6 @@ const JoinLeague: React.FC = () => {
         return;
       }
 
-      // Check for overlapping active leagues
-      const overlap = hasBlockingLeagueOverlap(league, userLeagues)
-      if (overlap) {
-        setError('You cannot join a league that overlaps with another active league you are in.');
-        return;
-      }
-
       if ((league.member_ids || []).includes(user.id)) {
         setError('You are already a member of this league')
         return
@@ -309,13 +279,6 @@ const JoinLeague: React.FC = () => {
 
       if (isLeagueJoinClosed(league)) {
         setError('You cannot join a league that is in progress or has already started.');
-        return;
-      }
-
-      // Check for overlapping active leagues
-      const overlap = hasBlockingLeagueOverlap(league, userLeagues)
-      if (overlap) {
-        setError('You cannot join a league that overlaps with another active league you are in.');
         return;
       }
 

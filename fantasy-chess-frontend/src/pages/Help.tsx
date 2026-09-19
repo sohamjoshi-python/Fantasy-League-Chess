@@ -123,7 +123,7 @@ const Help: React.FC<HelpProps> = ({ variant }) => {
               </div>
               <div className="bg-neutral-50 p-4 rounded-lg border border-royalBlue">
                 <p className="text-sm text-neutral-700">
-                  <strong>Tip:</strong> You can join multiple leagues, but they cannot overlap in time. Each league costs coins to join!
+                  <strong>Tip:</strong> You can join as many leagues as you want at the same time. Each league costs coins to join!
                 </p>
               </div>
               <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 my-4">

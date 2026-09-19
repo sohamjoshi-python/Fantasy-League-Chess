@@ -7,11 +7,15 @@ import {
 } from './calendarDate'
 import { isPlayerAlreadyOwnedError } from './leagueStatus'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables')
+export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey)
+
+if (!isSupabaseConfigured) {
+  console.error(
+    'Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY. Copy fantasy-chess-frontend/.env.example to .env and fill in the values from Supabase Settings → API, then restart npm run dev.'
+  )
 }
 
 // Ensure a single Supabase client instance in the browser to avoid multiple auth subscriptions
@@ -20,11 +24,13 @@ declare global {
 }
 
 export const supabase: SupabaseClient = ((): SupabaseClient => {
+  const url = supabaseUrl || 'https://unavailable.supabase.co'
+  const anonKey = supabaseAnonKey || 'missing-anon-key'
   if (typeof window === 'undefined') {
-    return createClient(supabaseUrl, supabaseAnonKey)
+    return createClient(url, anonKey)
   }
   if (!window.__supabaseClient) {
-    window.__supabaseClient = createClient(supabaseUrl, supabaseAnonKey)
+    window.__supabaseClient = createClient(url, anonKey)
   }
   return window.__supabaseClient
 })()
