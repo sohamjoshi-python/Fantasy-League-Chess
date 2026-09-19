@@ -1,6 +1,6 @@
-import React, { useLayoutEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Lightbulb } from 'lucide-react';
+import { Lightbulb, X } from 'lucide-react';
 
 interface TutorialCalloutProps {
   targetId: string;
@@ -55,6 +55,11 @@ const TutorialCallout: React.FC<TutorialCalloutProps> = ({
     bubbleWidth: number;
   } | null>(null);
   const [ready, setReady] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+
+  useEffect(() => {
+    setDismissed(false);
+  }, [targetId, stepNumber]);
 
   useLayoutEffect(() => {
     let cancelled = false;
@@ -200,7 +205,7 @@ const TutorialCallout: React.FC<TutorialCalloutProps> = ({
     };
   }, [targetId, title, description, action, stepNumber]);
 
-  if (typeof document === 'undefined') return null;
+  if (typeof document === 'undefined' || dismissed) return null;
 
   const visible = ready && coords;
   const pointRight = coords?.placement === 'left';
@@ -224,17 +229,25 @@ const TutorialCallout: React.FC<TutorialCalloutProps> = ({
       }}
     >
       <div
-        className="rounded-xl shadow-2xl"
+        className="rounded-xl shadow-2xl pointer-events-auto relative"
         style={{
           width: coords?.bubbleWidth ?? MAX_BUBBLE_WIDTH,
           backgroundColor: BUBBLE_BG,
         }}
       >
+        <button
+          type="button"
+          aria-label="Hide tip"
+          onClick={() => setDismissed(true)}
+          className="absolute top-2.5 right-2 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white hover:bg-white/20 transition-colors"
+        >
+          <X className="w-3.5 h-3.5" />
+        </button>
         <div
           className="h-1.5 rounded-t-xl"
           style={{ background: `linear-gradient(90deg, #4F7FFB 0%, ${GOLD} 100%)` }}
         />
-        <div className="px-4 py-3.5">
+        <div className="px-4 py-3.5 pr-9">
           <p className="text-[11px] uppercase tracking-wider font-semibold mb-1" style={{ color: GOLD }}>
             Step {stepNumber} of {totalSteps}
           </p>
