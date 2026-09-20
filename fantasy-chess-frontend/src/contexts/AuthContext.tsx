@@ -33,49 +33,90 @@ const sendWelcomeEmailFree = async (email: string): Promise<{ success: boolean; 
 }
 
 const welcomeEmailInFlight = new Set<string>()
+const welcomeEmailHandled = new Set<string>()
+
+const welcomeHandledKey = (userId: string) => `flc_welcome_email_${userId}`
+
+const hasHandledWelcome = (userId: string) => {
+  if (welcomeEmailHandled.has(userId)) return true
+  try {
+    if (sessionStorage.getItem(welcomeHandledKey(userId))) {
+      welcomeEmailHandled.add(userId)
+      return true
+    }
+  } catch {
+    // sessionStorage can throw in private mode
+  }
+  return false
+}
+
+const markWelcomeHandled = (userId: string) => {
+  welcomeEmailHandled.add(userId)
+  try {
+    sessionStorage.setItem(welcomeHandledKey(userId), '1')
+  } catch {
+    // sessionStorage can throw in private mode
+  }
+}
 
 const claimWelcomeEmailSend = async (userId: string) => {
+  // Do not use maybeSingle(): a 0-row PATCH is a 406 with that Accept header.
   const { data, error } = await supabase
     .from('users')
     .update({ sent_welcome_email: true })
     .eq('id', userId)
     .eq('sent_welcome_email', false)
     .select('id')
-    .maybeSingle()
 
   if (error) {
     console.error('Welcome email claim failed:', error)
     return null
   }
-  return data
+  return data?.[0] ?? null
 }
 
 // Send once after email confirmation. The users.sent_welcome_email flag is the lock.
 const checkAndSendWelcomeEmail = async (user: User) => {
   if (!user.email || !user.email_confirmed_at) return
-  if (welcomeEmailInFlight.has(user.id)) return
+  if (hasHandledWelcome(user.id) || welcomeEmailInFlight.has(user.id)) return
   welcomeEmailInFlight.add(user.id)
 
   try {
     let claimed = await claimWelcomeEmailSend(user.id)
 
     if (!claimed) {
-      const displayName =
-        (user.user_metadata?.display_name as string | undefined) ||
-        (user.user_metadata?.username as string | undefined) ||
-        user.email.split('@')[0]
-      await supabase.from('users').upsert({
-        id: user.id,
-        username: displayName,
-        email: user.email,
-        coins: 1000,
-        sent_welcome_email: false,
-        created_at: user.created_at,
-      }, { onConflict: 'id', ignoreDuplicates: true })
-      claimed = await claimWelcomeEmailSend(user.id)
+      const { data: existing } = await supabase
+        .from('users')
+        .select('id, sent_welcome_email')
+        .eq('id', user.id)
+        .limit(1)
+
+      if (existing?.[0]?.sent_welcome_email) {
+        markWelcomeHandled(user.id)
+        return
+      }
+
+      if (!existing?.[0]) {
+        const displayName =
+          (user.user_metadata?.display_name as string | undefined) ||
+          (user.user_metadata?.username as string | undefined) ||
+          user.email.split('@')[0]
+        await supabase.from('users').upsert({
+          id: user.id,
+          username: displayName,
+          email: user.email,
+          coins: 1000,
+          sent_welcome_email: false,
+          created_at: user.created_at,
+        }, { onConflict: 'id', ignoreDuplicates: true })
+        claimed = await claimWelcomeEmailSend(user.id)
+      }
     }
 
-    if (!claimed) return
+    if (!claimed) {
+      markWelcomeHandled(user.id)
+      return
+    }
 
     const result = await sendWelcomeEmailFree(user.email)
     if (!result.success) {
@@ -83,7 +124,9 @@ const checkAndSendWelcomeEmail = async (user: User) => {
         .from('users')
         .update({ sent_welcome_email: false })
         .eq('id', user.id)
+      return
     }
+    markWelcomeHandled(user.id)
   } catch (error) {
     console.error('Welcome email send failed:', error)
   } finally {

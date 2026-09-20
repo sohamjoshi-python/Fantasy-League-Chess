@@ -31,6 +31,16 @@ export const supabase: SupabaseClient = ((): SupabaseClient => {
   }
   if (!window.__supabaseClient) {
     window.__supabaseClient = createClient(url, anonKey)
+    // Confirmation links put tokens in the hash. Clear them after the client
+    // reads the session so a refresh does not parse the URL again.
+    const hash = window.location.hash
+    if (
+      hash.includes('access_token') ||
+      hash.includes('refresh_token') ||
+      hash.includes('error_description')
+    ) {
+      window.history.replaceState(null, '', window.location.pathname + window.location.search)
+    }
   }
   return window.__supabaseClient
 })()
