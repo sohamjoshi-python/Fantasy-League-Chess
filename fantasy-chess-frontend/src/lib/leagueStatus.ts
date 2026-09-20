@@ -112,8 +112,49 @@ export function isCoinMarketplaceAvailable(league: League): boolean {
 
 export const MARKETPLACE_TURN_TIMEOUT_HOURS = 12
 export const MARKETPLACE_TURN_TIMEOUT_MS = MARKETPLACE_TURN_TIMEOUT_HOURS * 60 * 60 * 1000
+const MIN_MARKETPLACE_TURN_TIMEOUT_HOURS = 0.25
+const FORCE_SKIP_TIMEOUT_HOURS = 1 / 60
 /** Snake-draft picks each manager gets before the open marketplace. */
 export const SNAKE_DRAFT_ROUNDS = 3
+
+export type MarketplaceTimeoutLeague = Pick<
+  League,
+  'id' | 'start_date' | 'marketplace_order' | 'current_marketplace_turn' | 'member_ids'
+>
+
+function pacificMidnightMs(ymd: string): number {
+  const utc = new Date(`${ymd}T00:00:00Z`)
+  const asPacific = new Date(utc.toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }))
+  return utc.getTime() + (utc.getTime() - asPacific.getTime())
+}
+
+function formatTimeoutHours(hours: number): string {
+  if (hours < 1) {
+    const minutes = Math.max(1, Math.round(hours * 60))
+    return minutes === 1 ? '1 minute' : `${minutes} minutes`
+  }
+  const rounded = hours >= 10 ? Math.round(hours) : Math.round(hours * 10) / 10
+  return rounded === 1 ? '1 hour' : `${rounded} hours`
+}
+
+/** Hours each manager has for the current snake-draft pick. Shrinks so remaining picks finish before start_date. */
+export function computeMarketplaceTurnTimeoutHours(league?: MarketplaceTimeoutLeague | null): number {
+  if (!league?.id) return MARKETPLACE_TURN_TIMEOUT_HOURS
+  if (isTestFiveMinuteDraftLeague(league.id)) return TEST_DRAFT_TIMEOUT_MS / (60 * 60 * 1000)
+  if (!league.start_date) return MARKETPLACE_TURN_TIMEOUT_HOURS
+
+  const remainingPicks = Math.max(
+    1,
+    (league.marketplace_order?.length || (league.member_ids?.length || 1) * SNAKE_DRAFT_ROUNDS) -
+      (league.current_marketplace_turn || 0)
+  )
+  const hoursLeft = (pacificMidnightMs(league.start_date) - Date.now()) / (60 * 60 * 1000)
+  if (hoursLeft <= 0) return FORCE_SKIP_TIMEOUT_HOURS
+  return Math.min(
+    MARKETPLACE_TURN_TIMEOUT_HOURS,
+    Math.max(MIN_MARKETPLACE_TURN_TIMEOUT_HOURS, hoursLeft / remainingPicks)
+  )
+}
 
 /**
  * Fallback 5-minute draft IDs until `five_minute_draft_leagues` is loaded.
@@ -171,30 +212,44 @@ export function isTestFiveMinuteDraftLeague(leagueId?: string | null): boolean {
   return TEST_FIVE_MINUTE_DRAFT_LEAGUE_IDS.has(normalizeLeagueId(fromPath?.[0]))
 }
 
-export function getMarketplaceTurnTimeoutMs(leagueId?: string | null): number {
-  if (isTestFiveMinuteDraftLeague(leagueId)) return TEST_DRAFT_TIMEOUT_MS
-  return MARKETPLACE_TURN_TIMEOUT_MS
+export function getMarketplaceTurnTimeoutMs(
+  league?: MarketplaceTimeoutLeague | string | null
+): number {
+  if (typeof league === 'string' || !league) {
+    const leagueId = typeof league === 'string' ? league : null
+    if (isTestFiveMinuteDraftLeague(leagueId)) return TEST_DRAFT_TIMEOUT_MS
+    return MARKETPLACE_TURN_TIMEOUT_MS
+  }
+  return computeMarketplaceTurnTimeoutHours(league) * 60 * 60 * 1000
 }
 
-export function getMarketplaceTurnTimeoutHours(leagueId?: string | null): number {
-  return getMarketplaceTurnTimeoutMs(leagueId) / (60 * 60 * 1000)
+export function getMarketplaceTurnTimeoutHours(
+  league?: MarketplaceTimeoutLeague | string | null
+): number {
+  return getMarketplaceTurnTimeoutMs(league) / (60 * 60 * 1000)
 }
 
-export function getMarketplaceTurnTimeoutLabel(leagueId?: string | null): string {
-  if (isTestFiveMinuteDraftLeague(leagueId)) return '5 minutes'
-  return `${MARKETPLACE_TURN_TIMEOUT_HOURS} hours`
+export function getMarketplaceTurnTimeoutLabel(
+  league?: MarketplaceTimeoutLeague | string | null
+): string {
+  if (typeof league === 'string' || !league) {
+    if (isTestFiveMinuteDraftLeague(typeof league === 'string' ? league : null)) return '5 minutes'
+    return `${MARKETPLACE_TURN_TIMEOUT_HOURS} hours`
+  }
+  if (isTestFiveMinuteDraftLeague(league.id)) return '5 minutes'
+  return formatTimeoutHours(computeMarketplaceTurnTimeoutHours(league))
 }
 
 /** Milliseconds until the current snake-draft pick is auto-skipped. Negative means expired. */
 export function getMarketplaceTurnMsRemaining(
   turnStartedAt: string | null | undefined,
   nowMs: number = Date.now(),
-  leagueId?: string | null
+  league?: MarketplaceTimeoutLeague | string | null
 ): number | null {
   if (!turnStartedAt) return null
   const startedMs = Date.parse(turnStartedAt)
   if (Number.isNaN(startedMs)) return null
-  return startedMs + getMarketplaceTurnTimeoutMs(leagueId) - nowMs
+  return startedMs + getMarketplaceTurnTimeoutMs(league) - nowMs
 }
 
 export function formatMarketplaceTurnRemaining(ms: number): string {

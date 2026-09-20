@@ -185,7 +185,7 @@ const Help: React.FC<HelpProps> = ({ variant }) => {
                     <strong>Why Snake Draft?</strong> This format ensures fairness - Player 1 gets first pick in odd rounds, but Player 4 gets first pick in even rounds. Everyone gets equal access to top talent!
                   </p>
                   <p className="text-neutral-700 text-sm">
-                    <strong>12-hour pick clock:</strong> Each manager has 12 hours to buy a player on their turn. You'll get an email as soon as it's your turn. If you don't pick, that turn is skipped and the next manager is up. Missed snake picks can still be filled later in the regular (non-turn-based) marketplace.
+                    <strong>Pick clock:</strong> Each turn is timed so the 3-round snake draft finishes before the league start date. Small leagues can still get up to 12 hours per pick; large leagues get a shorter clock (minimum 15 minutes). You'll get an email when it's your turn. If you don't pick, that turn is skipped. Any remaining snake picks are skipped when the league starts, and missed players can still be bought in the regular marketplace.
                   </p>
                   <p className="text-neutral-700 text-sm mt-2">
                     <strong>End turn:</strong> You can leave the snake draft even if you still have coins, for example to save them for a later purchase in the regular marketplace. You stay in the league and keep any players you already drafted.
@@ -269,7 +269,7 @@ const Help: React.FC<HelpProps> = ({ variant }) => {
                   <h3 className="font-semibold text-neutral-900">Two Marketplace Types</h3>
                   <p className="text-neutral-700">There are two ways to trade players:</p>
                   <ul className="list-disc list-inside text-neutral-700 mt-2 space-y-1">
-                    <li><strong>Turn-Based Marketplace:</strong> Take turns buying players. Each turn has a 12-hour limit; if you don't pick, the turn is skipped. You can also end your turn to leave the rest of the snake draft and keep remaining coins for later. The owner can start this early; otherwise it starts automatically one week before the league start date.</li>
+                    <li><strong>Turn-Based Marketplace:</strong> Take turns buying players. Each turn has a pick clock that shrinks so the draft finishes before the league starts (up to 12 hours, as little as 15 minutes). If you don't pick, the turn is skipped. You can also end your turn to leave the rest of the snake draft and keep remaining coins for later. The owner can start this early; otherwise it starts automatically one week before the league start date.</li>
                     <li><strong>Regular Marketplace:</strong> After the snake draft ends, buy and sell players freely throughout the season</li>
                   </ul>
                 </div>

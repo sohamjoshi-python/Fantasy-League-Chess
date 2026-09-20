@@ -269,7 +269,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
     skipExpiredRef.current = true;
     try {
       const { error: skipError } = await supabase.rpc('skip_expired_marketplace_turns', {
-        p_timeout_hours: getMarketplaceTurnTimeoutHours(league.id),
+        p_timeout_hours: getMarketplaceTurnTimeoutHours(league),
         p_league_id: league.id,
       });
       if (skipError) {
@@ -301,7 +301,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
       const remaining = getMarketplaceTurnMsRemaining(
         league.marketplace_turn_started_at,
         Date.now(),
-        league.id
+        league
       );
       setTurnMsRemaining(remaining);
       if (remaining !== null && remaining <= 0) {
@@ -1549,9 +1549,9 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
               )}
             </p>
             {turnMsRemaining !== null && (
-              <p className={`text-sm ${turnMsRemaining <= Math.min(60 * 1000, getMarketplaceTurnTimeoutMs(league.id) / 2) ? 'text-red-700 font-semibold' : 'text-blue-800'}`}>
+              <p className={`text-sm ${turnMsRemaining <= Math.min(60 * 1000, getMarketplaceTurnTimeoutMs(league) / 2) ? 'text-red-700 font-semibold' : 'text-blue-800'}`}>
                 {turnMsRemaining > 0
-                  ? `${formatMarketplaceTurnRemaining(turnMsRemaining)} left to pick. After ${getMarketplaceTurnTimeoutLabel(league.id)} this turn is skipped.`
+                  ? `${formatMarketplaceTurnRemaining(turnMsRemaining)} left to pick. After ${getMarketplaceTurnTimeoutLabel(league)} this turn is skipped.`
                   : 'Time is up — skipping this turn...'}
               </p>
             )}

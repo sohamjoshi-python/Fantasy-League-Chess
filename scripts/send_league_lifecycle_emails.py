@@ -1,8 +1,5 @@
 #!/usr/bin/env python3
-"""Send league-start emails via the deployed send-resend-email function.
-
-Marketplace-start emails are sent directly from the app when the draft opens.
-"""
+"""Send marketplace-start and league-start emails via send-resend-email."""
 
 from __future__ import annotations
 
@@ -59,6 +56,50 @@ def format_start_date(ymd: str | None) -> str:
     except ValueError:
         return ymd
     return parsed.strftime("%B %d, %Y")
+
+
+def create_marketplace_started_email(recipient_name: str, league_name: str, league_id: str) -> dict:
+    title = "The Draft Is Open"
+    headline = f"The snake draft for {league_name} has started."
+    details = "Managers take turns buying chess players. You'll get another email when it's your turn. If you don't pick, that turn is skipped and you can still add players later in the regular marketplace."
+    button_label = "Open Draft"
+    league_url = f"{SITE_URL}/league/{league_id}"
+    subject = f"The draft is open in {league_name}"
+    text = "\n\n".join(
+        [
+            f"Hi {recipient_name},",
+            headline,
+            details,
+            f"{button_label}: {league_url}",
+        ]
+    )
+    html = f"""
+    <!DOCTYPE html>
+    <html lang="en">
+      <body style="font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; color: #333333; line-height: 1.6;">
+        <div style="max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); overflow: hidden;">
+          <div style="background-color: #4CAF50; color: #ffffff; padding: 24px 20px; text-align: center;">
+            <img src="{LOGO_URL}" alt="Fantasy League Chess" style="max-width: 200px; height: auto; margin-bottom: 12px;">
+            <h1 style="margin: 0; font-size: 24px; color: #ffffff;">{escape(title)}</h1>
+          </div>
+          <div style="padding: 28px 24px;">
+            <p style="margin: 0 0 18px;">Hi {escape(recipient_name)},</p>
+            <p style="margin: 0 0 18px;">{escape(headline)}</p>
+            <div style="background-color: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; padding: 18px; margin: 22px 0;">
+              <p style="margin: 0;">{escape(details)}</p>
+            </div>
+            <p style="margin: 30px 0; text-align: center;">
+              <a href="{league_url}" style="display: inline-block; background-color: #4CAF50; color: #ffffff; padding: 12px 24px; border-radius: 5px; text-decoration: none; font-weight: bold;">{escape(button_label)}</a>
+            </p>
+          </div>
+          <div style="text-align: center; font-size: 12px; color: #777777; padding: 0 24px 24px;">
+            <p style="margin: 0;">&copy; 2026 Fantasy League Chess. All rights reserved.</p>
+          </div>
+        </div>
+      </body>
+    </html>
+    """
+    return {"subject": subject, "htmlContent": html, "textContent": text}
 
 
 def create_email(recipient_name: str, league_name: str, league_id: str, start_date: str | None) -> dict:
@@ -181,7 +222,11 @@ def process_leagues(base_url: str, service_key: str, leagues: list[dict], event:
             league_name = league.get("name") or "your league"
             for recipient in recipients:
                 name = recipient.get("username") or recipient["email"].split("@")[0] or "there"
-                payload = create_email(name, league_name, league_id, league.get("start_date"))
+                payload = (
+                    create_marketplace_started_email(name, league_name, league_id)
+                    if event == "marketplace_started"
+                    else create_email(name, league_name, league_id, league.get("start_date"))
+                )
                 send_email(base_url, service_key, recipient["email"], recipient["id"], league_id, event, payload)
                 emails_sent += 1
                 print(f"Sent {event} email to {recipient['email']} for {league_name}")
@@ -196,7 +241,19 @@ def process_leagues(base_url: str, service_key: str, leagues: list[dict], event:
 def main() -> None:
     base_url, service_key = require_env()
     today = pacific_today()
-    print(f"Sending league-start emails as of {today} PT")
+    print(f"Sending league lifecycle emails as of {today} PT")
+
+    draft_leagues = request_json(
+        "GET",
+        f"{base_url}/rest/v1/leagues?marketplace_started=eq.true&marketplace_started_email_sent_at=is.null&select=id,name,member_ids,start_date",
+        service_key,
+    ) or []
+
+    print(f"Pending marketplace-start emails: {len(draft_leagues)}")
+
+    draft_emails, draft_leagues_sent = process_leagues(
+        base_url, service_key, draft_leagues, "marketplace_started", "marketplace_started_email_sent_at"
+    )
 
     start_leagues = request_json(
         "GET",
@@ -213,6 +270,8 @@ def main() -> None:
     print(
         json.dumps(
             {
+                "marketplace_start_leagues": draft_leagues_sent,
+                "marketplace_start_emails": draft_emails,
                 "league_start_leagues": start_leagues_sent,
                 "league_start_emails": start_emails,
             }
