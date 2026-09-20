@@ -32,54 +32,41 @@ const sendWelcomeEmailFree = async (email: string): Promise<{ success: boolean; 
   }
 }
 
+const welcomeEmailInFlight = new Set<string>()
+
 // Helper function to check if welcome email should be sent and send it
 const checkAndSendWelcomeEmail = async (user: User) => {
+  if (!user.email || !user.email_confirmed_at) return
+  if (welcomeEmailInFlight.has(user.id)) return
+  welcomeEmailInFlight.add(user.id)
+
   try {
-    // Check if welcome email has already been sent
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('sent_welcome_email')
-      .eq('id', user.id)
-      .single()
-    
-    if (userError) {
-      return
-    }
-    
-    if (userData?.sent_welcome_email) {
-      return
-    }
-    
-    // Check if this is a recent email confirmation (within 1 hour of creation)
     const createdAt = new Date(user.created_at)
-    const confirmedAt = new Date(user.email_confirmed_at!)
-    const timeDiff = confirmedAt.getTime() - createdAt.getTime()
-    const hoursDiff = timeDiff / (1000 * 3600)
-    
-    if (hoursDiff < 1) {
-      // First, mark welcome email as sent to prevent race conditions
-      const { error: updateError } = await supabase
+    const confirmedAt = new Date(user.email_confirmed_at)
+    const hoursDiff = (confirmedAt.getTime() - createdAt.getTime()) / (1000 * 3600)
+    if (hoursDiff >= 1) return
+
+    const { data: claimed, error: claimError } = await supabase
+      .from('users')
+      .update({ sent_welcome_email: true })
+      .eq('id', user.id)
+      .or('sent_welcome_email.eq.false,sent_welcome_email.is.null')
+      .select('id')
+      .maybeSingle()
+
+    if (claimError || !claimed) return
+
+    const result = await sendWelcomeEmailFree(user.email)
+    if (!result.success) {
+      await supabase
         .from('users')
-        .update({ sent_welcome_email: true })
+        .update({ sent_welcome_email: false })
         .eq('id', user.id)
-      
-      if (updateError) {
-        return
-      }
-      
-      // Then send welcome email
-      const result = await sendWelcomeEmailFree(user.email!)
-      
-      if (!result.success) {
-        // Reset flag if email failed
-        await supabase
-          .from('users')
-          .update({ sent_welcome_email: false })
-          .eq('id', user.id)
-      }
     }
   } catch (error) {
     // Silent error handling for production
+  } finally {
+    welcomeEmailInFlight.delete(user.id)
   }
 }
 
@@ -155,7 +142,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw error
       }
 
-      // Insert user into public.users table immediately after signup
+      // Insert user into public.users table immediately after signup.
+      // ignoreDuplicates so a concurrent SIGNED_IN claim cannot be reset to false.
       if (data.user) {
         try {
           const { error: insertError } = await supabase.from('users').upsert({
@@ -163,15 +151,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             username: displayName,
             email: data.user.email,
             coins: 1000, // Starting coins
-            sent_welcome_email: false, // Initialize welcome email flag
+            sent_welcome_email: false,
             created_at: new Date().toISOString()
-          }, { onConflict: 'id' })
+          }, { onConflict: 'id', ignoreDuplicates: true })
           
           if (insertError) {
             // Don't throw error - user can still use the app
           }
         } catch (insertError) {
           // Don't throw error - user can still use the app
+        }
+
+        if (data.session?.user?.email_confirmed_at) {
+          await checkAndSendWelcomeEmail(data.session.user)
         }
       }
 

@@ -1,9 +1,8 @@
 name: Marketplace Turn Emails
 
 on:
-  schedule:
-    # Backup if nobody has the draft page open. Live picks also email from the app.
-    - cron: "*/5 * * * *"
+  # Manual only. Scheduled turn emails come from pg_cron → process-marketplace-turns
+  # and from the live draft page. A 5-minute cron here double-sent the same pick emails.
   workflow_dispatch:
   workflow_call:
 

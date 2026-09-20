@@ -35,6 +35,25 @@ serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
     const emailId = crypto.randomUUID();
+    const welcomeSubject = 'Welcome to Fantasy League Chess - Your Fantasy Chess Adventure Begins!';
+
+    if (emailType === 'welcome') {
+      const { data: existingWelcome } = await supabase
+        .from('emails')
+        .select('id')
+        .eq('to_email', recipientEmail)
+        .eq('status', 'sent')
+        .eq('subject', welcomeSubject)
+        .limit(1)
+        .maybeSingle();
+
+      if (existingWelcome) {
+        return new Response(
+          JSON.stringify({ success: true, skipped: true, message: 'Welcome email already sent' }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
 
     let emailSent = false;
     let errorMessage = '';
@@ -47,7 +66,7 @@ serve(async (req) => {
       let finalTextContent = textContent;
 
       if (emailType === 'welcome') {
-        finalSubject = 'Welcome to Fantasy League Chess - Your Fantasy Chess Adventure Begins!';
+        finalSubject = welcomeSubject;
         finalHtmlContent = createWelcomeEmailHTML();
         finalTextContent = createWelcomeEmailText();
       } else if (emailType === 'weekly_results') {
