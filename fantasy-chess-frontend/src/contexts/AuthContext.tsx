@@ -34,27 +34,48 @@ const sendWelcomeEmailFree = async (email: string): Promise<{ success: boolean; 
 
 const welcomeEmailInFlight = new Set<string>()
 
-// Helper function to check if welcome email should be sent and send it
+const claimWelcomeEmailSend = async (userId: string) => {
+  const { data, error } = await supabase
+    .from('users')
+    .update({ sent_welcome_email: true })
+    .eq('id', userId)
+    .eq('sent_welcome_email', false)
+    .select('id')
+    .maybeSingle()
+
+  if (error) {
+    console.error('Welcome email claim failed:', error)
+    return null
+  }
+  return data
+}
+
+// Send once after email confirmation. The users.sent_welcome_email flag is the lock.
 const checkAndSendWelcomeEmail = async (user: User) => {
   if (!user.email || !user.email_confirmed_at) return
   if (welcomeEmailInFlight.has(user.id)) return
   welcomeEmailInFlight.add(user.id)
 
   try {
-    const createdAt = new Date(user.created_at)
-    const confirmedAt = new Date(user.email_confirmed_at)
-    const hoursDiff = (confirmedAt.getTime() - createdAt.getTime()) / (1000 * 3600)
-    if (hoursDiff >= 1) return
+    let claimed = await claimWelcomeEmailSend(user.id)
 
-    const { data: claimed, error: claimError } = await supabase
-      .from('users')
-      .update({ sent_welcome_email: true })
-      .eq('id', user.id)
-      .or('sent_welcome_email.eq.false,sent_welcome_email.is.null')
-      .select('id')
-      .maybeSingle()
+    if (!claimed) {
+      const displayName =
+        (user.user_metadata?.display_name as string | undefined) ||
+        (user.user_metadata?.username as string | undefined) ||
+        user.email.split('@')[0]
+      await supabase.from('users').upsert({
+        id: user.id,
+        username: displayName,
+        email: user.email,
+        coins: 1000,
+        sent_welcome_email: false,
+        created_at: user.created_at,
+      }, { onConflict: 'id', ignoreDuplicates: true })
+      claimed = await claimWelcomeEmailSend(user.id)
+    }
 
-    if (claimError || !claimed) return
+    if (!claimed) return
 
     const result = await sendWelcomeEmailFree(user.email)
     if (!result.success) {
@@ -64,7 +85,7 @@ const checkAndSendWelcomeEmail = async (user: User) => {
         .eq('id', user.id)
     }
   } catch (error) {
-    // Silent error handling for production
+    console.error('Welcome email send failed:', error)
   } finally {
     welcomeEmailInFlight.delete(user.id)
   }
