@@ -14,10 +14,12 @@ npm run dev
 
 ```env
 VITE_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_xxxxxxxxxxxxxxxxxxxxxx
 ```
 
-Never put a service role key, Resend key, or Vercel token in a `VITE_` variable. Vite inlines those into the browser bundle.
+Both come from Supabase → Settings → API Keys.
+
+Never put a secret key, Resend key, or Vercel token in a `VITE_` variable. Vite inlines those into the browser bundle.
 
 ## Database
 

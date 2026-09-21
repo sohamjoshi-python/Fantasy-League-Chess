@@ -23,14 +23,19 @@ npm install
 npm run dev
 ```
 
-Fill `.env` with your Supabase **project URL** and **anon key** only. Put the **service role key**, **Resend API key**, and **Vercel tokens** in GitHub Actions / Supabase / Vercel secrets — never in git.
+Fill `.env` with your Supabase **project URL** and **publishable key** only. Put the **secret key**, **Resend API key**, and **Vercel tokens** in GitHub Actions / Supabase / Vercel secrets — never in git.
 
 ## Secrets
 
+This project uses Supabase's API keys (`sb_publishable_...` / `sb_secret_...`). The
+legacy anon and service_role JWTs are still accepted as a fallback so nothing
+breaks mid-migration; remove them once the legacy keys are disabled in the
+dashboard.
+
 Keep these out of the repo:
 
-- `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` — local `.env` (anon key is public-ish, still do not commit real project files)
-- `SUPABASE_SERVICE_ROLE_KEY` / `SB_KEY` — GitHub Actions + Edge Functions only
+- `VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_KEY` — local `.env` (the publishable key is public-ish, still do not commit real project files)
+- `SB_SECRET_KEY` — GitHub Actions + Edge Functions only
 - `RESEND_API_KEY` — Supabase Edge Function secrets
 - Vercel tokens — Vercel dashboard / CI secrets
 

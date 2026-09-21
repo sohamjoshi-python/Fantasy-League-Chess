@@ -8,7 +8,9 @@ import os
 
 load_dotenv()
 url: str = os.getenv("SB_URL")
-key: str = os.getenv("SB_KEY")
+# SB_KEY is the legacy service_role JWT, kept only until the legacy keys are
+# disabled in the Supabase dashboard.
+key: str = os.getenv("SB_SECRET_KEY") or os.getenv("SB_KEY")
 supabase: Client = create_client(url, key)
 
 def retry_operation(operation, max_retries=3, delay=1):

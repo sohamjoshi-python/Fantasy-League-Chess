@@ -9,7 +9,10 @@ dotenv.config({
 });
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+// SUPABASE_SERVICE_ROLE_KEY is the legacy JWT key, kept only until the legacy
+// keys are disabled in the Supabase dashboard.
+const SUPABASE_SECRET_KEY =
+  process.env.SB_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 const DEFAULT_FEEDBACK_URL = 'https://fantasyleaguechess.com/feedback';
 const EMAIL_FUNCTION_NAME = 'send-resend-email';
 const SUPPORT_EMAIL = 'soham@fantasyleaguechess.com';
@@ -29,15 +32,15 @@ if (!CAMPAIGNS.has(campaign)) {
   fail(`Unknown campaign "${campaign}". Use one of: ${Array.from(CAMPAIGNS).join(', ')}`);
 }
 
-if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-  fail('Missing VITE_SUPABASE_URL/SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in your environment.');
+if (!SUPABASE_URL || !SUPABASE_SECRET_KEY) {
+  fail('Missing VITE_SUPABASE_URL/SUPABASE_URL or SB_SECRET_KEY in your environment.');
 }
 
 if (limit !== null && (!Number.isInteger(limit) || limit <= 0)) {
   fail('--limit must be a positive whole number.');
 }
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+const supabase = createClient(SUPABASE_URL, SUPABASE_SECRET_KEY, {
   auth: {
     autoRefreshToken: false,
     persistSession: false,
@@ -219,8 +222,8 @@ async function sendCampaignEmail(user, email, emailCampaign) {
   const response = await fetch(`${SUPABASE_URL}/functions/v1/${EMAIL_FUNCTION_NAME}`, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-      apikey: SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${SUPABASE_SECRET_KEY}`,
+      apikey: SUPABASE_SECRET_KEY,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({

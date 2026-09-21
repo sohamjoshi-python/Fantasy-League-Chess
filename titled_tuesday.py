@@ -23,7 +23,9 @@ MONTH_NAMES = [
 
 load_dotenv()
 url: str = os.getenv("SB_URL")
-key: str = os.getenv("SB_KEY")
+# SB_KEY is the legacy service_role JWT, kept only until the legacy keys are
+# disabled in the Supabase dashboard.
+key: str = os.getenv("SB_SECRET_KEY") or os.getenv("SB_KEY")
 supabase: Client = create_client(url, key)
 CONTACT_EMAIL = os.getenv("CHESSCOM_CONTACT_EMAIL", "contact@example.com")
 API_HEADERS = {"User-Agent": f"FantasyChess/1.0 ({CONTACT_EMAIL})"}

@@ -84,6 +84,7 @@ jobs:
         if: steps.params.outputs.mode == 'ingest'
         env:
           SB_URL: ${{ secrets.SB_URL }}
+          SB_SECRET_KEY: ${{ secrets.SB_SECRET_KEY }}
           SB_KEY: ${{ secrets.SB_KEY }}
           CHESSCOM_CONTACT_EMAIL: ${{ secrets.CHESSCOM_CONTACT_EMAIL }}
           TUESDAY: ${{ steps.params.outputs.tuesday }}
@@ -102,6 +103,7 @@ jobs:
         if: steps.params.outputs.mode == 'backup'
         env:
           SB_URL: ${{ secrets.SB_URL }}
+          SB_SECRET_KEY: ${{ secrets.SB_SECRET_KEY }}
           SB_KEY: ${{ secrets.SB_KEY }}
           TUESDAY: ${{ steps.params.outputs.tuesday }}
         run: |
@@ -109,7 +111,10 @@ jobs:
           import os
           from supabase import create_client
 
-          sb = create_client(os.environ['SB_URL'], os.environ['SB_KEY'])
+          sb = create_client(
+              os.environ['SB_URL'],
+              os.environ.get('SB_SECRET_KEY') or os.environ['SB_KEY'],
+          )
           tuesday = os.environ['TUESDAY']
           print('Backup scoring for Titled Tuesday', tuesday)
           result = sb.rpc('process_weekly_results', {'week_date': tuesday}).execute()
@@ -120,6 +125,7 @@ jobs:
       - name: Send weekly results emails
         env:
           SB_URL: ${{ secrets.SB_URL }}
+          SB_SECRET_KEY: ${{ secrets.SB_SECRET_KEY }}
           SB_KEY: ${{ secrets.SB_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           EVENT_NAME: ${{ github.event_name }}
@@ -127,9 +133,9 @@ jobs:
           SEND_ALL: ${{ github.event.inputs.send_all || 'false' }}
           TUESDAY: ${{ steps.params.outputs.tuesday }}
         run: |
-          KEY="${SUPABASE_SERVICE_ROLE_KEY:-$SB_KEY}"
+          KEY="${SB_SECRET_KEY:-${SUPABASE_SERVICE_ROLE_KEY:-$SB_KEY}}"
           if [ -z "$KEY" ]; then
-            echo "No SUPABASE_SERVICE_ROLE_KEY or SB_KEY secret configured; skipping weekly results emails."
+            echo "No SB_SECRET_KEY secret configured; skipping weekly results emails."
             exit 0
           fi
 

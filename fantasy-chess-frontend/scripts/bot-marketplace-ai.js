@@ -20,7 +20,7 @@ dotenv.config();
 // Initialize Supabase client
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
+  process.env.SB_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
 async function botMarketplaceAI() {

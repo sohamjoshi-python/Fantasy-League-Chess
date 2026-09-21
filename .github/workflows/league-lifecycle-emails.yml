@@ -21,6 +21,7 @@ jobs:
       - name: Send league-start emails
         env:
           SB_URL: ${{ secrets.SB_URL }}
+          SB_SECRET_KEY: ${{ secrets.SB_SECRET_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           SB_KEY: ${{ secrets.SB_KEY }}
         run: python scripts/send_league_lifecycle_emails.py

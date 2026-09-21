@@ -8,7 +8,10 @@ import os
 from supabase import create_client
 
 load_dotenv()
-sb = create_client(os.getenv("SB_URL"), os.getenv("SB_KEY"))
+sb = create_client(
+    os.getenv("SB_URL"),
+    os.getenv("SB_SECRET_KEY") or os.getenv("SB_KEY"),
+)
 
 
 def tuesday_to_dotted(tuesday: date) -> str:

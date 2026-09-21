@@ -16,7 +16,12 @@ jobs:
         run: |
           echo "Starting due turn-based marketplaces..."
 
-          SERVICE_KEY="${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}"
+          # SUPABASE_SERVICE_ROLE_KEY / SB_KEY are the legacy JWT keys, kept
+          # only until the legacy keys are disabled in the dashboard.
+          SERVICE_KEY="${{ secrets.SB_SECRET_KEY }}"
+          if [ -z "$SERVICE_KEY" ]; then
+            SERVICE_KEY="${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}"
+          fi
           if [ -z "$SERVICE_KEY" ]; then
             SERVICE_KEY="${{ secrets.SB_KEY }}"
           fi

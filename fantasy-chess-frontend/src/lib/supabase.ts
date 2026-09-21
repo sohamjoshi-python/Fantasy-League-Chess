@@ -8,13 +8,16 @@ import {
 import { isPlayerAlreadyOwnedError } from './leagueStatus'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
+// VITE_SUPABASE_ANON_KEY is the legacy JWT key, kept only until the legacy keys
+// are disabled in the Supabase dashboard.
+const supabasePublishableKey = (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
+  import.meta.env.VITE_SUPABASE_ANON_KEY) as string | undefined
 
-export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey)
+export const isSupabaseConfigured = Boolean(supabaseUrl && supabasePublishableKey)
 
 if (!isSupabaseConfigured) {
   console.error(
-    'Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY. Copy fantasy-chess-frontend/.env.example to .env and fill in the values from Supabase Settings → API, then restart npm run dev.'
+    'Missing VITE_SUPABASE_URL or VITE_SUPABASE_PUBLISHABLE_KEY. Copy fantasy-chess-frontend/.env.example to .env and fill in the values from Supabase Settings → API Keys, then restart npm run dev.'
   )
 }
 
@@ -25,12 +28,12 @@ declare global {
 
 export const supabase: SupabaseClient = ((): SupabaseClient => {
   const url = supabaseUrl || 'https://unavailable.supabase.co'
-  const anonKey = supabaseAnonKey || 'missing-anon-key'
+  const publishableKey = supabasePublishableKey || 'missing-publishable-key'
   if (typeof window === 'undefined') {
-    return createClient(url, anonKey)
+    return createClient(url, publishableKey)
   }
   if (!window.__supabaseClient) {
-    window.__supabaseClient = createClient(url, anonKey)
+    window.__supabaseClient = createClient(url, publishableKey)
     // Confirmation links put tokens in the hash. Clear them after the client
     // reads the session so a refresh does not parse the URL again.
     const hash = window.location.hash

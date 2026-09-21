@@ -19,9 +19,15 @@ LOGO_URL = f"{SITE_URL}/assets/fantasy-league-chess-logo-updated.png"
 
 def require_env() -> tuple[str, str]:
     base_url = (os.environ.get("SB_URL") or "").rstrip("/")
-    service_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or os.environ.get("SB_KEY") or ""
+    # The legacy names are kept only until the legacy keys are disabled.
+    service_key = (
+        os.environ.get("SB_SECRET_KEY")
+        or os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+        or os.environ.get("SB_KEY")
+        or ""
+    )
     if not base_url or not service_key:
-        raise SystemExit("Missing SB_URL and SUPABASE_SERVICE_ROLE_KEY (or SB_KEY)")
+        raise SystemExit("Missing SB_URL and SB_SECRET_KEY")
     return base_url, service_key
 
 

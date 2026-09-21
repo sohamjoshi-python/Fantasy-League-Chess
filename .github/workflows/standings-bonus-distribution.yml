@@ -16,10 +16,18 @@ jobs:
       run: |
         echo "🏆 Triggering standings bonus distribution via Supabase Edge Function..."
         
+        # SUPABASE_SERVICE_ROLE_KEY is the legacy JWT key, kept only until the
+        # legacy keys are disabled in the dashboard.
+        SERVICE_KEY="${{ secrets.SB_SECRET_KEY }}"
+        if [ -z "$SERVICE_KEY" ]; then
+          SERVICE_KEY="${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}"
+        fi
+
         # Call the Supabase Edge Function
         response=$(curl -s -w "\n%{http_code}" -X POST \
           "${{ secrets.SB_URL }}/functions/v1/award-standings-bonus" \
-          -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+          -H "Authorization: Bearer ${SERVICE_KEY}" \
+          -H "apikey: ${SERVICE_KEY}" \
           -H "Content-Type: application/json")
         
         # Extract status code and response body
