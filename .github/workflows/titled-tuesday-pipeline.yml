@@ -30,6 +30,9 @@ on:
           - "false"
           - "true"
 
+permissions:
+  contents: read
+
 jobs:
   titled-tuesday:
     runs-on: ubuntu-latest

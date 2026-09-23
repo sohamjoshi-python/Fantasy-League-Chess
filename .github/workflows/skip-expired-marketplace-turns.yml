@@ -11,6 +11,8 @@ on:
         required: false
         default: "12"
 
+permissions: {}
+
 jobs:
   process-marketplace-turns:
     runs-on: ubuntu-latest

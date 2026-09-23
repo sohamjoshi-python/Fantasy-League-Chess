@@ -5,6 +5,9 @@ on:
     - cron: '0 2 * * *'  # every day at 2am UTC
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   update-elo:
     runs-on: ubuntu-latest
