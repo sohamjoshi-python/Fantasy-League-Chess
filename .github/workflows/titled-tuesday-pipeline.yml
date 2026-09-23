@@ -4,7 +4,8 @@ on:
   schedule:
     # Tuesday 22:00 UTC (5 PM ET standard / 6 PM ET daylight) — primary ingest + score + email
     - cron: "0 22 * * 2"
-    # Wednesday 06:00 UTC — backup if the Tuesday ingest/scoring was missed (re-score + email)
+    # Wednesday 06:00 UTC — backup scoring only if Tuesday's ingest was missed.
+    # Do not email from this run. Tuesday already sent the weekly recap.
     - cron: "0 6 * * 3"
   workflow_dispatch:
     inputs:
@@ -121,8 +122,9 @@ jobs:
           print(result)
           "
 
-      # The Edge Function re-runs scoring as a safety net, then sends weekly emails.
+      # Scheduled Wednesday is scoring-only. Email on Tuesday, and on a manual run.
       - name: Send weekly results emails
+        if: steps.params.outputs.mode == 'ingest' || github.event_name == 'workflow_dispatch'
         env:
           SB_URL: ${{ secrets.SB_URL }}
           SB_SECRET_KEY: ${{ secrets.SB_SECRET_KEY }}

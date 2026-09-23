@@ -403,30 +403,37 @@ serve(async (req) => {
             ? (usersWithResults || []).filter((user) => user.email?.toLowerCase() === testEmail)
             : (usersWithResults || [])
 
-          let alreadySent = new Set<string>()
+          const alreadySentUserIds = new Set<string>()
+          const alreadySentAddresses = new Set<string>()
           if (!testEmail && emailRecipients.length) {
             const { data: previousEmails, error: previousEmailsError } = await supabase
               .from('emails')
-              .select('user_id')
+              .select('user_id, to_email')
               .eq('status', 'sent')
-              .contains('metadata', {
-                source: 'process_weekly_results',
-                weekDate: tuesdayDate,
-                lineupWeekStart,
-              })
+              .eq('metadata->>source', 'process_weekly_results')
+              .eq('metadata->>weekDate', tuesdayDate)
 
             if (previousEmailsError) {
               console.error('Error checking previously sent weekly results emails:', previousEmailsError)
             } else {
-              alreadySent = new Set((previousEmails || []).map((email: any) => email.user_id).filter(Boolean))
+              for (const email of previousEmails || []) {
+                if (email.user_id) alreadySentUserIds.add(email.user_id)
+                if (typeof email.to_email === 'string' && email.to_email.trim()) {
+                  alreadySentAddresses.add(email.to_email.trim().toLowerCase())
+                }
+              }
             }
           }
 
-          const pendingRecipients = emailRecipients.filter((user) => testEmail || !alreadySent.has(user.id))
+          const pendingRecipients = emailRecipients.filter((user) => {
+            if (testEmail) return true
+            const address = typeof user.email === 'string' ? user.email.trim().toLowerCase() : ''
+            return !alreadySentUserIds.has(user.id) && !alreadySentAddresses.has(address)
+          })
 
           console.log(
             `Sending weekly results emails to ${pendingRecipients.length} users${testEmail ? ` (test_email=${testEmail})` : ''}`
-            + `${alreadySent.size ? `; skipping ${alreadySent.size} already sent` : ''}`,
+            + `${alreadySentUserIds.size ? `; skipping ${alreadySentUserIds.size} already sent` : ''}`,
           )
 
           for (const user of pendingRecipients) {
