@@ -46,6 +46,11 @@
     "typescript": "^5.2.2",
     "vite": "^7.3.6"
   },
+  "overrides": {
+    "sucrase": {
+      "glob": "10.5.0"
+    }
+  },
   "allowScripts": {
     "@vercel/speed-insights@1.2.0": true,
     "esbuild@0.28.2": true,
