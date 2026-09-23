@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { X, CheckCircle, XCircle, Clock, Coins } from 'lucide-react';
 import { acceptTrade, markNotificationSeen } from '../lib/supabase';
+import { publicErrorMessage } from '../lib/publicError';
 import { TradeNotificationWithDetails } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -38,7 +39,7 @@ export default function TradeNotificationPopup({
         onMarkSeen(notification.notification_id);
         onClose();
       } else {
-        setError(result.error?.message || 'Failed to accept trade');
+        setError(publicErrorMessage(result.error, 'Failed to accept trade'));
       }
     } catch (err) {
       setError('An unexpected error occurred');

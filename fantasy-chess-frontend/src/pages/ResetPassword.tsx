@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Eye, EyeOff, CheckCircle, AlertCircle } from 'lucide-react'
 import logo from '../assets/fantasy-league-chess-logo-updated.png'
 import { supabase } from '../lib/supabase'
+import { publicErrorMessage } from '../lib/publicError'
 
 const ResetPassword: React.FC = () => {
   const [password, setPassword] = useState('')
@@ -35,7 +36,7 @@ const ResetPassword: React.FC = () => {
       
       if (errorParam === 'access_denied' && errorDescription) {
         const message = errorDescription.replace(/\+/g, ' ')
-        setError(message)
+        setError(publicErrorMessage(message, 'This link is invalid or has expired.'))
         setIsValidSession(false)
         setCheckingSession(false)
         // Clear the hash from URL
@@ -134,7 +135,7 @@ const ResetPassword: React.FC = () => {
         navigate('/signin')
       }, 2500)
     } catch (error: any) {
-      setError(error.message || 'Failed to reset password')
+      setError(publicErrorMessage(error, 'Failed to reset password'))
     } finally {
       setLoading(false)
     }

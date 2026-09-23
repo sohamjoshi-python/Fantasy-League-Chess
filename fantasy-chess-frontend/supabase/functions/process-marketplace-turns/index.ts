@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 import { getSecretKey } from "../_shared/supabaseKeys.ts"
+import { GENERIC_ERROR, logServerError } from "../_shared/publicError.ts"
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -293,7 +294,8 @@ serve(async (req) => {
       })
       if (!sendResponse.ok) {
         const details = await sendResponse.text()
-        failures.push(`${recipient.email}: ${details}`)
+        logServerError("process-marketplace-turns", details)
+        failures.push("Could not send turn email")
         await supabase
           .from("leagues")
           .update({ marketplace_turn_email_sent_for: null })
@@ -316,11 +318,11 @@ serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     )
   } catch (error) {
-    console.error("process-marketplace-turns failed:", error)
+    logServerError("process-marketplace-turns", error)
     return new Response(
       JSON.stringify({
         success: false,
-        error: error instanceof Error ? error.message : String(error),
+        error: GENERIC_ERROR,
       }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     )

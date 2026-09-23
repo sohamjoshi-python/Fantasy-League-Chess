@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Coins, AlertCircle } from 'lucide-react';
 import { createTrade } from '../lib/supabase';
+import { publicErrorMessage } from '../lib/publicError';
 import { ChessPlayer } from '../types';
 
 interface TradeModalProps {
@@ -40,7 +41,7 @@ export default function TradeModal({
         onSuccess();
         onClose();
       } else {
-        setError(result.error?.message || 'Failed to create trade');
+        setError(publicErrorMessage(result.error, 'Failed to create trade'));
       }
     } catch (err) {
       setError('An unexpected error occurred');

@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { ArrowLeft, Eye, EyeOff, CheckCircle, ChevronRight, ChevronDown } from 'lucide-react'
 import logo from '../assets/fantasy-league-chess-logo-updated.png'
 import { getBrandName } from '../utils/browserDetection';
+import { publicErrorMessage } from '../lib/publicError';
 
 const SignUp: React.FC = () => {
   const [email, setEmail] = useState('')
@@ -61,7 +62,7 @@ const SignUp: React.FC = () => {
         navigate('/join-league')
       }, 2000)
     } catch (error: any) {
-      setError(error.message || 'Failed to create account')
+      setError(publicErrorMessage(error, 'Failed to create account'))
     } finally {
       setLoading(false)
     }

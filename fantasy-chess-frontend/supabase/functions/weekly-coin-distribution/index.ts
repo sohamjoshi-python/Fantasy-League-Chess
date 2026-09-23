@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { getSecretKey } from '../_shared/supabaseKeys.ts'
+import { GENERIC_ERROR, logServerError } from '../_shared/publicError.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -26,11 +27,11 @@ serve(async (req) => {
     const { data, error } = await supabase.rpc('distribute_weekly_coins_to_active_leagues_with_history')
 
     if (error) {
-      console.error('Error distributing weekly coins:', error)
+      logServerError('weekly-coin-distribution', error)
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: error.message,
+          error: GENERIC_ERROR,
           timestamp: new Date().toISOString()
         }),
         { 
@@ -65,11 +66,11 @@ serve(async (req) => {
     )
 
   } catch (error) {
-    console.error('Unexpected error in weekly coin distribution:', error)
+    logServerError('weekly-coin-distribution', error)
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message,
+        error: GENERIC_ERROR,
         timestamp: new Date().toISOString()
       }),
       { 

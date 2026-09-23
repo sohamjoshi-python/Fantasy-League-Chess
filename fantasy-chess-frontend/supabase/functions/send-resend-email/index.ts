@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { getSecretKey } from '../_shared/supabaseKeys.ts';
+import { GENERIC_ERROR, logServerError } from '../_shared/publicError.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -102,8 +103,8 @@ serve(async (req) => {
       console.log('Email sent successfully via Resend:', resendResult);
 
     } catch (error: any) {
-      console.error('Resend send error:', error);
-      errorMessage = `Resend failed: ${error.message}. `;
+      logServerError('send-resend-email', error);
+      errorMessage = 'Resend failed';
     }
 
     // Store email record in database for tracking
@@ -135,15 +136,15 @@ serve(async (req) => {
       );
     } else {
       return new Response(
-        JSON.stringify({ success: false, error: `Failed to send email via Resend: ${errorMessage}` }),
+        JSON.stringify({ success: false, error: 'Failed to send email.' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
   } catch (err: any) {
-    console.error('Unexpected error in send-resend-email:', err);
+    logServerError('send-resend-email', err);
     return new Response(
-      JSON.stringify({ success: false, error: 'Error: ' + (err?.message || err) }),
+      JSON.stringify({ success: false, error: GENERIC_ERROR }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Clock, Coins, CheckCircle, XCircle, AlertCircle, RefreshCw } from 'lucide-react';
 import { getAllTrades, cancelTrade, acceptTrade } from '../lib/supabase';
+import { publicErrorMessage } from '../lib/publicError';
 import { Trade, ChessPlayer } from '../types';
 
 interface TradingTabProps {
@@ -38,7 +39,7 @@ export default function TradingTab({
         const pendingTrades = (result.trades || []).filter(trade => trade.status === 'pending');
         setTrades(pendingTrades);
       } else {
-        setError(result.error?.message || 'Failed to load trades');
+        setError(publicErrorMessage(result.error, 'Failed to load trades'));
       }
     } catch (err) {
       setError('An unexpected error occurred');
@@ -61,7 +62,7 @@ export default function TradingTab({
         await loadTrades();
         onTradeUpdate();
       } else {
-        setError(result.error?.message || 'Failed to cancel trade');
+        setError(publicErrorMessage(result.error, 'Failed to cancel trade'));
       }
     } catch (err) {
       setError('An unexpected error occurred');
@@ -80,7 +81,7 @@ export default function TradingTab({
         await loadTrades();
         onTradeUpdate();
       } else {
-        setError(result.error?.message || 'Failed to accept trade');
+        setError(publicErrorMessage(result.error, 'Failed to accept trade'));
       }
     } catch (err) {
       setError('An unexpected error occurred');

@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { publicErrorMessage } from './publicError'
 import fallbackLogo from '../assets/fantasy-league-chess-logo-updated.png'
 import pawnAvatar from '../assets/avatars/pawn.svg'
 import bishopAvatar from '../assets/avatars/bishop.svg'
@@ -32,18 +33,12 @@ type RpcResult = {
 
 function throwIfRpcFailed(data: RpcResult | null, error: { message?: string } | null, fallback: string) {
   if (error) {
-    throw new Error(humanizeAvatarError(error.message || fallback))
+    console.error(fallback)
+    throw new Error(publicErrorMessage(error, fallback))
   }
   if (data && data.success === false) {
-    throw new Error(humanizeAvatarError(data.error || fallback))
+    throw new Error(publicErrorMessage(data.error, fallback))
   }
-}
-
-function humanizeAvatarError(message: string) {
-  if (/schema cache|does not exist|could not find the table|could not find the function/i.test(message)) {
-    return 'Avatar shop is not set up yet. Apply the latest database migration and try again.'
-  }
-  return message
 }
 
 export function resolveAvatarUrl(imageUrl?: string | null, name?: string | null): string {
@@ -84,10 +79,12 @@ export async function fetchAvatarsForUser(userId: string): Promise<ShopAvatar[]>
     ])
 
   if (avatarsError) {
-    throw new Error(humanizeAvatarError(avatarsError.message || 'Could not load avatars'))
+    console.error('Could not load avatars')
+    throw new Error(publicErrorMessage(avatarsError, 'Could not load avatars'))
   }
   if (ownershipError) {
-    throw new Error(humanizeAvatarError(ownershipError.message || 'Could not load owned avatars'))
+    console.error('Could not load owned avatars')
+    throw new Error(publicErrorMessage(ownershipError, 'Could not load owned avatars'))
   }
 
   const ownedIds = new Set(

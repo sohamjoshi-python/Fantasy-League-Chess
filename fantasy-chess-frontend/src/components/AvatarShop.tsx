@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { buyAvatar, equipAvatar, fetchAvatarsForUser, ShopAvatar } from '../lib/avatars'
+import { publicErrorMessage } from '../lib/publicError'
 
 type AvatarShopProps = {
   onClose?: () => void
@@ -21,7 +22,7 @@ const AvatarShop: React.FC<AvatarShopProps> = ({ onClose, onBalanceChange }) => 
       const list = await fetchAvatarsForUser(user.id)
       setAvatars(list)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not load avatars')
+      setError(publicErrorMessage(e, 'Could not load avatars'))
       setAvatars([])
     } finally {
       setLoading(false)
@@ -43,7 +44,7 @@ const AvatarShop: React.FC<AvatarShopProps> = ({ onClose, onBalanceChange }) => 
       )
       onBalanceChange?.()
     } catch (e) {
-      setError((e instanceof Error ? e.message : 'Purchase failed').replace(/coins/gi, 'gems'))
+      setError(publicErrorMessage(e, 'Purchase failed').replace(/coins/gi, 'gems'))
     } finally {
       setBusyId(null)
     }
@@ -63,7 +64,7 @@ const AvatarShop: React.FC<AvatarShopProps> = ({ onClose, onBalanceChange }) => 
       )
       onBalanceChange?.()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not equip avatar')
+      setError(publicErrorMessage(e, 'Could not equip avatar'))
     } finally {
       setBusyId(null)
     }

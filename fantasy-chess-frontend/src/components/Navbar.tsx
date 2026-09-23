@@ -8,6 +8,7 @@ import { getUnreadNotificationCount, supabase } from '../lib/supabase'
 import Inbox from './Inbox'
 import logo from '../assets/fantasy-league-chess-logo-updated.png'
 import { useResponsiveBrandName } from '../utils/browserDetection';
+import { publicErrorMessage } from '../lib/publicError';
 
 const Navbar: React.FC = () => {
   const { user, signOut } = useAuth();
@@ -377,8 +378,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ isSignUp, onClose, onToggleMode }
         }, 1500)
       }
     } catch (error: any) {
-      console.error('Signup/Login error:', error)
-      setError(error.message || 'An error occurred')
+      console.error('Signup/Login error')
+      setError(publicErrorMessage(error, 'An error occurred'))
     } finally {
       setLoading(false)
     }

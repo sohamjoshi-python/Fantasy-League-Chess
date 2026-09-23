@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
+import { publicErrorMessage } from '../lib/publicError';
 import { ChessPlayer } from '../types';
 
 interface MarketplaceData {
@@ -226,11 +227,11 @@ export function useMarketplaceData(leagueId: string, userId: string | undefined)
         return; // Request was cancelled
       }
       
-      console.error('Error loading marketplace data:', error);
+      console.error('Error loading marketplace data');
       setData(prev => ({
         ...prev,
         loading: false,
-        error: error.message || 'Failed to load marketplace data'
+        error: publicErrorMessage(error, 'Failed to load marketplace data')
       }));
     }
   }, [leagueId, userId, loadAllPlayers, loadUserTeam, loadUserCoinBalance, loadOwnedPlayerIds]);

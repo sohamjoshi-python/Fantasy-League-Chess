@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getSecretKey } from "../_shared/supabaseKeys.ts";
+import { logServerError } from "../_shared/publicError.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -42,7 +43,7 @@ serve(async (req) => {
     await supabase.from("user_avatars").upsert({ user_id, avatar_id, owned: true });
     return jsonResponse({ success: true });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Purchase failed";
-    return jsonResponse({ error: message }, 400);
+    logServerError("buy-avatar", error);
+    return jsonResponse({ error: "Purchase failed" }, 400);
   }
 });

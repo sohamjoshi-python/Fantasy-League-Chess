@@ -27,8 +27,8 @@ const sendWelcomeEmailFree = async (email: string): Promise<{ success: boolean; 
   try {
     const result = await sendWelcomeEmail(email)
     return { success: result.success, error: result.error }
-  } catch (error: any) {
-    return { success: false, error: error.message }
+  } catch {
+    return { success: false, error: 'Failed to send email' }
   }
 }
 

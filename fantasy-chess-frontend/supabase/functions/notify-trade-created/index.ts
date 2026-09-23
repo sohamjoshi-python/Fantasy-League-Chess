@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { getSecretKey } from '../_shared/supabaseKeys.ts'
+import { GENERIC_ERROR, logServerError } from '../_shared/publicError.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -225,7 +226,8 @@ serve(async (req) => {
       })
 
       if (error) {
-        emailErrors.push(`${member.email}: ${error.message}`)
+        logServerError('notify-trade-created', error)
+        emailErrors.push('Could not send email')
       } else {
         emailsSent += 1
       }
@@ -236,10 +238,9 @@ serve(async (req) => {
       { status: emailErrors.length === 0 ? 200 : 207, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     )
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Internal server error'
-    console.error('notify-trade-created error:', error)
+    logServerError('notify-trade-created', error)
     return new Response(
-      JSON.stringify({ success: false, error: message }),
+      JSON.stringify({ success: false, error: GENERIC_ERROR }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     )
   }

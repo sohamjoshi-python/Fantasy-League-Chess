@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getSecretKey } from "../_shared/supabaseKeys.ts";
+import { logServerError } from "../_shared/publicError.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -34,14 +35,16 @@ serve(async (req) => {
     const { user_id } = await req.json();
     const { data: avatars, error: avatarsError } = await supabase.from("avatars").select("*");
     if (avatarsError) {
-      return jsonResponse({ error: avatarsError.message }, 500);
+      logServerError("fetch-avatars", avatarsError);
+      return jsonResponse({ error: "Could not load avatars" }, 500);
     }
     const { data: userAvatars, error: ownershipError } = await supabase
       .from("user_avatars")
       .select("*")
       .eq("user_id", user_id);
     if (ownershipError) {
-      return jsonResponse({ error: ownershipError.message }, 500);
+      logServerError("fetch-avatars", ownershipError);
+      return jsonResponse({ error: "Could not load avatars" }, 500);
     }
     const ownedIds = new Set((userAvatars ?? []).filter((a) => a.owned).map((a) => a.avatar_id));
     const equippedId = (userAvatars ?? []).find((a) => a.equipped)?.avatar_id;
@@ -52,7 +55,7 @@ serve(async (req) => {
     }));
     return jsonResponse(result);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Could not load avatars";
-    return jsonResponse({ error: message }, 400);
+    logServerError("fetch-avatars", error);
+    return jsonResponse({ error: "Could not load avatars" }, 400);
   }
 });

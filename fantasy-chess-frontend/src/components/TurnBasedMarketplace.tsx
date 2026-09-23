@@ -676,9 +676,9 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
 
       await notifyMarketplaceStartedIfNeeded(league.id);
       onUpdate();
-    } catch (err) {
-      console.error('Failed to start marketplace:', err);
-      setError(`Failed to start marketplace: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } catch {
+      console.error('Failed to start marketplace');
+      setError('Failed to start marketplace');
     } finally {
       setLoading(false);
     }
@@ -903,14 +903,8 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
         }
       }
       
-    } catch (err: any) {
-      console.error('❌ Error buying player:', err);
-      console.error('Error details:', {
-        message: err?.message,
-        details: err?.details,
-        hint: err?.hint,
-        code: err?.code
-      });
+    } catch {
+      console.error('Error buying player');
       setError('Failed to buy player');
     } finally {
       setLoading(false);
@@ -1146,9 +1140,9 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
       onUpdate();
       await notifyMarketplaceTurnIfNeeded(league.id);
       await finishDraftAfterWithdrawal(remainingOrder, nextTurn, draftCompleted);
-    } catch (err: any) {
-      console.error('Error leaving draft:', err);
-      setError(err?.message || 'Failed to leave the draft');
+    } catch {
+      console.error('Error leaving draft');
+      setError('Failed to leave the draft');
     } finally {
       setLoading(false);
     }

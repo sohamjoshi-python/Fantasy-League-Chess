@@ -43,8 +43,8 @@ export async function sendResendEmail(emailData: ResendEmailData): Promise<{
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`Email sending failed: ${error}`);
+      console.error('Email sending failed');
+      throw new Error('Failed to send email');
     }
 
     const result = await response.json();
@@ -53,9 +53,9 @@ export async function sendResendEmail(emailData: ResendEmailData): Promise<{
       provider: result.provider || 'Resend',
       messageId: result.messageId 
     };
-  } catch (error: any) {
-    console.error('Error sending Resend email:', error);
-    return { success: false, error: error.message };
+  } catch {
+    console.error('Error sending Resend email');
+    return { success: false, error: 'Failed to send email' };
   }
 }
 

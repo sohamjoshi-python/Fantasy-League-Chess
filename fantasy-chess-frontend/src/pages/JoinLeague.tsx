@@ -7,6 +7,7 @@ import { League } from '../types'
 import { Users, Trophy, Calendar, Search, Copy } from 'lucide-react'
 import { getLeagueEndDateFromStart, getMinLeagueStartDateString } from '../lib/calendarDate'
 import { formatCalendarDate, isLeagueJoinClosed } from '../lib/leagueStatus'
+import { publicErrorMessage } from '../lib/publicError'
 
 // Helper function to send league joined email
 const sendLeagueJoinedEmail = async (userEmail: string, leagueName: string) => {
@@ -25,16 +26,7 @@ const sendLeagueJoinedEmail = async (userEmail: string, leagueName: string) => {
 }
 
 function getSupabaseErrorMessage(error: unknown, fallback = 'Failed to create league'): string {
-  if (!error) return fallback
-  if (typeof error === 'string' && error.trim()) return error
-  if (typeof error === 'object') {
-    const e = error as { message?: string; details?: string; hint?: string }
-    const parts = [e.message, e.details, e.hint].filter(
-      (part): part is string => typeof part === 'string' && part.trim().length > 0
-    )
-    if (parts.length) return parts.join(' ')
-  }
-  return fallback
+  return publicErrorMessage(error, fallback)
 }
 
 const JoinLeague: React.FC = () => {
@@ -243,7 +235,7 @@ const JoinLeague: React.FC = () => {
 
       await completeLeagueJoin(league)
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Failed to join league')
+      setError(publicErrorMessage(error, 'Failed to join league'))
     } finally {
       setLoading(false)
     }
@@ -326,7 +318,7 @@ const JoinLeague: React.FC = () => {
 
       await completeLeagueJoin(league)
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Failed to join league')
+      setError(publicErrorMessage(error, 'Failed to join league'))
     } finally {
       setLoading(false)
     }

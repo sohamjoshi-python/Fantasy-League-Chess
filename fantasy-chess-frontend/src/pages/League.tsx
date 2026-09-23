@@ -407,7 +407,7 @@ const LeaguePage: React.FC = () => {
         const { error: payoutError } = await supabase.rpc('process_league_payouts');
         if (payoutError) {
           console.error('Failed to process league payouts:', payoutError);
-          setError(payoutError.message || 'Failed to process league payout.');
+          setError('Failed to process league payout.');
           return;
         }
 
@@ -905,7 +905,8 @@ const LeaguePage: React.FC = () => {
         .maybeSingle()
 
       if (existingLineupError) {
-        setError(existingLineupError.message || 'Failed to load lineup')
+        console.error('Failed to load lineup')
+        setError('Failed to load lineup')
         return
       }
 
@@ -919,7 +920,8 @@ const LeaguePage: React.FC = () => {
           .eq('id', existingLineup.id)
 
         if (updateError) {
-          setError(updateError.message || 'Failed to update lineup')
+          console.error('Failed to update lineup')
+          setError('Failed to update lineup')
           return
         }
       } else {
@@ -935,17 +937,17 @@ const LeaguePage: React.FC = () => {
             }
           ]);
         if (insertError) {
-          setError(insertError.message || 'Failed to insert lineup');
+          console.error('Failed to save lineup')
+          setError('Failed to save lineup');
           return;
         }
       }
 
       setIsEditingLineup(false)
       await loadLeagueData()
-    } catch (error: any) {
-      // Show a clear error message if available
-      setError(error?.message || error?.toString() || 'Failed to save lineup')
-      console.error('Error saving lineup:', error)
+    } catch {
+      console.error('Error saving lineup')
+      setError('Failed to save lineup')
     } finally {
       setLoading(false)
     }
@@ -981,7 +983,7 @@ const LeaguePage: React.FC = () => {
       setBotLoading(true)
       setBotNameError('')
 
-      const { success, bot: newBot, error } = await createBot(league.id, botName.trim())
+      const { success, bot: newBot } = await createBot(league.id, botName.trim())
       
       if (success && newBot) {
         setBot(newBot)
@@ -1028,10 +1030,12 @@ const LeaguePage: React.FC = () => {
         // Reload league data to update draft order
         await loadLeagueData()
       } else {
-        setBotNameError(error?.message || 'Failed to create bot')
+        console.error('Failed to create bot')
+        setBotNameError('Failed to create bot')
       }
-    } catch (error: any) {
-      setBotNameError(error.message || 'Failed to create bot')
+    } catch {
+      console.error('Failed to create bot')
+      setBotNameError('Failed to create bot')
     } finally {
       setBotLoading(false)
     }
@@ -1417,8 +1421,8 @@ const LeaguePage: React.FC = () => {
       
       navigate('/dashboard');
     } catch (err) {
-      console.error('Delete league error:', err);
-      setError('Failed to delete league: ' + (err instanceof Error ? err.message : 'Unknown error'));
+      console.error('Delete league error');
+      setError('Failed to delete league');
     } finally {
       setLoading(false);
     }
@@ -1495,8 +1499,8 @@ const LeaguePage: React.FC = () => {
         .update(leagueUpdate)
         .eq('id', league.id);
       if (leaguesError) {
-        console.error('Error updating leagues.member_ids:', leaguesError);
-        setError('Failed to update league members: ' + leaguesError.message);
+        console.error('Error updating leagues.member_ids');
+        setError('Failed to update league members');
         setLoading(false);
         return;
       }
@@ -1509,7 +1513,7 @@ const LeaguePage: React.FC = () => {
         .eq('user_id', userIdToRemove);
       if (leagueMembersError) {
         // Don't fail if league_members table doesn't exist or user is a bot
-        console.log('Note: Could not remove from league_members (table may not exist or user is bot):', leagueMembersError.message);
+        console.log('Note: Could not remove from league_members (table may not exist or user is bot)');
       }
       
       // Remove user's team
@@ -1519,8 +1523,8 @@ const LeaguePage: React.FC = () => {
         .eq('league_id', league.id)
         .eq('user_id', userIdToRemove);
       if (teamsError) {
-        console.error('Error deleting team:', teamsError);
-        setError('Failed to delete team: ' + teamsError.message);
+        console.error('Error deleting team');
+        setError('Failed to delete team');
         setLoading(false);
         return;
       }
@@ -1532,8 +1536,8 @@ const LeaguePage: React.FC = () => {
         .eq('league_id', league.id)
         .eq('user_id', userIdToRemove);
       if (lineupsError) {
-        console.error('Error deleting lineups:', lineupsError);
-        setError('Failed to delete lineups: ' + lineupsError.message);
+        console.error('Error deleting lineups');
+        setError('Failed to delete lineups');
         setLoading(false);
         return;
       }
@@ -1546,8 +1550,8 @@ const LeaguePage: React.FC = () => {
         await loadLeagueData();
       }
     } catch (err) {
-      console.error('Unexpected error in removeUserFromLeague:', err);
-      setError('Unexpected error: ' + (err as Error).message);
+      console.error('Unexpected error in removeUserFromLeague');
+      setError('Something went wrong. Please try again.');
     } finally {
       setLoading(false);
     }

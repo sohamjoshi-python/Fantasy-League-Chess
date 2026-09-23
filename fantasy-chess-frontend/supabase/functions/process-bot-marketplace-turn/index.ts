@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 import { getSecretKey } from "../_shared/supabaseKeys.ts"
+import { GENERIC_ERROR, logServerError } from "../_shared/publicError.ts"
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -43,7 +44,7 @@ serve(async (req) => {
     if (leagueError || !league) {
       console.error("Failed to fetch league:", leagueError)
       return new Response(
-        JSON.stringify({ success: false, error: leagueError || "No league found" }),
+        JSON.stringify({ success: false, error: "Could not load league" }),
         { 
           status: 500, 
           headers: { ...corsHeaders, "Content-Type": "application/json" } 
@@ -143,7 +144,7 @@ serve(async (req) => {
         if (leagueUpdateError) {
           console.error("Failed to update league turn:", leagueUpdateError)
           return new Response(
-            JSON.stringify({ success: false, error: leagueUpdateError }),
+            JSON.stringify({ success: false, error: "Could not update the draft" }),
             { 
               status: 500, 
               headers: { ...corsHeaders, "Content-Type": "application/json" } 
@@ -178,7 +179,7 @@ serve(async (req) => {
       if (leagueUpdateError) {
         console.error("Failed to update league turn:", leagueUpdateError)
         return new Response(
-          JSON.stringify({ success: false, error: leagueUpdateError }),
+          JSON.stringify({ success: false, error: "Could not update the draft" }),
           { 
             status: 500, 
             headers: { ...corsHeaders, "Content-Type": "application/json" } 
@@ -345,7 +346,7 @@ serve(async (req) => {
       if (leagueUpdateError) {
         console.error("Failed to update league turn:", leagueUpdateError)
         return new Response(
-          JSON.stringify({ success: false, error: leagueUpdateError }),
+          JSON.stringify({ success: false, error: "Could not update the draft" }),
           { 
             status: 500, 
             headers: { ...corsHeaders, "Content-Type": "application/json" } 
@@ -384,7 +385,7 @@ serve(async (req) => {
       if (leagueUpdateError) {
         console.error("Failed to update league turn:", leagueUpdateError)
         return new Response(
-          JSON.stringify({ success: false, error: leagueUpdateError }),
+          JSON.stringify({ success: false, error: "Could not update the draft" }),
           { 
             status: 500, 
             headers: { ...corsHeaders, "Content-Type": "application/json" } 
@@ -418,9 +419,9 @@ serve(async (req) => {
     }
 
   } catch (error) {
-    console.error("Error in process-bot-marketplace-turn:", error)
+    logServerError("process-bot-marketplace-turn", error)
     return new Response(
-      JSON.stringify({ success: false, error: error.message }),
+      JSON.stringify({ success: false, error: GENERIC_ERROR }),
       { 
         status: 500, 
         headers: { ...corsHeaders, "Content-Type": "application/json" } 

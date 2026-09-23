@@ -775,48 +775,29 @@ export async function autoMarketplaceForBot(botId: string, leagueId: string): Pr
       body: { botId, leagueId }
     });
     
-    console.log('Full response:', response);
-    
     if (response.error) {
-      // Check if it's a 400 error by looking at the response
       const is400Error = response.response && response.response.status === 400;
       
       if (is400Error) {
-        console.log(`⏳ Bot ${botId} turn not ready yet (400 - expected behavior)`);
-        console.log('Error response:', response.error);
-        console.log('Response data:', response.data);
-        
-        // Try to extract the response body for debug info
-        try {
-          if (response.response) {
-            const responseText = await response.response.text();
-            console.log('Response body:', responseText);
-            const responseData = JSON.parse(responseText);
-            console.log('Parsed response:', responseData);
-            return { success: false, error: 'Bot turn not ready yet', debug: responseData };
-          }
-        } catch (parseError) {
-          console.log('Could not parse response body:', parseError);
-        }
-        return { success: false, error: 'Bot turn not ready yet', debug: response };
+        console.log(`Bot ${botId} turn not ready yet`);
+        return { success: false, error: 'Bot turn not ready yet' };
       }
       
-      console.error('❌ Edge Function error:', response.error);
-      return { success: false, error: response.error.message };
+      console.error('Edge Function error');
+      return { success: false, error: 'Could not complete the bot turn' };
     }
     
     const { data } = response;
     
     if (data && data.success) {
-      console.log('✅ Bot marketplace turn completed via Edge Function:', data);
       return { success: true, data };
     } else {
-      console.log('⚠️ Edge Function returned non-success response:', data);
-      return { success: false, error: data?.error || 'Unknown response from Edge Function' };
+      console.error('Edge Function returned a non-success response');
+      return { success: false, error: 'Could not complete the bot turn' };
     }
-  } catch (error) {
-    console.error('❌ Error calling Edge Function:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  } catch {
+    console.error('Error calling Edge Function');
+    return { success: false, error: 'Could not complete the bot turn' };
   }
 }
 

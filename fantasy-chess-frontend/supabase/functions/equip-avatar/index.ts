@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getSecretKey } from "../_shared/supabaseKeys.ts";
+import { logServerError } from "../_shared/publicError.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -49,7 +50,7 @@ serve(async (req) => {
     }
     return jsonResponse({ success: true });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Could not equip avatar";
-    return jsonResponse({ error: message }, 400);
+    logServerError("equip-avatar", error);
+    return jsonResponse({ error: "Could not equip avatar" }, 400);
   }
 });

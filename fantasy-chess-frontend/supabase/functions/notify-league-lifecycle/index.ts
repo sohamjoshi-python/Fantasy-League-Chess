@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2"
 import { getSecretKey } from "../_shared/supabaseKeys.ts"
+import { GENERIC_ERROR, logServerError } from "../_shared/publicError.ts"
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -249,9 +250,8 @@ async function notifyLeague(
       })
       emailsSent += 1
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      emailErrors.push(`${member.email}: ${message}`)
-      console.error(`Failed to send ${event} email to ${member.email}:`, error)
+      logServerError("notify-league-lifecycle", error)
+      emailErrors.push("Could not send email")
     }
   }
 
@@ -326,10 +326,9 @@ serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     )
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Internal server error"
-    console.error("notify-league-lifecycle error:", error)
+    logServerError("notify-league-lifecycle", error)
     return new Response(
-      JSON.stringify({ success: false, error: message }),
+      JSON.stringify({ success: false, error: GENERIC_ERROR }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     )
   }

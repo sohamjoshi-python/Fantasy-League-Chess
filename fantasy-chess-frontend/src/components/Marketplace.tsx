@@ -680,9 +680,9 @@ export default function Marketplace({ leagueId, onTeamUpdate }: MarketplaceProps
       await loadData();
       await onTeamUpdate?.();
       setSellingToMarketplace(null);
-    } catch (err) {
-      setError('Failed to sell player to marketplace: ' + JSON.stringify(err));
-      console.error('Sell to Marketplace exception:', err);
+    } catch {
+      console.error('Sell to Marketplace exception');
+      setError('Failed to sell player to marketplace');
     } finally {
       setLoading(false);
     }

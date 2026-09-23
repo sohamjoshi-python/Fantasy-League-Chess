@@ -5,6 +5,7 @@ import { ArrowLeft, Eye, EyeOff, CheckCircle, Mail } from 'lucide-react'
 import logo from '../assets/fantasy-league-chess-logo-updated.png'
 import { getBrandName } from '../utils/browserDetection'
 import { supabase } from '../lib/supabase'
+import { publicErrorMessage } from '../lib/publicError'
 
 const SignIn: React.FC = () => {
   const [email, setEmail] = useState('')
@@ -30,7 +31,7 @@ const SignIn: React.FC = () => {
       
       if (errorParam === 'access_denied' && errorDescription) {
         const message = errorDescription.replace(/\+/g, ' ')
-        setError(message)
+        setError(publicErrorMessage(message, 'This link is invalid or has expired.'))
         // Clear the hash from URL
         window.history.replaceState(null, '', window.location.pathname)
       }
@@ -49,7 +50,7 @@ const SignIn: React.FC = () => {
         navigate('/dashboard')
       }, 1000)
     } catch (error: any) {
-      setError(error.message || 'Failed to sign in')
+      setError(publicErrorMessage(error, 'Failed to sign in'))
     } finally {
       setLoading(false)
     }
@@ -95,7 +96,7 @@ const SignIn: React.FC = () => {
       setResetRequestTime(timeString)
       setResetEmailSent(true)
     } catch (error: any) {
-      setError(error.message || 'Failed to send reset email')
+      setError(publicErrorMessage(error, 'Failed to send reset email'))
     } finally {
       setLoading(false)
     }

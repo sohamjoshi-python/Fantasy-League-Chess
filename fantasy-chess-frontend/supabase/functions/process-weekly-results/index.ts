@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { getSecretKey } from '../_shared/supabaseKeys.ts'
+import { GENERIC_ERROR, logServerError } from '../_shared/publicError.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -257,9 +258,9 @@ serve(async (req) => {
     })
 
     if (error) {
-      console.error('Error processing weekly results:', error)
+      logServerError('process-weekly-results', error)
       return new Response(
-        JSON.stringify({ error: error.message }),
+        JSON.stringify({ error: GENERIC_ERROR }),
         {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -482,10 +483,9 @@ serve(async (req) => {
       },
     )
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Internal server error'
-    console.error('Unexpected error:', error)
+    logServerError('process-weekly-results', error)
     return new Response(
-      JSON.stringify({ error: message }),
+      JSON.stringify({ error: GENERIC_ERROR }),
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

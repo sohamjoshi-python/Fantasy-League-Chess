@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { resolveAvatarUrl } from '../lib/avatars'
+import { publicErrorMessage } from '../lib/publicError'
 import { User } from '../types'
 import AvatarShop from '../components/AvatarShop'
 
@@ -36,8 +37,8 @@ const Profile: React.FC<ProfileProps> = ({ showOnlyShop = false, onCloseShop }) 
       // Account is gone; end the session and return to the landing page.
       await signOut().catch(() => {})
       navigate('/')
-    } catch (err: any) {
-      setDeleteError(err?.message || 'Failed to delete account. Please try again or contact support.')
+    } catch (err: unknown) {
+      setDeleteError(publicErrorMessage(err, 'Failed to delete account. Please try again or contact support.'))
       setDeleting(false)
     }
   }
