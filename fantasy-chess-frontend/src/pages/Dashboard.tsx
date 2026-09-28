@@ -172,6 +172,7 @@ const Dashboard: React.FC = () => {
 
       if (activeLeague) {
         const league = activeLeague;
+        let teamPlayerIds = new Set<string>();
         try {
           const { data: teams, error: teamError } = await supabase
             .from('teams')
@@ -184,6 +185,7 @@ const Dashboard: React.FC = () => {
             console.error('Error loading team:', teamError);
           } else if (teams) {
             setUserTeam(teams);
+            teamPlayerIds = new Set(teams.player_ids || []);
             // Load team players if team exists
             if (teams.player_ids && teams.player_ids.length > 0) {
               try {
@@ -206,8 +208,11 @@ const Dashboard: React.FC = () => {
         }
 
         // Load the same editable lineup week as the League page. After this
-        // week's games are imported, edits apply to next week.
+        // week's games are imported, edits apply to next week. If that next-week
+        // row does not exist yet, show this week's scored lineup as the template
+        // the League page already displays.
         try {
+          const currentWeek = getCurrentWeekStart();
           const lineupWeek = await getEditableLineupWeekStart();
           setEditableLineupWeek(lineupWeek);
 
@@ -219,16 +224,44 @@ const Dashboard: React.FC = () => {
             .eq('week_start_date', lineupWeek)
             .maybeSingle();
 
+          let lineupToDisplay = lineups;
+          if (!lineupToDisplay && !lineupError && lineupWeek !== currentWeek) {
+            const { data: scoredCurrentLineup, error: scoredLineupError } = await supabase
+              .from('lineups')
+              .select('*')
+              .eq('user_id', user.id)
+              .eq('league_id', league.id)
+              .eq('week_start_date', currentWeek)
+              .maybeSingle();
+
+            if (scoredLineupError) {
+              console.error('Error loading scored lineup template:', scoredLineupError);
+            } else if (scoredCurrentLineup) {
+              lineupToDisplay = {
+                ...scoredCurrentLineup,
+                id: '',
+                week_start_date: lineupWeek,
+                total_points: 0,
+              };
+            }
+          }
+
           if (lineupError) {
             console.error('Error loading lineup:', lineupError);
-          } else if (lineups) {
-            setCurrentLineup(lineups);
-            if (lineups.player_ids && lineups.player_ids.length > 0) {
+          } else if (lineupToDisplay) {
+            const currentTeamLineupIds = (lineupToDisplay.player_ids || []).filter((id: string) =>
+              teamPlayerIds.has(id)
+            );
+            setCurrentLineup({
+              ...lineupToDisplay,
+              player_ids: currentTeamLineupIds,
+            });
+            if (currentTeamLineupIds.length > 0) {
               try {
                 const { data: lineupPlayerData, error: lineupPlayersError } = await supabase
                   .from('chess_players')
                   .select('*')
-                  .in('id', lineups.player_ids);
+                  .in('id', currentTeamLineupIds);
                 
                 if (lineupPlayersError) {
                   console.error('Error loading lineup players:', lineupPlayersError);
