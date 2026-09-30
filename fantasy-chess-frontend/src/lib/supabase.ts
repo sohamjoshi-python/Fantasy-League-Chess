@@ -34,16 +34,18 @@ export const supabase: SupabaseClient = ((): SupabaseClient => {
   }
   if (!window.__supabaseClient) {
     window.__supabaseClient = createClient(url, publishableKey)
-    // Confirmation links put tokens in the hash. Clear them after the client
-    // reads the session so a refresh does not parse the URL again.
-    const hash = window.location.hash
-    if (
-      hash.includes('access_token') ||
-      hash.includes('refresh_token') ||
-      hash.includes('error_description')
-    ) {
-      window.history.replaceState(null, '', window.location.pathname + window.location.search)
-    }
+    // Recovery and confirmation links put tokens in the URL hash. GoTrue only
+    // reads that URL after it acquires a lock, so stripping the hash here
+    // makes a brand-new reset link look expired. Clear the tokens after the
+    // session has been read. Leave error fragments for the page to display.
+    void window.__supabaseClient.auth.getSession().finally(() => {
+      const hash = window.location.hash
+      if (hash.includes('access_token') || hash.includes('refresh_token')) {
+        const current = new URL(window.location.href)
+        current.hash = ''
+        window.history.replaceState(window.history.state, '', current.pathname + current.search)
+      }
+    })
   }
   return window.__supabaseClient
 })()

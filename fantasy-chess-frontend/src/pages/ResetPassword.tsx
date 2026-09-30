@@ -19,84 +19,53 @@ const ResetPassword: React.FC = () => {
   const navigate = useNavigate()
 
   useEffect(() => {
-    let timeoutId: NodeJS.Timeout
+    let cancelled = false
 
-    // Check for error in URL hash (from expired/invalid links)
-    const hash = window.location.hash
-    console.log('Reset password page loaded, hash:', hash)
-    
-    if (hash) {
-      const params = new URLSearchParams(hash.substring(1))
-      const errorParam = params.get('error')
-      const errorDescription = params.get('error_description')
-      const typeParam = params.get('type')
-      const accessToken = params.get('access_token')
-      
-      console.log('URL params:', { errorParam, typeParam, hasAccessToken: !!accessToken })
-      
-      if (errorParam === 'access_denied' && errorDescription) {
-        const message = errorDescription.replace(/\+/g, ' ')
-        setError(publicErrorMessage(message, 'This link is invalid or has expired.'))
-        setIsValidSession(false)
-        setCheckingSession(false)
-        // Clear the hash from URL
-        window.history.replaceState(null, '', window.location.pathname)
-        return
-      }
-      
-      // Check if this is a recovery/password reset link
-      if (typeParam === 'recovery' && accessToken) {
-        console.log('✅ Recovery link detected with access token')
-        // Give Supabase a moment to process the token and set up the session
-        timeoutId = setTimeout(() => {
-          checkSession()
-        }, 500)
-        return
-      }
-    }
+    // Capture redirect errors before auth initialization finishes. Do not
+    // clear the URL until getSession() resolves — that call is what reads
+    // the recovery tokens out of the hash.
+    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''))
+    const searchParams = new URLSearchParams(window.location.search)
+    const hadAuthError = Boolean(
+      hashParams.get('error') || searchParams.get('error') || hashParams.get('error_description')
+    )
+    const errorDescription = (
+      hashParams.get('error_description') || searchParams.get('error_description') || ''
+    ).replace(/\+/g, ' ')
 
-    // If no hash params, check session immediately
-    checkSession()
-
-    // Check if user has a valid recovery session
-    async function checkSession() {
+    async function validateResetLink() {
       try {
         const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-        
-        console.log('Session check:', { 
-          hasSession: !!session, 
-          userId: session?.user?.id,
-          error: sessionError 
-        })
-        
-        if (sessionError) {
-          console.error('Session error:', sessionError)
+        if (cancelled) return
+
+        if (sessionError || !session?.user) {
           setIsValidSession(false)
-          setError('Invalid or expired reset link. Please request a new password reset.')
-          setCheckingSession(false)
-          return
-        }
-        
-        // Check if this is a valid session from the recovery email
-        if (session && session.user) {
-          console.log('✅ Valid recovery session found for user:', session.user.email)
-          setIsValidSession(true)
+          setError(
+            hadAuthError
+              ? publicErrorMessage(errorDescription, 'This link is invalid or has expired.')
+              : 'Invalid or expired reset link. Please request a new password reset.'
+          )
+          if (hadAuthError) {
+            window.history.replaceState(null, '', window.location.pathname)
+          }
         } else {
-          console.log('❌ No valid session found')
-          setIsValidSession(false)
-          setError('Invalid or expired reset link. Please request a new password reset.')
+          setIsValidSession(true)
         }
       } catch (err) {
         console.error('Error checking session:', err)
-        setIsValidSession(false)
-        setError('Error validating reset link. Please try again.')
+        if (!cancelled) {
+          setIsValidSession(false)
+          setError('Error validating reset link. Please try again.')
+        }
+      } finally {
+        if (!cancelled) setCheckingSession(false)
       }
-      
-      setCheckingSession(false)
     }
 
+    validateResetLink()
+
     return () => {
-      if (timeoutId) clearTimeout(timeoutId)
+      cancelled = true
     }
   }, [])
 

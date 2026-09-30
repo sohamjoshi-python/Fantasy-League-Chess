@@ -1,15 +1,17 @@
 import React, { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 
 const NewUserRedirect: React.FC = () => {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const [hasChecked, setHasChecked] = useState(false)
 
   useEffect(() => {
     const checkAndRedirect = async () => {
+      if (location.pathname === '/reset-password') return
       if (user && !hasChecked) {
         try {
           // Check if user has been redirected to tutorial before
@@ -39,7 +41,7 @@ const NewUserRedirect: React.FC = () => {
     }
 
     checkAndRedirect()
-  }, [user, navigate, hasChecked])
+  }, [user, navigate, hasChecked, location.pathname])
 
   return null // This component doesn't render anything
 }
