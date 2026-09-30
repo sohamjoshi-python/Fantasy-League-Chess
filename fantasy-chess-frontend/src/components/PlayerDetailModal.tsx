@@ -12,9 +12,7 @@ const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({ player, onClose }
   const navigate = useNavigate()
 
   const handleViewHistory = () => {
-    // Create URL-friendly player name (lowercase, no spaces)
-    const urlName = player.name.toLowerCase().replace(/\s+/g, '')
-    navigate(`/player/${urlName}`)
+    navigate(`/player/${player.id}`)
     onClose()
   }
 

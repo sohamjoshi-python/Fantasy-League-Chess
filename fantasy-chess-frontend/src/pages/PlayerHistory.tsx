@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, ExternalLink, Trophy, TrendingUp, Target, Calendar, Award } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { ChessPlayer } from '../types'
+import { formatCalendarDate } from '../lib/leagueStatus'
 
 interface GameResult {
   id: string
@@ -30,6 +31,85 @@ interface WeeklyPerformance {
   worst_acl: number | null
 }
 
+const PLAYER_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+function nameSlug(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]/g, '')
+}
+
+function nameMatchesUrl(player: ChessPlayer, urlName: string) {
+  const slug = nameSlug(urlName)
+  if (!slug) return false
+  const nameParts = player.name.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean)
+  const username = nameSlug(player.username || '')
+  return nameParts.join('') === slug || username === slug || nameParts[0] === slug
+}
+
+function weekStartMonday(gameDate: string): string {
+  const match = gameDate.trim().replace(/\./g, '-').match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (!match) return gameDate
+  const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])))
+  const daysToMonday = date.getUTCDay() === 0 ? 6 : date.getUTCDay() - 1
+  date.setUTCDate(date.getUTCDate() - daysToMonday)
+  return date.toISOString().slice(0, 10)
+}
+
+function buildWeeklyPerformances(games: GameResult[], playerName: string): WeeklyPerformance[] {
+  const weeks = new Map<string, WeeklyPerformance & { aclSum: number; aclCount: number }>()
+
+  for (const game of games) {
+    const isWhite = game.white === playerName
+    const points = Number(isWhite ? game.white_points : game.black_points) || 0
+    const acl = isWhite ? game.white_accuracy : game.black_accuracy
+    const won = (isWhite && game.result === '1-0') || (!isWhite && game.result === '0-1')
+    const lost = (isWhite && game.result === '0-1') || (!isWhite && game.result === '1-0')
+    const weekStart = weekStartMonday(game.date)
+    const week = weeks.get(weekStart) || {
+      week_start_date: weekStart,
+      total_points: 0,
+      games_played: 0,
+      wins: 0,
+      draws: 0,
+      losses: 0,
+      average_acl: null,
+      best_acl: null,
+      worst_acl: null,
+      aclSum: 0,
+      aclCount: 0,
+    }
+
+    week.games_played += 1
+    week.total_points += points
+    if (won) week.wins += 1
+    else if (lost) week.losses += 1
+    else week.draws += 1
+
+    if (acl !== null && acl !== undefined && !Number.isNaN(Number(acl))) {
+      const aclValue = Number(acl)
+      week.aclSum += aclValue
+      week.aclCount += 1
+      week.best_acl = week.best_acl === null ? aclValue : Math.min(week.best_acl, aclValue)
+      week.worst_acl = week.worst_acl === null ? aclValue : Math.max(week.worst_acl, aclValue)
+    }
+
+    weeks.set(weekStart, week)
+  }
+
+  return Array.from(weeks.values())
+    .map((week) => ({
+      week_start_date: week.week_start_date,
+      total_points: week.total_points,
+      games_played: week.games_played,
+      wins: week.wins,
+      draws: week.draws,
+      losses: week.losses,
+      average_acl: week.aclCount > 0 ? week.aclSum / week.aclCount : null,
+      best_acl: week.best_acl,
+      worst_acl: week.worst_acl,
+    }))
+    .sort((a, b) => b.week_start_date.localeCompare(a.week_start_date))
+}
+
 const PlayerHistory: React.FC = () => {
   const { playerName } = useParams<{ playerName: string }>()
   const navigate = useNavigate()
@@ -48,56 +128,78 @@ const PlayerHistory: React.FC = () => {
   const loadPlayerData = async () => {
     try {
       setLoading(true)
-      console.log('Loading player data for:', playerName)
+      let playerData: ChessPlayer | null = null
 
-      // Convert URL player name back to actual player name
-      // URL format: "magnuscarlsen" -> Need to find actual "Magnus Carlsen"
-      const { data: allPlayers, error: searchError } = await supabase
-        .from('chess_players')
-        .select('*')
+      if (playerName && PLAYER_ID_PATTERN.test(playerName)) {
+        const { data, error } = await supabase
+          .from('chess_players')
+          .select('*')
+          .eq('id', playerName)
+          .maybeSingle()
 
-      if (searchError) throw searchError
+        if (error) throw error
+        playerData = data
+      } else if (playerName) {
+        // Older links used a shortened name such as "hikaru". The table is
+        // larger than one PostgREST page, so scan every page.
+        const pageSize = 1000
+        const slug = nameSlug(playerName)
+        const looseMatches: ChessPlayer[] = []
+        let exactMatch: ChessPlayer | null = null
 
-      // Find player by matching URL-friendly name
-      const playerData = allPlayers?.find(p => 
-        p.name.toLowerCase().replace(/\s+/g, '') === playerName?.toLowerCase()
-      )
+        for (let page = 0; page < 20 && !exactMatch; page += 1) {
+          const { data, error } = await supabase
+            .from('chess_players')
+            .select('*')
+            .order('id')
+            .range(page * pageSize, (page + 1) * pageSize - 1)
+
+          if (error) throw error
+          if (!data || data.length === 0) break
+
+          for (const candidate of data) {
+            if (!nameMatchesUrl(candidate, playerName)) continue
+            const candidateSlug = nameSlug(candidate.name)
+            const usernameSlug = nameSlug(candidate.username || '')
+            if (candidateSlug === slug || usernameSlug === slug) {
+              exactMatch = candidate
+              break
+            }
+            looseMatches.push(candidate)
+          }
+
+          if (data.length < pageSize) break
+        }
+
+        playerData = exactMatch || (looseMatches.length === 1 ? looseMatches[0] : null)
+      }
 
       if (!playerData) {
         console.error('Player not found for URL:', playerName)
+        setPlayer(null)
         setLoading(false)
         return
       }
 
-      console.log('Found player:', playerData.name)
       setPlayer(playerData)
 
-      // Load weekly performance
-      console.log('Loading weekly performance for player ID:', playerData.id)
-      const { data: perfData, error: perfError } = await supabase
-        .rpc('get_player_weekly_performance', { p_player_id: playerData.id })
-
-      if (perfError) {
-        console.error('Error loading weekly performance:', perfError)
-      } else {
-        console.log('Weekly performance data:', perfData)
-        setWeeklyPerformances(perfData || [])
-      }
-
-      // Load recent games from the games table (uses player names, not IDs)
-      console.log('Loading games for player name:', playerData.name)
+      // Titled Tuesday results live in games, keyed by player name.
+      // get_player_weekly_performance reads game_results, which this ingest does not fill.
       const { data: gamesData, error: gamesError } = await supabase
         .from('games')
         .select('*')
         .or(`white.eq."${playerData.name}",black.eq."${playerData.name}"`)
         .order('date', { ascending: false })
-        .limit(20)
+        .limit(1000)
 
       if (gamesError) {
         console.error('Error loading games:', gamesError)
+        setRecentGames([])
+        setWeeklyPerformances([])
       } else {
-        console.log('Loaded games:', gamesData?.length)
-        setRecentGames(gamesData as GameResult[] || [])
+        const games = (gamesData || []) as GameResult[]
+        setRecentGames(games)
+        setWeeklyPerformances(buildWeeklyPerformances(games, playerData.name))
       }
     } catch (error) {
       console.error('Error loading player data:', error)
@@ -295,7 +397,7 @@ const PlayerHistory: React.FC = () => {
                       <div className="flex justify-between items-start mb-3">
                         <div>
                           <h4 className="font-semibold text-gray-900">
-                            Week of {new Date(week.week_start_date).toLocaleDateString()}
+                            Week of {formatCalendarDate(week.week_start_date)}
                           </h4>
                           <p className="text-sm text-gray-600">{week.games_played} games played</p>
                         </div>
@@ -373,7 +475,10 @@ const PlayerHistory: React.FC = () => {
                             </div>
                             <div className="flex items-center gap-4 text-sm text-gray-600">
                               <span>
-                                {new Date(game.date).toLocaleDateString()}
+                                {formatCalendarDate(game.date.replace(/\./g, '-'))}
+                              </span>
+                              <span>
+                                Points: <span className="font-semibold">{Number((isWhite ? game.white_points : game.black_points) || 0).toFixed(1)}</span>
                               </span>
                               {playerACL && (
                                 <span>
