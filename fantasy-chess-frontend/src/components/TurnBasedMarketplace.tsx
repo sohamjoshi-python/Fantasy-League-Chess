@@ -1678,7 +1678,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
         </div>
 
         {/* Players List */}
-        <div className="space-y-3 max-h-96 overflow-y-auto">
+        <div className={`space-y-3 max-h-96 overflow-y-auto ${dataLoading ? 'min-h-96' : ''}`}>
           {dataLoading ? (
             <LoadingSpinner size="lg" text="Loading players..." className="py-8" />
           ) : (

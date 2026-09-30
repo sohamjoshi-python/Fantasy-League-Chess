@@ -7,7 +7,9 @@ import { League, Team, Lineup, ChessPlayer } from '../types'
 import { Crown, Users, Trophy, Calendar, Plus, ExternalLink } from 'lucide-react'
 import { fetchLineupPlayerBreakdownByRounds, fetchUserLeagueDisplayWeeks } from '../lib/supabase'
 import PlayerDetailModal from '../components/PlayerDetailModal'
+import { DashboardPageSkeleton, PointBreakdownSkeleton, SkeletonBlock } from '../components/ui/LoadingSpinner'
 import { addDaysToYmd, getLocalDateString, getWeekStartMonday } from '../lib/calendarDate'
+import { keepIfSame } from '../lib/keepIfSame'
 import { formatCalendarDate } from '../lib/leagueStatus'
 
 function getCurrentWeekStart() {
@@ -32,7 +34,8 @@ const Dashboard: React.FC = () => {
   const [editableLineupWeek, setEditableLineupWeek] = useState<string>('')
   const [pastLeagues, setPastLeagues] = useState<any[]>([])
   const [futureLeagues, setFutureLeagues] = useState<League[]>([])
-  const [loading, setLoading] = useState(false)
+  const [initialLoading, setInitialLoading] = useState(true)
+  const [rosterLoading, setRosterLoading] = useState(false)
   const [playerBreakdown, setPlayerBreakdown] = useState<{ 
     early: Array<{ player_id: string, player_name: string, player_points: number, wins?: number, total_games?: number }>, 
     late: Array<{ player_id: string, player_name: string, player_points: number, wins?: number, total_games?: number }> 
@@ -41,78 +44,128 @@ const Dashboard: React.FC = () => {
   const [breakdownError, setBreakdownError] = useState('')
   const [availableWeeks, setAvailableWeeks] = useState<string[]>([]);
   const [selectedWeek, setSelectedWeek] = useState<string | null>(null);
+  const [weeksReady, setWeeksReady] = useState(false);
   const [activeLeagues, setActiveLeagues] = useState<League[]>([]);
   const [selectedActiveLeagueId, setSelectedActiveLeagueId] = useState<string | null>(null);
   const [selectedPlayerForModal, setSelectedPlayerForModal] = useState<ChessPlayer | null>(null);
+  const loadGeneration = React.useRef(0);
+  const lastLoadedBreakdownKey = React.useRef('');
 
   useEffect(() => {
     if (user) {
-      loadDashboardData();
+      const generation = ++loadGeneration.current;
+      loadDashboardData(undefined, generation);
     } else {
-      setLoading(false);
+      setInitialLoading(false);
     }
-  }, [user]);
+  }, [user?.id]);
+
+  const loadDashboardDataRef = React.useRef<(preferred?: string | null, generation?: number) => void>(() => {})
+  const refreshExtrasRef = React.useRef<() => void>(() => {})
+  const weeksLeagueIdRef = React.useRef<string | null>(null)
 
   useEffect(() => {
-    const refreshOnFocus = () => {
-      if (user && document.visibilityState === 'visible') {
-        loadDashboardData();
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return
+      loadDashboardDataRef.current()
+      refreshExtrasRef.current()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [])
+
+  const refreshWeeks = async (background: boolean) => {
+    if (!currentLeague || !user) {
+      setWeeksReady(true)
+      return
+    }
+    if (!background) setWeeksReady(false)
+    try {
+      const displayWeeks = await fetchUserLeagueDisplayWeeks(user.id, currentLeague)
+      setAvailableWeeks(keepIfSame(displayWeeks))
+      setSelectedWeek((prev) => {
+        if (prev && displayWeeks.includes(prev)) return prev
+        return displayWeeks.length > 0 ? displayWeeks[displayWeeks.length - 1] : null
+      })
+    } catch (e) {
+      if (!background) {
+        setAvailableWeeks([])
+        setSelectedWeek(null)
       }
-    };
-    window.addEventListener('focus', refreshOnFocus);
-    document.addEventListener('visibilitychange', refreshOnFocus);
-    return () => {
-      window.removeEventListener('focus', refreshOnFocus);
-      document.removeEventListener('visibilitychange', refreshOnFocus);
-    };
-  }, [user]);
+    } finally {
+      setWeeksReady(true)
+    }
+  }
+
+  const refreshBreakdown = async (background: boolean) => {
+    if (!user || !currentLeague || !selectedWeek) return
+    const breakdownKey = `${user.id}-${currentLeague.id}-${selectedWeek}`
+    if (!background && lastLoadedBreakdownKey.current === breakdownKey) return
+    if (!background) {
+      setBreakdownLoading(true)
+      setBreakdownError('')
+    }
+    try {
+      const data = await fetchLineupPlayerBreakdownByRounds(user.id, currentLeague.id, selectedWeek.replace(/\./g, '-'))
+      setPlayerBreakdown(keepIfSame(data))
+      lastLoadedBreakdownKey.current = breakdownKey
+    } catch (e: any) {
+      if (!background) setBreakdownError('Could not load point breakdown')
+    } finally {
+      if (!background) setBreakdownLoading(false)
+    }
+  }
+
+  refreshExtrasRef.current = () => {
+    void refreshWeeks(true)
+    void refreshBreakdown(true)
+  }
 
   useEffect(() => {
-    async function fetchAvailableWeeks() {
-      if (!currentLeague || !user) return;
-      const displayWeeks = await fetchUserLeagueDisplayWeeks(user.id, currentLeague);
-      setAvailableWeeks(displayWeeks);
-      setSelectedWeek(displayWeeks.length > 0 ? displayWeeks[displayWeeks.length - 1] : null);
-    }
-    fetchAvailableWeeks();
-  }, [currentLeague, user]);
+    const sameLeague = weeksLeagueIdRef.current === (currentLeague?.id ?? null)
+    weeksLeagueIdRef.current = currentLeague?.id ?? null
+    void refreshWeeks(sameLeague && availableWeeks.length > 0)
+  }, [currentLeague?.id, user?.id]);
 
-  const lastLoadedBreakdownKey = React.useRef<string>('');
-  
   useEffect(() => {
-    async function loadBreakdown() {
-      if (!user || !currentLeague || !selectedWeek) {
-        return;
-      }
-      
-      // Create a unique key for this breakdown request
-      const breakdownKey = `${user.id}-${currentLeague.id}-${selectedWeek}`;
-      
-      // Skip if we've already loaded this exact breakdown
-      if (lastLoadedBreakdownKey.current === breakdownKey) {
-        return;
-      }
-      
-      setBreakdownLoading(true);
-      setBreakdownError('');
-      try {
-        const data = await fetchLineupPlayerBreakdownByRounds(user.id, currentLeague.id, selectedWeek.replace(/\./g, '-'));
-        setPlayerBreakdown(data);
-        lastLoadedBreakdownKey.current = breakdownKey;
-      } catch (e: any) {
-        setBreakdownError('Could not load point breakdown');
-      } finally {
-        setBreakdownLoading(false);
-      }
-    }
-    loadBreakdown();
-  }, [user, currentLeague, selectedWeek]);
+    void refreshBreakdown(false)
+  }, [currentLeague?.id, user?.id, selectedWeek]);
 
-  const loadDashboardData = async (preferredActiveLeagueId?: string | null) => {
+  const loadDashboardData = async (preferredActiveLeagueId?: string | null, generation?: number) => {
     if (!user) return
 
+    const capturedGeneration = generation ?? loadGeneration.current
+    const isCurrent = () => capturedGeneration === loadGeneration.current
+
+    const applyPastLeagues = (
+      past: Array<{ id: string; name: string; end_date: string }>,
+      result: { data: Array<{ league_id: string; total_points: number | null }> | null; error: { message?: string } | null }
+    ) => {
+      if (past.length === 0) {
+        setPastLeagues(keepIfSame<any[]>([]))
+        return
+      }
+      if (result.error) {
+        console.error('Error loading past league lineups:', result.error)
+        setPastLeagues(keepIfSame<any[]>([]))
+        return
+      }
+      const leagueTotals = new Map<string, number>()
+      ;(result.data || []).forEach((lineup) => {
+        const current = leagueTotals.get(lineup.league_id) || 0
+        leagueTotals.set(lineup.league_id, current + (lineup.total_points || 0))
+      })
+      setPastLeagues(keepIfSame(past.map(league => ({
+        league_id: league.id,
+        league_name: league.name,
+        total_points: leagueTotals.get(league.id) || 0,
+        end_date: league.end_date
+      })).sort((a, b) => b.end_date.localeCompare(a.end_date))))
+    }
+
     try {
-      setLoading(true)
+      const currentWeek = getCurrentWeekStart()
+      const gamesImportedPromise = hasImportedGamesForWeek(currentWeek)
 
       // Get all leagues where user is a member with retry logic
       let allLeagues = null;
@@ -130,7 +183,7 @@ const Dashboard: React.FC = () => {
           console.error(`Dashboard - leagues query error (attempt ${retryCount + 1}):`, error)
           retryCount++;
           if (retryCount < maxRetries) {
-            await new Promise(resolve => setTimeout(resolve, 1000 * retryCount)); // Exponential backoff
+            await new Promise(resolve => setTimeout(resolve, 250 * retryCount));
             continue;
           }
           throw error;
@@ -139,6 +192,8 @@ const Dashboard: React.FC = () => {
         allLeagues = data;
         break;
       }
+
+      if (!isCurrent()) return
 
       if (!allLeagues) {
         console.error('Failed to load leagues after all retries');
@@ -154,181 +209,135 @@ const Dashboard: React.FC = () => {
       const active = leagues.filter(l => l.end_date >= todayStr && l.start_date <= todayStr);
       const future = leagues.filter(l => l.start_date > todayStr);
       const past = leagues.filter(l => l.end_date < todayStr);
-      setActiveLeagues(active);
-      setFutureLeagues(future);
+      setActiveLeagues(keepIfSame(active));
+      setFutureLeagues(keepIfSame(future));
 
       const pickId = preferredActiveLeagueId ?? selectedActiveLeagueId;
       const activeLeague =
         active.find((l) => l.id === pickId) || active[0] || null;
       if (activeLeague) {
-        setSelectedActiveLeagueId(activeLeague.id);
+        setSelectedActiveLeagueId((prev) => prev === activeLeague.id ? prev : activeLeague.id);
       } else {
         setSelectedActiveLeagueId(null);
-        setUserTeam(null);
-        setCurrentLineup(null);
-        setLineupPlayers([]);
+        setUserTeam(keepIfSame<Team | null>(null));
+        setCurrentLineup(keepIfSame<Lineup | null>(null));
+        setLineupPlayers(keepIfSame<ChessPlayer[]>([]));
       }
-      setCurrentLeague(activeLeague);
+      setCurrentLeague(keepIfSame(activeLeague));
+      if (generation !== undefined && generation === loadGeneration.current) {
+        setInitialLoading(false)
+      }
+
+      const gamesImported = await gamesImportedPromise
+      if (!isCurrent()) return
+      const lineupWeek = gamesImported ? addDaysToYmd(currentWeek, 7) : currentWeek
+      setEditableLineupWeek((prev) => prev === lineupWeek ? prev : lineupWeek)
+
+      const pastLineupsPromise = past.length > 0
+        ? supabase
+            .from('lineups')
+            .select('league_id, total_points')
+            .eq('user_id', user.id)
+            .in('league_id', past.map(l => l.id))
+        : Promise.resolve({ data: null, error: null })
 
       if (activeLeague) {
-        const league = activeLeague;
-        let teamPlayerIds = new Set<string>();
-        try {
-          const { data: teams, error: teamError } = await supabase
+        if (generation !== undefined) setRosterLoading(true)
+        const league = activeLeague
+        const [teamResult, lineupResult, scoredLineupResult, pastLineupsResult] = await Promise.all([
+          supabase
             .from('teams')
             .select('*')
             .eq('user_id', user.id)
             .eq('league_id', league.id)
-            .maybeSingle(); // Use maybeSingle to handle no results gracefully
-
-          if (teamError) {
-            console.error('Error loading team:', teamError);
-          } else if (teams) {
-            setUserTeam(teams);
-            teamPlayerIds = new Set(teams.player_ids || []);
-            // Load team players if team exists
-            if (teams.player_ids && teams.player_ids.length > 0) {
-              try {
-                const { error: playersError } = await supabase
-                  .from('chess_players')
-                  .select('*')
-                  .in('id', teams.player_ids);
-                
-                if (playersError) {
-                  console.error('Error loading team players:', playersError);
-                }
-                // Note: setTeamPlayers was removed as per previous edit
-              } catch (error) {
-                console.error('Exception loading team players:', error);
-              }
-            }
-          }
-        } catch (error) {
-          console.error('Exception loading team:', error);
-        }
-
-        // Load the same editable lineup week as the League page. After this
-        // week's games are imported, edits apply to next week. If that next-week
-        // row does not exist yet, show this week's scored lineup as the template
-        // the League page already displays.
-        try {
-          const currentWeek = getCurrentWeekStart();
-          const lineupWeek = await getEditableLineupWeekStart();
-          setEditableLineupWeek(lineupWeek);
-
-          const { data: lineups, error: lineupError } = await supabase
+            .maybeSingle(),
+          supabase
             .from('lineups')
             .select('*')
             .eq('user_id', user.id)
             .eq('league_id', league.id)
             .eq('week_start_date', lineupWeek)
-            .maybeSingle();
+            .maybeSingle(),
+          lineupWeek !== currentWeek
+            ? supabase
+                .from('lineups')
+                .select('*')
+                .eq('user_id', user.id)
+                .eq('league_id', league.id)
+                .eq('week_start_date', currentWeek)
+                .maybeSingle()
+            : Promise.resolve({ data: null, error: null }),
+          pastLineupsPromise,
+        ])
 
-          let lineupToDisplay = lineups;
-          if (!lineupToDisplay && !lineupError && lineupWeek !== currentWeek) {
-            const { data: scoredCurrentLineup, error: scoredLineupError } = await supabase
-              .from('lineups')
-              .select('*')
-              .eq('user_id', user.id)
-              .eq('league_id', league.id)
-              .eq('week_start_date', currentWeek)
-              .maybeSingle();
+        if (!isCurrent()) return
 
-            if (scoredLineupError) {
-              console.error('Error loading scored lineup template:', scoredLineupError);
-            } else if (scoredCurrentLineup) {
-              lineupToDisplay = {
-                ...scoredCurrentLineup,
-                id: '',
-                week_start_date: lineupWeek,
-                total_points: 0,
-              };
+        const teamPlayerIds = new Set<string>(teamResult.data?.player_ids || [])
+        if (teamResult.error) {
+          console.error('Error loading team:', teamResult.error)
+        }
+        setUserTeam(keepIfSame(teamResult.data ?? null))
+
+        let lineupToDisplay = lineupResult.data
+        if (lineupResult.error) {
+          console.error('Error loading lineup:', lineupResult.error)
+        } else if (!lineupToDisplay && scoredLineupResult.data) {
+          if (scoredLineupResult.error) {
+            console.error('Error loading scored lineup template:', scoredLineupResult.error)
+          } else {
+            lineupToDisplay = {
+              ...scoredLineupResult.data,
+              id: '',
+              week_start_date: lineupWeek,
+              total_points: 0,
             }
           }
+        }
 
-          if (lineupError) {
-            console.error('Error loading lineup:', lineupError);
-          } else if (lineupToDisplay) {
-            const currentTeamLineupIds = (lineupToDisplay.player_ids || []).filter((id: string) =>
-              teamPlayerIds.has(id)
-            );
-            setCurrentLineup({
-              ...lineupToDisplay,
-              player_ids: currentTeamLineupIds,
-            });
-            if (currentTeamLineupIds.length > 0) {
-              try {
-                const { data: lineupPlayerData, error: lineupPlayersError } = await supabase
-                  .from('chess_players')
-                  .select('*')
-                  .in('id', currentTeamLineupIds);
-                
-                if (lineupPlayersError) {
-                  console.error('Error loading lineup players:', lineupPlayersError);
-                } else if (lineupPlayerData) {
-                  setLineupPlayers(lineupPlayerData);
-                }
-              } catch (error) {
-                console.error('Exception loading lineup players:', error);
-              }
-            } else {
-              setLineupPlayers([]);
+        if (lineupToDisplay && !lineupResult.error) {
+          const currentTeamLineupIds = (lineupToDisplay.player_ids || []).filter((id: string) =>
+            teamPlayerIds.has(id)
+          )
+          setCurrentLineup(keepIfSame({
+            ...lineupToDisplay,
+            player_ids: currentTeamLineupIds,
+          }))
+          if (currentTeamLineupIds.length > 0) {
+            const { data: lineupPlayerData, error: lineupPlayersError } = await supabase
+              .from('chess_players')
+              .select('*')
+              .in('id', currentTeamLineupIds)
+            if (!isCurrent()) return
+            if (lineupPlayersError) {
+              console.error('Error loading lineup players:', lineupPlayersError)
+            } else if (lineupPlayerData) {
+              setLineupPlayers(keepIfSame(lineupPlayerData))
             }
           } else {
-            setCurrentLineup(null);
-            setLineupPlayers([]);
+            setLineupPlayers(keepIfSame<ChessPlayer[]>([]))
           }
-        } catch (error) {
-          console.error('Exception loading lineup:', error);
+        } else if (!lineupResult.error) {
+          setCurrentLineup(keepIfSame<Lineup | null>(null))
+          setLineupPlayers(keepIfSame<ChessPlayer[]>([]))
         }
-      }
 
-      // Get past league performance for all past leagues
-      if (past.length > 0) {
-        try {
-          const pastLeagueIds = past.map(l => l.id);
-          
-          // Get lineups for past leagues separately to avoid complex join
-          const { data: userLineups, error: lineupsError } = await supabase
-            .from('lineups')
-            .select('league_id, total_points, week_start_date')
-            .eq('user_id', user.id)
-            .in('league_id', pastLeagueIds);
-          
-          if (lineupsError) {
-            console.error('Error loading past league lineups:', lineupsError);
-            setPastLeagues([]);
-          } else if (userLineups) {
-            // Group lineups by league and calculate totals
-            const leagueTotals = new Map<string, number>();
-            userLineups.forEach((lineup: any) => {
-              const current = leagueTotals.get(lineup.league_id) || 0;
-              leagueTotals.set(lineup.league_id, current + (lineup.total_points || 0));
-            });
-            
-            // Process past league data
-            const processedPastLeagues = past.map(league => ({
-              league_id: league.id,
-              league_name: league.name,
-              total_points: leagueTotals.get(league.id) || 0,
-              end_date: league.end_date
-            })).sort((a, b) => b.end_date.localeCompare(a.end_date));
-            
-            setPastLeagues(processedPastLeagues);
-          }
-        } catch (error) {
-          console.error('Exception loading past leagues:', error);
-          setPastLeagues([]);
-        }
+        applyPastLeagues(past, pastLineupsResult)
       } else {
-        setPastLeagues([])
+        const pastLineupsResult = await pastLineupsPromise
+        if (!isCurrent()) return
+        applyPastLeagues(past, pastLineupsResult)
       }
     } catch (error) {
       console.error('Error loading dashboard data:', error)
     } finally {
-      setLoading(false)
+      if (generation !== undefined && generation === loadGeneration.current) {
+        setRosterLoading(false)
+        setInitialLoading(false)
+      }
     }
   }
+
+  loadDashboardDataRef.current = loadDashboardData
 
   const hasImportedGamesForWeek = async (weekStartDate: string) => {
     const gameDate = getTuesdayDateForWeek(weekStartDate)
@@ -345,13 +354,6 @@ const Dashboard: React.FC = () => {
     return (count || 0) > 0
   }
 
-  const getEditableLineupWeekStart = async () => {
-    const currentWeek = getCurrentWeekStart()
-    return (await hasImportedGamesForWeek(currentWeek))
-      ? addDaysToYmd(currentWeek, 7)
-      : currentWeek
-  }
-
   const getNextTitledTuesday = () => {
     const now = new Date()
     const daysUntilTuesday = (2 - now.getDay() + 7) % 7
@@ -360,18 +362,8 @@ const Dashboard: React.FC = () => {
     return nextTuesday
   }
 
-  if (
-    loading &&
-    !currentLeague &&
-    activeLeagues.length === 0 &&
-    futureLeagues.length === 0 &&
-    pastLeagues.length === 0
-  ) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="text-xl text-neutral-900">Loading...</div>
-      </div>
-    )
+  if (initialLoading) {
+    return <DashboardPageSkeleton />
   }
 
   return (
@@ -458,7 +450,7 @@ const Dashboard: React.FC = () => {
             </div>
           )}
           {/* Current Lineup */}
-          {userTeam && (
+          {(userTeam || rosterLoading) && (
             <div className="bg-white rounded-lg shadow-lg p-6 border-2 border-royalBlue">
               <div className="mb-4">
                 <h3 className="text-xl font-bold text-neutral-900">Current Lineup</h3>
@@ -468,7 +460,13 @@ const Dashboard: React.FC = () => {
                   </p>
                 )}
               </div>
-              {currentLineup && lineupPlayers.length > 0 ? (
+              {rosterLoading ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4" aria-hidden="true">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <SkeletonBlock key={i} className="h-16" />
+                  ))}
+                </div>
+              ) : currentLineup && lineupPlayers.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                   {lineupPlayers.map((player) => (
                     <div 
@@ -513,8 +511,8 @@ const Dashboard: React.FC = () => {
               )}
               <span className="text-xs text-neutral-500">(Select week)</span>
             </div>
-            {breakdownLoading ? (
-              <div className="text-neutral-500">Loading breakdown...</div>
+            {((!weeksReady || breakdownLoading) && playerBreakdown.early.length === 0 && playerBreakdown.late.length === 0) ? (
+              <PointBreakdownSkeleton />
             ) : breakdownError ? (
               <div className="text-red-600">{breakdownError}</div>
             ) : (playerBreakdown.early.length > 0 || playerBreakdown.late.length > 0) ? (

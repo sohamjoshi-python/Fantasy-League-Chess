@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { buyAvatar, equipAvatar, fetchAvatarsForUser, ShopAvatar } from '../lib/avatars'
 import { publicErrorMessage } from '../lib/publicError'
+import { SkeletonBlock } from './ui/LoadingSpinner'
 
 type AvatarShopProps = {
   onClose?: () => void
@@ -96,7 +97,15 @@ const AvatarShop: React.FC<AvatarShopProps> = ({ onClose, onBalanceChange }) => 
       )}
 
       {loading ? (
-        <p className="text-neutral-500">Loading avatars...</p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4" aria-busy="true" aria-label="Loading avatars">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="rounded-lg border-2 border-neutral-200 p-3 flex flex-col items-center">
+              <SkeletonBlock className="mb-2 h-16 w-16 rounded-full" />
+              <SkeletonBlock className="mb-2 h-4 w-20" />
+              <SkeletonBlock className="h-8 w-full" />
+            </div>
+          ))}
+        </div>
       ) : avatars.length === 0 ? (
         <p className="text-neutral-500">No avatars available yet.</p>
       ) : (

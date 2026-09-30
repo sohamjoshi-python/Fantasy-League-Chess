@@ -4,6 +4,7 @@ import { ArrowLeft, ExternalLink, Trophy, TrendingUp, Target, Calendar, Award } 
 import { supabase } from '../lib/supabase'
 import { ChessPlayer } from '../types'
 import { formatCalendarDate } from '../lib/leagueStatus'
+import { PlayerHistorySkeleton } from '../components/ui/LoadingSpinner'
 
 interface GameResult {
   id: string
@@ -228,11 +229,7 @@ const PlayerHistory: React.FC = () => {
   }
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-royalBlue"></div>
-      </div>
-    )
+    return <PlayerHistorySkeleton />
   }
 
   if (!player) {

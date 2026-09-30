@@ -3,7 +3,7 @@ import React from 'react';
 import { supabase } from '../lib/supabase';
 import { CoinTransaction, calculatePlayerPrice, getPlayerTier } from '../types/coin-system';
 import { useAuth } from '../contexts/AuthContext';
-import { LoadingSpinner } from './ui/LoadingSpinner';
+import { MarketplaceSkeleton } from './ui/LoadingSpinner';
 import { StaggeredTransition } from './ui/SmoothTransition';
 import { ChessPlayer } from '../types';
 import TradeModal from './TradeModal';
@@ -114,7 +114,7 @@ export default function Marketplace({ leagueId, onTeamUpdate }: MarketplaceProps
   const [ownedPlayers, setOwnedPlayers] = useState<ChessPlayer[]>([]);
   const [transactions, setTransactions] = useState<CoinTransaction[]>([]);
   const [userCoinBalance, setUserCoinBalance] = useState<number>(0);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sellingPlayer, setSellingPlayer] = useState<{ player: ChessPlayer; price: number } | null>(null);
   const [buyingPlayer, setBuyingPlayer] = useState<{ player: ChessPlayer; price: number } | null>(null);
@@ -888,9 +888,7 @@ export default function Marketplace({ leagueId, onTeamUpdate }: MarketplaceProps
   }
 
   if (loading && !league) {
-    return (
-      <LoadingSpinner size="lg" text="Loading marketplace..." className="p-8" />
-    );
+    return <MarketplaceSkeleton />;
   }
 
   // Check if marketplace is available (draft must be started)

@@ -142,7 +142,9 @@ const Navbar: React.FC = () => {
                     onClick={() => setShowDropdown((prev) => !prev)}
                     onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
                   >
-                    <span className="font-semibold text-neutral-900">{displayName}</span>
+                    <span className="inline-block min-w-[7rem] text-right font-semibold text-neutral-900">
+                      {displayName || <span className="inline-block h-4 w-24 animate-pulse rounded bg-neutral-200" />}
+                    </span>
                     <svg className="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"/></svg>
                   </button>
                   {showDropdown && (
@@ -208,7 +210,9 @@ const Navbar: React.FC = () => {
             {user ? (
               <>
                 <div className="px-4 py-2 border-b border-gray-200 mb-2">
-                  <span className="font-semibold text-neutral-900 text-lg">{displayName}</span>
+                  <span className="inline-block min-h-[1.75rem] min-w-[8rem] font-semibold text-neutral-900 text-lg">
+                    {displayName || <span className="inline-block h-5 w-32 animate-pulse rounded bg-neutral-200" />}
+                  </span>
                 </div>
                 <Link
                   to="/dashboard"

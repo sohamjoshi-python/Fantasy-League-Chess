@@ -36,6 +36,9 @@ env/
 pgn_archive/
 analyze_titled_tuesday.py
 
+# Local one-off email scripts
+fantasy-chess-frontend/scripts/send-password-reset-fix-email.js
+
 # Supabase CLI local state
 **/.temp/
 **/.branches/

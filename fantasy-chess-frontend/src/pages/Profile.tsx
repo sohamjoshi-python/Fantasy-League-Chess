@@ -7,6 +7,7 @@ import { resolveAvatarUrl } from '../lib/avatars'
 import { publicErrorMessage } from '../lib/publicError'
 import { User } from '../types'
 import AvatarShop from '../components/AvatarShop'
+import { ProfilePageSkeleton } from '../components/ui/LoadingSpinner'
 
 interface ProfileProps {
   showOnlyShop?: boolean;
@@ -18,7 +19,7 @@ const Profile: React.FC<ProfileProps> = ({ showOnlyShop = false, onCloseShop }) 
   const navigate = useNavigate()
   const [profile, setProfile] = useState<User | null>(null)
   const [username, setUsername] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -108,7 +109,7 @@ const Profile: React.FC<ProfileProps> = ({ showOnlyShop = false, onCloseShop }) 
   }
 
   if (loading) {
-    return <div className="flex justify-center items-center h-64">Loading...</div>
+    return <ProfilePageSkeleton />
   }
 
   return (

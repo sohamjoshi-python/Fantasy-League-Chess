@@ -1,10 +1,11 @@
-import * as React from 'react'
+﻿import * as React from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { League, Lineup, ChessPlayer, Bot } from '../types'
-import { addDaysToYmd, getWeekStartMonday, leagueSeasonHasEndedLocal } from '../lib/calendarDate'
+import { addDaysToYmd, compareCalendarDates, getLeagueLineupWeekBounds, getWeekStartMonday, leagueSeasonHasEndedLocal, mondayYmdToTuesdayDot } from '../lib/calendarDate'
+import { keepIfSame } from '../lib/keepIfSame'
 import {
   formatCalendarDate,
   getTeamBuildingStatusLabel,
@@ -24,7 +25,6 @@ import {
   fetchLineupPlayerBreakdownByRounds,
   fetchUserLeagueDisplayWeeks,
   fetchLineupParticipantBreakdownByRounds,
-  fetchLineupParticipantDisplayWeeks,
 } from '../lib/supabase';
 import Confetti from 'react-confetti';
 import { resolveAvatarUrl } from '../lib/avatars';
@@ -32,6 +32,7 @@ import { resolveAvatarUrl } from '../lib/avatars';
 import Marketplace from '../components/Marketplace';
 import TurnBasedMarketplace from '../components/TurnBasedMarketplace';
 import PlayerDetailModal from '../components/PlayerDetailModal';
+import { LeaguePageSkeleton, PointBreakdownSkeleton, SkeletonBlock } from '../components/ui/LoadingSpinner';
 
 // Remove: import { useQuery } from '@tanstack/react-query';
 // Remove: fetchLeague function
@@ -181,6 +182,97 @@ type RoundBreakdown = {
   late: PlayerBreakdownRow[]
 }
 
+type ParticipantSheet = {
+  team: ChessPlayer[]
+  lineup: ChessPlayer[]
+  weeks: string[]
+  breakdowns: Record<string, RoundBreakdown>
+}
+
+const emptyBreakdown = (): RoundBreakdown => ({ early: [], late: [] })
+
+function orderedPlayers(ids: string[], byId: Map<string, ChessPlayer>): ChessPlayer[] {
+  return ids
+    .map((id) => byId.get(id))
+    .filter((player): player is ChessPlayer => Boolean(player))
+}
+
+async function loadParticipantSheets(options: {
+  league: Pick<League, 'id' | 'start_date' | 'end_date'>
+  participants: Array<{ id: string; isBot: boolean }>
+  lineupWeek: string
+  currentWeek: string
+}): Promise<Map<string, ParticipantSheet>> {
+  const { league, participants, lineupWeek, currentWeek } = options
+  const sheets = new Map<string, ParticipantSheet>()
+  if (participants.length === 0) return sheets
+
+  const [{ data: teams }, { data: lineups }] = await Promise.all([
+    supabase.from('teams').select('user_id, bot_id, player_ids').eq('league_id', league.id),
+    supabase.from('lineups').select('user_id, bot_id, player_ids, week_start_date, total_points').eq('league_id', league.id),
+  ])
+
+  const playerIds = new Set<string>()
+  for (const team of teams || []) {
+    for (const id of team.player_ids || []) playerIds.add(id)
+  }
+  for (const lineup of lineups || []) {
+    for (const id of lineup.player_ids || []) playerIds.add(id)
+  }
+
+  const { data: playerRows } = playerIds.size > 0
+    ? await supabase.from('chess_players').select('*').in('id', Array.from(playerIds))
+    : { data: [] as ChessPlayer[] }
+  const byId = new Map((playerRows || []).map((player) => [player.id, player as ChessPlayer]))
+  const { minMonday, maxMonday } = getLeagueLineupWeekBounds(league.start_date, league.end_date)
+
+  const breakdownJobs: Array<Promise<void>> = []
+  for (const participant of participants) {
+    const owns = (row: { user_id?: string | null; bot_id?: string | null }) =>
+      participant.isBot ? row.bot_id === participant.id : row.user_id === participant.id
+    const teamRow = (teams || []).find(owns)
+    const teamIds = teamRow?.player_ids || []
+    const ownedLineups = (lineups || []).filter(owns)
+    let lineupRow = ownedLineups.find((row) => row.week_start_date === lineupWeek) || null
+    if (!lineupRow && lineupWeek !== currentWeek) {
+      lineupRow = ownedLineups.find((row) => row.week_start_date === currentWeek) || null
+    }
+    const lineupIds = ((lineupRow?.player_ids || []) as string[]).filter((id) =>
+      !teamRow || teamIds.includes(id)
+    )
+    const weeks = Array.from(new Set(
+      ownedLineups
+        .filter((row) =>
+          Number(row.total_points) > 0 &&
+          compareCalendarDates(String(row.week_start_date), minMonday) >= 0 &&
+          compareCalendarDates(String(row.week_start_date), maxMonday) <= 0
+        )
+        .map((row) => String(row.week_start_date))
+    )).sort().map(mondayYmdToTuesdayDot)
+
+    const sheet: ParticipantSheet = {
+      team: orderedPlayers(teamIds, byId),
+      lineup: orderedPlayers(lineupIds, byId),
+      weeks,
+      breakdowns: {},
+    }
+    sheets.set(participant.id, sheet)
+
+    for (const week of weeks) {
+      breakdownJobs.push((async () => {
+        sheet.breakdowns[week] = await fetchLineupParticipantBreakdownByRounds(
+          participant.isBot ? { botId: participant.id } : { userId: participant.id },
+          league.id,
+          week.replace(/\./g, '-')
+        )
+      })())
+    }
+  }
+
+  await Promise.all(breakdownJobs)
+  return sheets
+}
+
 type StandingDisplayRow = {
   user_id: string
   rank: number
@@ -270,6 +362,15 @@ const LeaguePage: React.FC = () => {
   const { user } = useAuth()
   const navigate = useNavigate();
   const marketplaceAutoStartAttempted = useRef(false)
+  const loadGeneration = useRef(0)
+  const isEditingLineupRef = useRef(false)
+  const loadLeagueDataRef = useRef<(generation?: number) => void>(() => {})
+  const refreshExtrasRef = useRef<() => void>(() => {})
+  const weeksLeagueIdRef = useRef<string | null>(null)
+  const breakdownKeyRef = useRef('')
+  const sheetCacheRef = useRef<Map<string, ParticipantSheet>>(new Map())
+  const openStandingIdRef = useRef<string | null>(null)
+  const selectedBreakdownWeekRef = useRef<string | null>(null)
 
   // React Query for league data
   // Remove: const {
@@ -295,6 +396,8 @@ const LeaguePage: React.FC = () => {
   const [editableLineupWeek, setEditableLineupWeek] = useState<string>('')
   const [standings, setStandings] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
+  const [initialLoading, setInitialLoading] = useState(true)
+  const [detailsLoading, setDetailsLoading] = useState(true)
   const [error, setError] = useState('')
   const [selectedPlayerForModal, setSelectedPlayerForModal] = useState<ChessPlayer | null>(null)
 
@@ -315,6 +418,7 @@ const LeaguePage: React.FC = () => {
   const [selectedUserBreakdownWeeks, setSelectedUserBreakdownWeeks] = useState<string[]>([])
   const [selectedUserBreakdownWeek, setSelectedUserBreakdownWeek] = useState<string | null>(null)
   const [selectedUserBreakdownLoading, setSelectedUserBreakdownLoading] = useState(false)
+  const [selectedUserDetailsLoading, setSelectedUserDetailsLoading] = useState(false)
   const [selectedUserBreakdownError, setSelectedUserBreakdownError] = useState('')
 
   const [playerBreakdown, setPlayerBreakdown] = useState<RoundBreakdown>({ early: [], late: [] });
@@ -322,6 +426,7 @@ const LeaguePage: React.FC = () => {
   const [breakdownError, setBreakdownError] = useState('');
   const [availableWeeks, setAvailableWeeks] = useState<string[]>([]);
   const [selectedWeek, setSelectedWeek] = useState<string | null>(null);
+  const [weeksReady, setWeeksReady] = useState(false);
   const [payout, setPayout] = useState<any | null>(null);
   const [winnerName, setWinnerName] = useState<string>('');
   const [showConfetti, setShowConfetti] = useState(false);
@@ -333,68 +438,111 @@ const LeaguePage: React.FC = () => {
   const [botNameError, setBotNameError] = useState('')
 
   useEffect(() => {
-    async function fetchAvailableWeeks() {
-      if (!league || !user) return;
-      try {
-        const displayWeeks = await fetchUserLeagueDisplayWeeks(user.id, league);
-        setAvailableWeeks(displayWeeks);
-        setSelectedWeek(displayWeeks.length > 0 ? displayWeeks[displayWeeks.length - 1] : null);
-      } catch (e) {
-        setAvailableWeeks([]);
-        setSelectedWeek(null);
-      }
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return
+      loadLeagueDataRef.current()
+      refreshExtrasRef.current()
     }
-    fetchAvailableWeeks();
-  }, [league, user]);
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [])
+
+  const refreshWeeks = async (background: boolean) => {
+    if (!league || !user) {
+      setWeeksReady(true)
+      return
+    }
+    if (!background) setWeeksReady(false)
+    try {
+      const displayWeeks = await fetchUserLeagueDisplayWeeks(user.id, league)
+      setAvailableWeeks(keepIfSame(displayWeeks))
+      setSelectedWeek((prev) => {
+        if (prev && displayWeeks.includes(prev)) return prev
+        return displayWeeks.length > 0 ? displayWeeks[displayWeeks.length - 1] : null
+      })
+    } catch (e) {
+      if (!background) {
+        setAvailableWeeks([])
+        setSelectedWeek(null)
+      }
+    } finally {
+      setWeeksReady(true)
+    }
+  }
+
+  const refreshBreakdown = async (background: boolean) => {
+    if (!user || !league || !selectedWeek) return
+    if (!background) {
+      setBreakdownLoading(true)
+      setBreakdownError('')
+    }
+    try {
+      const data = await fetchLineupPlayerBreakdownByRounds(user.id, league.id, selectedWeek.replace(/\./g, '-'))
+      setPlayerBreakdown(keepIfSame(data))
+    } catch (e) {
+      if (!background) setBreakdownError('Could not load point breakdown')
+    } finally {
+      if (!background) setBreakdownLoading(false)
+    }
+  }
+
+  refreshExtrasRef.current = () => {
+    void refreshWeeks(true)
+    void refreshBreakdown(true)
+  }
+  isEditingLineupRef.current = isEditingLineup
 
   useEffect(() => {
-    async function loadBreakdown() {
-      if (!user || !league || !selectedWeek) {
-        setPlayerBreakdown({ early: [], late: [] });
-        return;
-      }
-
-      setBreakdownLoading(true);
-      setBreakdownError('');
-      try {
-        const data = await fetchLineupPlayerBreakdownByRounds(user.id, league?.id, selectedWeek.replace(/\./g, '-'));
-        setPlayerBreakdown(data);
-      } catch (e: any) {
-        setBreakdownError('Could not load point breakdown');
-      } finally {
-        setBreakdownLoading(false);
-      }
-    }
-    loadBreakdown();
-  }, [user?.id, league?.id, selectedWeek, currentLineup?.total_points, currentLineup?.player_ids?.join(',')]);
+    const sameLeague = weeksLeagueIdRef.current === (league?.id ?? null)
+    weeksLeagueIdRef.current = league?.id ?? null
+    void refreshWeeks(sameLeague && availableWeeks.length > 0)
+  }, [league?.id, league?.start_date, league?.end_date, user?.id])
 
   useEffect(() => {
-    async function loadSelectedUserBreakdown() {
-      if (!league || !selectedUser || !selectedUserBreakdownWeek) {
-        setSelectedUserBreakdown({ early: [], late: [] })
-        return
-      }
+    const key = `${league?.id ?? ''}|${selectedWeek ?? ''}`
+    const background = breakdownKeyRef.current === key && selectedWeek != null
+    breakdownKeyRef.current = key
+    void refreshBreakdown(background)
+  }, [user?.id, league?.id, selectedWeek, currentLineup?.total_points, currentLineup?.player_ids?.join(',')])
 
-      const isSelectedBot = Boolean(bot && selectedUser.user_id === bot.id)
-      setSelectedUserBreakdownLoading(true)
-      setSelectedUserBreakdownError('')
+  selectedBreakdownWeekRef.current = selectedUserBreakdownWeek
 
+  useEffect(() => {
+    if (!league || !selectedUser || !selectedUserBreakdownWeek) return
+    const cached = sheetCacheRef.current.get(selectedUser.user_id)?.breakdowns[selectedUserBreakdownWeek]
+    if (cached) {
+      setSelectedUserBreakdown(keepIfSame(cached))
+      setSelectedUserBreakdownLoading(false)
+      return
+    }
+
+    let cancelled = false
+    const week = selectedUserBreakdownWeek
+    const participantId = selectedUser.user_id
+    const isSelectedBot = Boolean(bot && participantId === bot.id)
+    setSelectedUserBreakdownLoading(true)
+    setSelectedUserBreakdownError('')
+
+    ;(async () => {
       try {
         const data = await fetchLineupParticipantBreakdownByRounds(
-          isSelectedBot ? { botId: selectedUser.user_id } : { userId: selectedUser.user_id },
+          isSelectedBot ? { botId: participantId } : { userId: participantId },
           league.id,
-          selectedUserBreakdownWeek.replace(/\./g, '-')
+          week.replace(/\./g, '-')
         )
+        if (cancelled) return
+        const existing = sheetCacheRef.current.get(participantId)
+        if (existing) existing.breakdowns[week] = data
         setSelectedUserBreakdown(data)
       } catch (e) {
         console.error('Could not load selected user breakdown:', e)
-        setSelectedUserBreakdownError('Could not load score breakdown')
+        if (!cancelled) setSelectedUserBreakdownError('Could not load score breakdown')
       } finally {
-        setSelectedUserBreakdownLoading(false)
+        if (!cancelled) setSelectedUserBreakdownLoading(false)
       }
-    }
+    })()
 
-    loadSelectedUserBreakdown()
+    return () => { cancelled = true }
   }, [league?.id, selectedUser?.user_id, selectedUserBreakdownWeek, bot?.id])
 
   useEffect(() => {
@@ -419,9 +567,12 @@ const LeaguePage: React.FC = () => {
 
   useEffect(() => {
     if (leagueId && user) {
-      loadLeagueData()
+      const generation = ++loadGeneration.current
+      setInitialLoading(true)
+      setDetailsLoading(true)
+      loadLeagueData(generation)
     }
-  }, [leagueId, user])
+  }, [leagueId, user?.id])
 
   useEffect(() => {
     if (!leagueId || !user) return
@@ -472,11 +623,13 @@ const LeaguePage: React.FC = () => {
     }
   }, [isEditingLineup, league?.end_date, currentLineup])
 
-  const loadLeagueData = async () => {
+  const loadLeagueData = async (generation?: number) => {
     if (!leagueId || !user) return
 
     try {
-      setLoading(true)
+      if (generation !== undefined) setLoading(true)
+      const currentWeek = getCurrentWeekStart()
+      const gamesImportedPromise = hasImportedGamesForWeek(currentWeek)
 
       // Get league data
     const { data: leagueData, error: leagueError } = await supabase
@@ -503,229 +656,194 @@ const LeaguePage: React.FC = () => {
 
       if (!marketplaceAutoStartAttempted.current && isMarketplaceAutoStartDue(leagueRow)) {
         marketplaceAutoStartAttempted.current = true
-        const { error: autoStartError } = await supabase.rpc('auto_start_due_marketplaces')
-        if (!autoStartError) {
+        void (async () => {
+          const { error: autoStartError } = await supabase.rpc('auto_start_due_marketplaces')
+          if (autoStartError || (generation !== undefined && generation !== loadGeneration.current)) return
           const { data: refreshedLeague } = await supabase
             .from('leagues')
             .select('*')
             .eq('id', leagueId)
             .single()
           if (refreshedLeague) {
-            leagueRow = refreshedLeague as League
+            setLeague(refreshedLeague as League)
+            if (refreshedLeague.marketplace_started) {
+              void notifyMarketplaceStartedIfNeeded(leagueId)
+            }
           }
-          if (leagueRow.marketplace_started) {
-            void notifyMarketplaceStartedIfNeeded(leagueId)
-          }
-        }
+        })()
       }
 
-      setLeague(leagueRow);
+      if (generation !== undefined && generation !== loadGeneration.current) return
+
+      setLeague(keepIfSame<League | null>(leagueRow));
+      if (generation !== undefined && generation === loadGeneration.current) {
+        setInitialLoading(false)
+      }
       // Combine all relevant user IDs
       const allUserIds = Array.from(new Set([
         ...(leagueRow.member_ids || []),
         ...(leagueRow.draft_order || [])
       ]));
-      fetchUserMap(allUserIds)
+      void fetchUserMap(allUserIds)
 
-      // Get user's team
-      let teamData = null;
-      try {
-        const { data: teamResult } = await supabase
+      const [teamResult, botResult, gamesImported] = await Promise.all([
+        supabase
           .from('teams')
           .select('*')
           .eq('user_id', user.id)
           .eq('league_id', leagueId)
-          .maybeSingle(); // Use maybeSingle instead of single to handle no results
-        teamData = teamResult;
-      } catch (error) {
-        // Teams query failed, continuing without team data
-        teamData = null;
-      }
-
-      if (teamData) {
-        try {
-          // Get team players
-          const { data: players } = await supabase
-            .from('chess_players')
-            .select('*')
-            .in('id', teamData.player_ids)
-
-          if (players) {
-            setTeamPlayers(players)
-          } else {
-            setTeamPlayers([])
-          }
-        } catch (error) {
-          // Team players query failed
-          setTeamPlayers([])
-        }
-      } else {
-        setTeamPlayers([])
-      }
-      const teamPlayerIds = new Set<string>(teamData?.player_ids || [])
-
-      // Get available players for draft
-      if (!isTeamBuildingComplete(leagueRow)) {
-        const { data: allPlayers } = await supabase
-          .from('chess_players')
+          .maybeSingle(),
+        supabase
+          .from('bots')
           .select('*')
-          .order('elo', { ascending: false })
+          .eq('league_id', leagueId)
+          .maybeSingle(),
+        gamesImportedPromise,
+      ])
 
-        if (allPlayers) {
-          // Filter out already drafted players
-          const draftedPlayerIds = new Set()
-          const { data: allTeams } = await supabase
-            .from('teams')
-            .select('player_ids')
-            .eq('league_id', leagueId)
+      if (generation !== undefined && generation !== loadGeneration.current) return
 
-          if (allTeams) {
-            allTeams.forEach(team => {
-              team.player_ids.forEach((id: string) => draftedPlayerIds.add(id))
-            })
-          }
+      const lineupWeek = gamesImported ? addDaysToYmd(currentWeek, 7) : currentWeek
+      setEditableLineupWeek((prev) => prev === lineupWeek ? prev : lineupWeek)
+      const teamData = teamResult.data
+      const teamPlayerIds = new Set<string>(teamData?.player_ids || [])
+      const botData = !botResult.error && botResult.data ? botResult.data : null
+      if (botData) setBot(keepIfSame(botData))
 
-
-        }
-      }
-
-      // Get the lineup users can currently edit. Once this week's games are imported,
-      // lineup changes should apply to next week instead of mutating scored results.
-      const currentWeek = getCurrentWeekStart()
-      const lineupWeek = await getEditableLineupWeekStart()
-      setEditableLineupWeek(lineupWeek)
-
-      const { data: lineupData, error: lineupError } = await supabase
-        .from('lineups')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('league_id', leagueId)
-        .eq('week_start_date', lineupWeek)
-        .maybeSingle() // Use maybeSingle instead of single to handle no results
-
-      let lineupToDisplay = lineupData
-      if (!lineupToDisplay && !lineupError && lineupWeek !== currentWeek) {
-        const { data: scoredCurrentLineup } = await supabase
+      const [lineupResult, scoredLineupResult, teamPlayersResult] = await Promise.all([
+        supabase
           .from('lineups')
           .select('*')
           .eq('user_id', user.id)
           .eq('league_id', leagueId)
-          .eq('week_start_date', currentWeek)
-          .maybeSingle()
+          .eq('week_start_date', lineupWeek)
+          .maybeSingle(),
+        lineupWeek !== currentWeek
+          ? supabase
+              .from('lineups')
+              .select('*')
+              .eq('user_id', user.id)
+              .eq('league_id', leagueId)
+              .eq('week_start_date', currentWeek)
+              .maybeSingle()
+          : Promise.resolve({ data: null, error: null }),
+        teamPlayerIds.size > 0
+          ? supabase.from('chess_players').select('*').in('id', Array.from(teamPlayerIds))
+          : Promise.resolve({ data: [] as ChessPlayer[], error: null }),
+        loadStandings(leagueId, botData, leagueRow),
+      ])
 
-        if (scoredCurrentLineup) {
-          lineupToDisplay = {
-            ...scoredCurrentLineup,
-            id: '',
-            week_start_date: lineupWeek,
-            total_points: 0,
-          }
+      if (generation !== undefined && generation !== loadGeneration.current) return
+
+      const rosterPlayers = teamPlayersResult.data || []
+      setTeamPlayers(keepIfSame(rosterPlayers))
+      const playersById = new Map(rosterPlayers.map((player) => [player.id, player]))
+
+      let lineupToDisplay = lineupResult.data
+      if (!lineupToDisplay && !lineupResult.error && scoredLineupResult.data) {
+        lineupToDisplay = {
+          ...scoredLineupResult.data,
+          id: '',
+          week_start_date: lineupWeek,
+          total_points: 0,
         }
       }
 
-      if (lineupToDisplay && !lineupError) {
-        const currentTeamLineupIds = (lineupToDisplay.player_ids || []).filter((id: string) =>
+      if (lineupToDisplay && !lineupResult.error) {
+        const currentTeamLineupIds = ((lineupToDisplay.player_ids || []) as string[]).filter((id) =>
           teamPlayerIds.has(id)
         )
-        const filteredLineupToDisplay = {
+        setCurrentLineup(keepIfSame({
           ...lineupToDisplay,
           player_ids: currentTeamLineupIds,
+        }))
+        if (!isEditingLineupRef.current) {
+          setSelectedLineupPlayers(keepIfSame(currentTeamLineupIds))
         }
-
-        setCurrentLineup(filteredLineupToDisplay)
-        setSelectedLineupPlayers(currentTeamLineupIds)
-
-        // Get lineup players
-        if (currentTeamLineupIds.length > 0) {
-          const { data: lineupPlayers } = await supabase
-            .from('chess_players')
-            .select('*')
-            .in('id', currentTeamLineupIds)
-
-          setLineupPlayers(lineupPlayers || [])
-        } else {
-          setLineupPlayers([])
+        setLineupPlayers(keepIfSame(
+          currentTeamLineupIds
+            .map((id) => playersById.get(id))
+            .filter((player): player is ChessPlayer => Boolean(player))
+        ))
+      } else if (!lineupResult.error) {
+        setCurrentLineup(keepIfSame<Lineup | null>(null))
+        if (!isEditingLineupRef.current) {
+          setSelectedLineupPlayers(keepIfSame<string[]>([]))
         }
-      } else {
-        // No lineup exists for this week, that's okay
-        setCurrentLineup(null)
-        setSelectedLineupPlayers([])
-        setLineupPlayers([])
+        setLineupPlayers(keepIfSame<ChessPlayer[]>([]))
       }
-
-      // Load bot data if league has a bot
-      // Note: bot_id column doesn't exist, so we'll check for bots by league_id
-      const { data: botData, error: botError } = await supabase
-        .from('bots')
-        .select('*')
-        .eq('league_id', leagueId)
-        .maybeSingle() // Use maybeSingle instead of single to handle no results
-      
-      if (!botError && botData) {
-        setBot(botData)
-      }
-
-      // Load standings (after bot is loaded)
-      await loadStandings(leagueId, botData) // Pass botData directly
 
     } catch (error) {
       console.error('Error loading league data:', error)
       setError('Failed to load league data')
     } finally {
       setLoading(false)
+      if (generation !== undefined && generation === loadGeneration.current) {
+        setInitialLoading(false)
+        setDetailsLoading(false)
+      }
     }
   }
 
-  const loadStandings = async (leagueId: string, botData?: Bot) => {
+  loadLeagueDataRef.current = loadLeagueData
+
+  const loadStandings = async (
+    leagueId: string,
+    botData?: Bot | null,
+    knownLeague?: Pick<League, 'member_ids' | 'creator_id' | 'buy_in' | 'payout_processed'>
+  ) => {
     try {
-      // Get league data with member_ids and creator_id
-      const { data: leagueData } = await supabase
+      const leagueData = knownLeague ?? (await supabase
         .from('leagues')
         .select('member_ids, creator_id, buy_in, payout_processed')
         .eq('id', leagueId)
-        .single()
+        .single()).data
 
       if (!leagueData) return
 
-      let leaguePayout: { user_id: string; amount: number } | null = null
-      if (!leagueData.payout_processed) {
-        const { data: payoutData, error: payoutError } = await supabase
-          .from('payouts')
-          .select('user_id, amount')
-          .eq('league_id', leagueId)
-          .order('processed_at', { ascending: false })
-          .limit(1)
-          .maybeSingle()
-
-        if (payoutError) {
-          console.warn('Could not load payout row for standings coin display:', payoutError)
-        } else {
-          leaguePayout = payoutData
-        }
-      }
-
       // Get all unique user IDs (creator + members)
-      const allUserIds = new Set([
+      const allUserIds = Array.from(new Set([
         leagueData.creator_id,
         ...(leagueData.member_ids || [])
-      ])
+      ].filter(Boolean)))
 
       const avatarMap: Record<string, { username: string; avatar_url: string }> = {}
-      Array.from(allUserIds).forEach((userId) => {
+      allUserIds.forEach((userId) => {
         avatarMap[userId] = {
           username: `User_${userId.slice(0, 6)}`,
           avatar_url: resolveAvatarUrl(),
         }
       })
 
-      // Get user details from users table
-      const { data: userDetails } = await supabase
-        .from('users')
-        .select('id, username, selected_avatar_url')
-        .in('id', Array.from(allUserIds))
+      const [payoutResult, userDetailsResult, lineupsResult] = await Promise.all([
+        leagueData.payout_processed
+          ? Promise.resolve({ data: null, error: null })
+          : supabase
+              .from('payouts')
+              .select('user_id, amount')
+              .eq('league_id', leagueId)
+              .order('processed_at', { ascending: false })
+              .limit(1)
+              .maybeSingle(),
+        allUserIds.length > 0
+          ? supabase
+              .from('users')
+              .select('id, username, selected_avatar_url')
+              .in('id', allUserIds)
+          : Promise.resolve({ data: [], error: null }),
+        supabase
+          .from('lineups')
+          .select('user_id, bot_id, total_points')
+          .eq('league_id', leagueId),
+      ])
 
-      if (userDetails) {
-        userDetails.forEach((u) => {
+      if (payoutResult.error) {
+        console.warn('Could not load payout row for standings coin display:', payoutResult.error)
+      }
+      const leaguePayout = payoutResult.data
+
+      if (userDetailsResult.data) {
+        userDetailsResult.data.forEach((u) => {
           avatarMap[u.id] = {
             username: u.username || `User_${u.id.slice(0, 6)}`,
             avatar_url: resolveAvatarUrl(u.selected_avatar_url),
@@ -736,11 +854,7 @@ const LeaguePage: React.FC = () => {
       // Create a map of user details (for standings)
       const userMap = avatarMap
 
-      // Get lineups to calculate points
-      const { data: lineups } = await supabase
-        .from('lineups')
-        .select('*')
-        .eq('league_id', leagueId)
+      const lineups = lineupsResult.data
 
       // Calculate total points for each user
       const userPoints = new Map<string, number>()
@@ -794,7 +908,7 @@ const LeaguePage: React.FC = () => {
         }
         standingsData.push({
           user_id: botData.id,
-          display_name: `${botData.name} 🤖`, // Use bot.name from the bots table
+          display_name: `${botData.name} ðŸ¤–`, // Use bot.name from the bots table
           total_points: botPoints,
           coin_delta: payoutWinnerId === botData.id
             ? prizeAmount - buyIn
@@ -814,7 +928,7 @@ const LeaguePage: React.FC = () => {
         standing.coin_delta = isWinner ? prizeAmount - buyIn : -buyIn
       })
 
-      setStandings(standingsData)
+      setStandings(keepIfSame(standingsData))
     } catch (error) {
       console.error('Error loading standings:', error)
     }
@@ -1122,126 +1236,95 @@ const LeaguePage: React.FC = () => {
     }
   }
 
+  const applyParticipantSheet = (participantId: string, sheet: ParticipantSheet, preserveWeek: boolean) => {
+    const chosen = preserveWeek && selectedBreakdownWeekRef.current && sheet.weeks.includes(selectedBreakdownWeekRef.current)
+      ? selectedBreakdownWeekRef.current
+      : (sheet.weeks[sheet.weeks.length - 1] ?? null)
+    const breakdown = chosen ? sheet.breakdowns[chosen] : undefined
+    setSelectedUserTeam(keepIfSame(sheet.team))
+    setSelectedUserLineup(keepIfSame(sheet.lineup))
+    setSelectedUserBreakdownWeeks(keepIfSame(sheet.weeks))
+    setSelectedUserBreakdownWeek(chosen)
+    setSelectedUserBreakdown(keepIfSame(breakdown ?? emptyBreakdown()))
+    setSelectedUserBreakdownLoading(Boolean(chosen) && !breakdown)
+    setSelectedUserDetailsLoading(false)
+    setSelectedUserBreakdownError('')
+    sheetCacheRef.current.set(participantId, sheet)
+  }
+
+  const standingsCacheKey = standings.map((row) => `${row.user_id}:${Number(row.total_points).toFixed(2)}`).join('|')
+
+  useEffect(() => {
+    if (detailsLoading || !league || !leagueId || standings.length === 0) return
+    let cancelled = false
+    const participants = standings.map((row) => ({
+      id: row.user_id,
+      isBot: Boolean(bot && row.user_id === bot.id),
+    }))
+    const leagueSnapshot = league
+
+    ;(async () => {
+      try {
+        const currentWeek = getCurrentWeekStart()
+        const lineupWeek = (await hasImportedGamesForWeek(currentWeek))
+          ? addDaysToYmd(currentWeek, 7)
+          : currentWeek
+        const sheets = await loadParticipantSheets({
+          league: leagueSnapshot,
+          participants,
+          lineupWeek,
+          currentWeek,
+        })
+        if (cancelled) return
+        sheetCacheRef.current = sheets
+        const openId = openStandingIdRef.current
+        const openSheet = openId ? sheets.get(openId) : undefined
+        if (openId && openSheet) applyParticipantSheet(openId, openSheet, true)
+      } catch (error) {
+        console.error('Failed to prefetch standings details:', error)
+      }
+    })()
+
+    return () => { cancelled = true }
+  }, [detailsLoading, league?.id, standingsCacheKey, bot?.id])
+
   // Handle user click in standings
   const handleUserClick = async (userData: any) => {
+    const participantId = userData.user_id as string
+    openStandingIdRef.current = participantId
+    setSelectedUser(userData)
+    setShowUserPopup(true)
+    setSelectedUserBreakdownError('')
+
+    const cached = sheetCacheRef.current.get(participantId)
+    if (cached) {
+      applyParticipantSheet(participantId, cached, false)
+      return
+    }
+
+    if (!league || !leagueId) return
+    setSelectedUserDetailsLoading(true)
     try {
-      setSelectedUser(userData)
-      setShowUserPopup(true)
-      setSelectedUserTeam([])
-      setSelectedUserLineup([])
-      setSelectedUserBreakdown({ early: [], late: [] })
-      setSelectedUserBreakdownWeeks([])
-      setSelectedUserBreakdownWeek(null)
-      setSelectedUserBreakdownError('')
-
-      // Check if this is a bot by checking if userData.user_id matches bot.id
-      const isBot = Boolean(bot && userData.user_id === bot.id);
-      const selectedBot = isBot ? bot : null;
-      const participant = isBot ? { botId: userData.user_id } : { userId: userData.user_id }
-
-      if (league) {
-        const displayWeeks = await fetchLineupParticipantDisplayWeeks(participant, league)
-        setSelectedUserBreakdownWeeks(displayWeeks)
-        setSelectedUserBreakdownWeek(displayWeeks.length > 0 ? displayWeeks[displayWeeks.length - 1] : null)
-      }
-
-      // Get user's team
-      let teamData = null;
-      if (selectedBot) {
-        // Fetch bot's team by bot_id
-        const { data } = await supabase
-          .from('teams')
-          .select('*')
-          .eq('bot_id', selectedBot.id)
-          .eq('league_id', leagueId!)
-          .maybeSingle(); // Use maybeSingle instead of single
-        teamData = data;
-      } else {
-        // Fetch user's team by user_id
-        const { data } = await supabase
-          .from('teams')
-          .select('*')
-          .eq('user_id', userData.user_id)
-          .eq('league_id', leagueId!)
-          .maybeSingle(); // Use maybeSingle instead of single
-        teamData = data;
-      }
-
-      const selectedTeamPlayerIds = new Set<string>(teamData?.player_ids || [])
-
-      if (teamData && teamData.player_ids?.length > 0) {
-        const { data: teamPlayers } = await supabase
-          .from('chess_players')
-          .select('*')
-          .in('id', teamData.player_ids)
-
-        setSelectedUserTeam(teamPlayers || [])
-      } else {
-        setSelectedUserTeam([])
-      }
-
-      // Same week the manager sees on their own screen. After this week's games
-      // are imported, that is next week, falling back to this week's saved lineup
-      // when next week's row has not been created yet.
-      const scoredWeek = getCurrentWeekStart()
-      const lineupWeek = await getEditableLineupWeekStart()
-      const lineupColumn = selectedBot ? 'bot_id' : 'user_id'
-      const lineupOwnerId = selectedBot ? selectedBot.id : userData.user_id
-      let lineupData = null
-      let lineupError = null
-      try {
-        const { data, error } = await supabase
-          .from('lineups')
-          .select('*')
-          .eq(lineupColumn, lineupOwnerId)
-          .eq('league_id', leagueId!)
-          .eq('week_start_date', lineupWeek)
-          .maybeSingle()
-        lineupData = data
-        lineupError = error
-      } catch (error) {
-        lineupData = null
-        lineupError = error
-      }
-
-      if (!lineupData && !lineupError && lineupWeek !== scoredWeek) {
-        const { data: scoredLineup } = await supabase
-          .from('lineups')
-          .select('*')
-          .eq(lineupColumn, lineupOwnerId)
-          .eq('league_id', leagueId!)
-          .eq('week_start_date', scoredWeek)
-          .maybeSingle()
-        lineupData = scoredLineup
-      }
-
-      if (lineupData) {
-        try {
-          const lineupIds: string[] = lineupData.player_ids || []
-          // Only drop players who are no longer on the roster when that roster
-          // actually loaded. An unreadable team used to wipe a real lineup.
-          const currentTeamLineupIds = teamData
-            ? lineupIds.filter((id: string) => selectedTeamPlayerIds.has(id))
-            : lineupIds
-
-          if (currentTeamLineupIds.length > 0) {
-            const { data: lineupPlayers } = await supabase
-              .from('chess_players')
-              .select('*')
-              .in('id', currentTeamLineupIds)
-
-            setSelectedUserLineup(lineupPlayers || [])
-          } else {
-            setSelectedUserLineup([])
-          }
-        } catch (error) {
-          setSelectedUserLineup([]);
-        }
-      } else {
-        setSelectedUserLineup([])
-      }
+      const isBot = Boolean(bot && participantId === bot.id)
+      const currentWeek = getCurrentWeekStart()
+      const lineupWeek = (await hasImportedGamesForWeek(currentWeek))
+        ? addDaysToYmd(currentWeek, 7)
+        : currentWeek
+      const sheets = await loadParticipantSheets({
+        league,
+        participants: [{ id: participantId, isBot }],
+        lineupWeek,
+        currentWeek,
+      })
+      const sheet = sheets.get(participantId)
+      if (!sheet || openStandingIdRef.current !== participantId) return
+      const merged = new Map(sheetCacheRef.current)
+      merged.set(participantId, sheet)
+      sheetCacheRef.current = merged
+      applyParticipantSheet(participantId, sheet, false)
     } catch (error) {
       console.error('Error loading user data:', error)
+      setSelectedUserDetailsLoading(false)
     }
   }
 
@@ -1566,12 +1649,8 @@ const LeaguePage: React.FC = () => {
     }
   };
 
-  if (loading && !league) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="text-xl">Loading...</div>
-      </div>
-    )
+  if (initialLoading) {
+    return <LeaguePageSkeleton />
   }
 
   if (error) {
@@ -1813,7 +1892,13 @@ const LeaguePage: React.FC = () => {
             <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6 border-2 border-gold relative">
               {showConfetti && <Confetti className="pointer-events-none" style={{zIndex: 30}} />}
               <h2 className="text-lg lg:text-xl font-bold mb-4 text-neutral-900">Standings</h2>
-              {seasonEnded ? (
+              {detailsLoading ? (
+                <div className="space-y-3" aria-hidden="true">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <SkeletonBlock key={i} className="h-14 w-full" />
+                  ))}
+                </div>
+              ) : seasonEnded ? (
                 <>
                   {showConfetti && <Confetti className="pointer-events-none" style={{zIndex: 30}} />}
                   {/* Podium for Top 3 */}
@@ -1974,7 +2059,13 @@ const LeaguePage: React.FC = () => {
               {/* Your Team */}
               <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6 border-2 border-gold">
                 <h3 className="text-lg lg:text-xl font-bold mb-4 text-neutral-900">Your Team</h3>
-                {teamPlayers.length === 0 ? (
+                {detailsLoading ? (
+                  <div className="grid grid-cols-2 gap-4 lg:grid-cols-3" aria-hidden="true">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                      <SkeletonBlock key={i} className="h-20" />
+                    ))}
+                  </div>
+                ) : teamPlayers.length === 0 ? (
                   <div className="text-neutral-500 text-sm">You haven't drafted any players yet.</div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -2026,7 +2117,13 @@ const LeaguePage: React.FC = () => {
                   )}
                 </div>
 
-                {isEditingLineup ? (
+                {detailsLoading ? (
+                  <div className="grid grid-cols-2 gap-4 lg:grid-cols-3" aria-hidden="true">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <SkeletonBlock key={i} className="h-20" />
+                    ))}
+                  </div>
+                ) : isEditingLineup ? (
                     <div className="space-y-4">
                       <p className="text-xs lg:text-sm text-neutral-600">Select 1-5 players for your lineup:</p>
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -2115,8 +2212,8 @@ const LeaguePage: React.FC = () => {
                   )}
                   <span className="text-xs text-neutral-500">(Select week)</span>
                 </div>
-                {breakdownLoading ? (
-                  <div className="text-neutral-600">Loading breakdown...</div>
+                {((!weeksReady || breakdownLoading) && !(playerBreakdown?.early?.length || playerBreakdown?.late?.length)) ? (
+                  <PointBreakdownSkeleton />
                 ) : breakdownError ? (
                   <div className="text-red-600">{breakdownError}</div>
                 ) : (playerBreakdown && (playerBreakdown.early?.length > 0 || playerBreakdown.late?.length > 0)) ? (
@@ -2231,7 +2328,7 @@ const LeaguePage: React.FC = () => {
           {/* User Popup Modal */}
           {showUserPopup && selectedUser && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border-2 border-gold">
+              <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full h-[min(40rem,85vh)] overflow-y-auto border-2 border-gold">
                 <div className="p-6">
                   <div className="flex items-center justify-between mb-6">
                     <h2 className="text-xl font-bold text-neutral-900">
@@ -2243,7 +2340,10 @@ const LeaguePage: React.FC = () => {
                     </h2>
                     <button
                       type="button"
-                      onClick={() => setShowUserPopup(false)}
+                      onClick={() => {
+                        openStandingIdRef.current = null
+                        setShowUserPopup(false)
+                      }}
                       className="text-neutral-400 hover:text-neutral-600 transition-colors"
                     >
                       <X className="h-6 w-6" />
@@ -2253,7 +2353,13 @@ const LeaguePage: React.FC = () => {
                   {/* Team Section */}
                   <div className="mb-6">
                     <h3 className="text-lg font-semibold mb-3 text-neutral-900">Team ({selectedUserTeam.length} players)</h3>
-                    {selectedUserTeam.length === 0 ? (
+                    {selectedUserDetailsLoading ? (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3" aria-hidden="true">
+                        {Array.from({ length: 4 }).map((_, i) => (
+                          <div key={i} className="h-20 animate-pulse rounded-lg bg-neutral-200" />
+                        ))}
+                      </div>
+                    ) : selectedUserTeam.length === 0 ? (
                       <p className="text-neutral-500 text-sm">No players drafted yet.</p>
                     ) : (
                       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
@@ -2279,7 +2385,13 @@ const LeaguePage: React.FC = () => {
                   {/* Current Lineup Section */}
                   <div className="mb-6">
                     <h3 className="text-lg font-semibold mb-3 text-neutral-900">Current Lineup ({selectedUserLineup.length}/5 players)</h3>
-                    {selectedUserLineup.length === 0 ? (
+                    {selectedUserDetailsLoading ? (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3" aria-hidden="true">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <div key={i} className="h-16 animate-pulse rounded-lg bg-neutral-200" />
+                        ))}
+                      </div>
+                    ) : selectedUserLineup.length === 0 ? (
                       <p className="text-neutral-500 text-sm">No lineup set for this week.</p>
                     ) : (
                       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
@@ -2317,7 +2429,7 @@ const LeaguePage: React.FC = () => {
                     </div>
 
                     {selectedUserBreakdownLoading ? (
-                      <div className="text-neutral-600">Loading breakdown...</div>
+                      <PointBreakdownSkeleton />
                     ) : selectedUserBreakdownError ? (
                       <div className="text-red-600">{selectedUserBreakdownError}</div>
                     ) : selectedUserBreakdown.early.length > 0 || selectedUserBreakdown.late.length > 0 ? (
@@ -2453,10 +2565,10 @@ const LeaguePage: React.FC = () => {
                     <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
                       <h3 className="font-semibold text-blue-900 mb-2">Bot Behavior</h3>
                       <ul className="text-sm text-blue-700 space-y-1">
-                        <li>• Automatically drafts the highest ELO player available</li>
-                        <li>• Sets lineups with the 5 highest ELO players from their team</li>
-                        <li>• Only one bot allowed per league</li>
-                        <li>• Can be removed by the league owner before the league starts</li>
+                        <li>â€¢ Automatically drafts the highest ELO player available</li>
+                        <li>â€¢ Sets lineups with the 5 highest ELO players from their team</li>
+                        <li>â€¢ Only one bot allowed per league</li>
+                        <li>â€¢ Can be removed by the league owner before the league starts</li>
                       </ul>
                     </div>
 

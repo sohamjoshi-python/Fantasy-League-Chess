@@ -34,6 +34,7 @@ const JoinLeague: React.FC = () => {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<'create' | 'public' | 'code'>('create')
   const [publicLeagues, setPublicLeagues] = useState<League[]>([])
+  const [publicLeaguesLoading, setPublicLeaguesLoading] = useState(false)
   const [joinCode, setJoinCode] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -53,6 +54,7 @@ const JoinLeague: React.FC = () => {
   }, [activeTab])
 
   const loadPublicLeagues = async () => {
+    setPublicLeaguesLoading(true)
     try {
       const { data: leagues, error } = await supabase.rpc('list_joinable_public_leagues')
       if (error) {
@@ -64,6 +66,8 @@ const JoinLeague: React.FC = () => {
       }
     } catch (error) {
       console.error('Error loading public leagues:', error)
+    } finally {
+      setPublicLeaguesLoading(false)
     }
   }
 
@@ -500,7 +504,13 @@ const JoinLeague: React.FC = () => {
             <h2 className="text-xl lg:text-2xl font-bold text-neutral-900">Public Leagues</h2>
             <p className="text-sm text-neutral-600 mt-1">Showing leagues that start tomorrow or later</p>
           </div>
-          {publicLeagues.length === 0 ? (
+          {publicLeaguesLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6" aria-busy="true" aria-label="Loading public leagues">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="h-48 animate-pulse rounded-lg border-2 border-royalBlue bg-neutral-100" />
+              ))}
+            </div>
+          ) : publicLeagues.length === 0 ? (
             <div className="text-center py-8 lg:py-12 bg-white rounded-lg shadow-lg border-2 border-royalBlue">
               <Search className="h-8 w-8 lg:h-12 lg:w-12 text-neutral-400 mx-auto mb-4" />
               <p className="text-neutral-600 text-sm lg:text-base">No upcoming public leagues available. Check back later or create your own league!</p>
