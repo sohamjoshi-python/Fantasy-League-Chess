@@ -1180,39 +1180,49 @@ const LeaguePage: React.FC = () => {
         setSelectedUserTeam([])
       }
 
-      // Get participant's editable lineup. Once this week is scored, this means next week.
-      const currentWeek = await getEditableLineupWeekStart()
-      let lineupData = null;
+      // Same week the manager sees on their own screen. After this week's games
+      // are imported, that is next week, falling back to this week's saved lineup
+      // when next week's row has not been created yet.
+      const scoredWeek = getCurrentWeekStart()
+      const lineupWeek = await getEditableLineupWeekStart()
+      const lineupColumn = selectedBot ? 'bot_id' : 'user_id'
+      const lineupOwnerId = selectedBot ? selectedBot.id : userData.user_id
+      let lineupData = null
+      let lineupError = null
       try {
-        if (selectedBot) {
-          const { data } = await supabase
-            .from('lineups')
-            .select('*')
-            .eq('bot_id', selectedBot.id)
-            .eq('league_id', leagueId!)
-            .eq('week_start_date', currentWeek)
-            .maybeSingle(); // Use maybeSingle instead of single
-          lineupData = data;
-        } else {
-          const { data } = await supabase
-            .from('lineups')
-            .select('*')
-            .eq('user_id', userData.user_id)
-            .eq('league_id', leagueId!)
-            .eq('week_start_date', currentWeek)
-            .maybeSingle(); // Use maybeSingle instead of single
-          lineupData = data;
-        }
+        const { data, error } = await supabase
+          .from('lineups')
+          .select('*')
+          .eq(lineupColumn, lineupOwnerId)
+          .eq('league_id', leagueId!)
+          .eq('week_start_date', lineupWeek)
+          .maybeSingle()
+        lineupData = data
+        lineupError = error
       } catch (error) {
-        // Lineups query failed, continuing without lineup data
-        lineupData = null;
+        lineupData = null
+        lineupError = error
+      }
+
+      if (!lineupData && !lineupError && lineupWeek !== scoredWeek) {
+        const { data: scoredLineup } = await supabase
+          .from('lineups')
+          .select('*')
+          .eq(lineupColumn, lineupOwnerId)
+          .eq('league_id', leagueId!)
+          .eq('week_start_date', scoredWeek)
+          .maybeSingle()
+        lineupData = scoredLineup
       }
 
       if (lineupData) {
         try {
-          const currentTeamLineupIds = (lineupData.player_ids || []).filter((id: string) =>
-            selectedTeamPlayerIds.has(id)
-          )
+          const lineupIds: string[] = lineupData.player_ids || []
+          // Only drop players who are no longer on the roster when that roster
+          // actually loaded. An unreadable team used to wipe a real lineup.
+          const currentTeamLineupIds = teamData
+            ? lineupIds.filter((id: string) => selectedTeamPlayerIds.has(id))
+            : lineupIds
 
           if (currentTeamLineupIds.length > 0) {
             const { data: lineupPlayers } = await supabase
@@ -1225,7 +1235,6 @@ const LeaguePage: React.FC = () => {
             setSelectedUserLineup([])
           }
         } catch (error) {
-          
           setSelectedUserLineup([]);
         }
       } else {
