@@ -98,6 +98,27 @@ export function getLastTuesdayOnOrBefore(ymd: string): string {
   return d
 }
 
+/**
+ * Monday whose lineup is still open.
+ * After this week's Titled Tuesday games are imported, edits move to next week.
+ * A Monday whose Tuesday is before the league starts is never the target:
+ * that lineup would not be scored.
+ */
+export function getOpenLineupMonday(
+  leagueStartYmd: string,
+  leagueEndYmd: string,
+  calendarMondayYmd: string,
+  currentTuesdayGamesImported: boolean,
+): string {
+  const openMonday = currentTuesdayGamesImported
+    ? addDaysToYmd(calendarMondayYmd, 7)
+    : calendarMondayYmd
+  const firstMonday = addDaysToYmd(getFirstTuesdayOnOrAfter(leagueStartYmd), -1)
+  const lastMonday = addDaysToYmd(getLastTuesdayOnOrBefore(leagueEndYmd), -1)
+  const chosen = compareCalendarDates(openMonday, firstMonday) >= 0 ? openMonday : firstMonday
+  return compareCalendarDates(chosen, lastMonday) > 0 ? lastMonday : chosen
+}
+
 /** Monday bounds for lineup queries within a league season. */
 export function getLeagueLineupWeekBounds(startDateYmd: string, endDateYmd: string): {
   minMonday: string

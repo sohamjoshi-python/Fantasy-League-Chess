@@ -113,15 +113,18 @@ jobs:
         run: |
           python -c "
           import os
+          from datetime import date
           from supabase import create_client
+          from lineup_rollover import ensure_scoring_lineups
 
           sb = create_client(
               os.environ['SB_URL'],
               os.environ.get('SB_SECRET_KEY') or os.environ['SB_KEY'],
           )
-          tuesday = os.environ['TUESDAY']
-          print('Backup scoring for Titled Tuesday', tuesday)
-          result = sb.rpc('process_weekly_results', {'week_date': tuesday}).execute()
+          tuesday = date.fromisoformat(os.environ['TUESDAY'])
+          print('Backup scoring for Titled Tuesday', tuesday.isoformat())
+          ensure_scoring_lineups(sb, tuesday)
+          result = sb.rpc('process_weekly_results', {'week_date': tuesday.isoformat()}).execute()
           print(result)
           "
 

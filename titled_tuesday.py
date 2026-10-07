@@ -49,6 +49,7 @@ def retry_operation(operation, max_retries=3, delay=1):
 def score_week_lineups(tuesday: date) -> None:
     """Update lineup totals for this Titled Tuesday (Monday lineups + Tuesday games)."""
     from datetime import timedelta
+    from lineup_rollover import ensure_scoring_lineups
 
     tuesday_str = tuesday.isoformat()
     monday = tuesday - timedelta(days=1)
@@ -56,6 +57,8 @@ def score_week_lineups(tuesday: date) -> None:
         f"Scoring lineups: process_weekly_results({tuesday_str}) "
         f"[games.date={tuesday.strftime('%Y.%m.%d')}, lineups.week_start_date={monday.isoformat()}]"
     )
+    print("Ensuring missing weekly lineups are carried forward before scoring")
+    ensure_scoring_lineups(supabase, tuesday)
     response = retry_operation(
         lambda: supabase.rpc("process_weekly_results", {"week_date": tuesday_str}).execute()
     )

@@ -4,7 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { League, Lineup, ChessPlayer, Bot } from '../types'
-import { addDaysToYmd, compareCalendarDates, getLeagueLineupWeekBounds, getWeekStartMonday, leagueSeasonHasEndedLocal, mondayYmdToTuesdayDot } from '../lib/calendarDate'
+import { addDaysToYmd, compareCalendarDates, getLeagueLineupWeekBounds, getLocalDateString, getOpenLineupMonday, getWeekStartMonday, leagueSeasonHasEndedLocal, mondayYmdToTuesdayDot } from '../lib/calendarDate'
 import { keepIfSame } from '../lib/keepIfSame'
 import {
   formatCalendarDate,
@@ -25,6 +25,8 @@ import {
   fetchLineupPlayerBreakdownByRounds,
   fetchUserLeagueDisplayWeeks,
   fetchLineupParticipantBreakdownByRounds,
+  formatTournamentRecord,
+  carriedLineupPlayerIds,
 } from '../lib/supabase';
 import Confetti from 'react-confetti';
 import { resolveAvatarUrl } from '../lib/avatars';
@@ -203,7 +205,7 @@ async function loadParticipantSheets(options: {
   lineupWeek: string
   currentWeek: string
 }): Promise<Map<string, ParticipantSheet>> {
-  const { league, participants, lineupWeek, currentWeek } = options
+  const { league, participants, lineupWeek } = options
   const sheets = new Map<string, ParticipantSheet>()
   if (participants.length === 0) return sheets
 
@@ -234,19 +236,32 @@ async function loadParticipantSheets(options: {
     const teamIds = teamRow?.player_ids || []
     const ownedLineups = (lineups || []).filter(owns)
     let lineupRow = ownedLineups.find((row) => row.week_start_date === lineupWeek) || null
-    if (!lineupRow && lineupWeek !== currentWeek) {
-      lineupRow = ownedLineups.find((row) => row.week_start_date === currentWeek) || null
+    if (!lineupRow) {
+      const carriedIds = carriedLineupPlayerIds(ownedLineups, lineupWeek, new Set(teamIds))
+      if (carriedIds.length > 0) {
+        lineupRow = {
+          user_id: participant.isBot ? null : participant.id,
+          bot_id: participant.isBot ? participant.id : null,
+          player_ids: carriedIds,
+          week_start_date: lineupWeek,
+          total_points: 0,
+        }
+      }
     }
     const lineupIds = ((lineupRow?.player_ids || []) as string[]).filter((id) =>
       !teamRow || teamIds.includes(id)
     )
+    const today = getLocalDateString()
     const weeks = Array.from(new Set(
       ownedLineups
-        .filter((row) =>
-          Number(row.total_points) > 0 &&
-          compareCalendarDates(String(row.week_start_date), minMonday) >= 0 &&
-          compareCalendarDates(String(row.week_start_date), maxMonday) <= 0
-        )
+        .filter((row) => {
+          if (compareCalendarDates(String(row.week_start_date), minMonday) < 0) return false
+          if (compareCalendarDates(String(row.week_start_date), maxMonday) > 0) return false
+          if (Number(row.total_points) !== 0) return true
+          const hasPlayers = (row.player_ids || []).length > 0
+          const tuesday = addDaysToYmd(String(row.week_start_date), 1)
+          return hasPlayers && compareCalendarDates(tuesday, today) <= 0
+        })
         .map((row) => String(row.week_start_date))
     )).sort().map(mondayYmdToTuesdayDot)
 
@@ -703,14 +718,19 @@ const LeaguePage: React.FC = () => {
 
       if (generation !== undefined && generation !== loadGeneration.current) return
 
-      const lineupWeek = gamesImported ? addDaysToYmd(currentWeek, 7) : currentWeek
+      const lineupWeek = getOpenLineupMonday(
+        leagueRow.start_date,
+        leagueRow.end_date,
+        currentWeek,
+        gamesImported,
+      )
       setEditableLineupWeek((prev) => prev === lineupWeek ? prev : lineupWeek)
       const teamData = teamResult.data
       const teamPlayerIds = new Set<string>(teamData?.player_ids || [])
       const botData = !botResult.error && botResult.data ? botResult.data : null
       if (botData) setBot(keepIfSame(botData))
 
-      const [lineupResult, scoredLineupResult, teamPlayersResult] = await Promise.all([
+      const [lineupResult, priorLineupsResult, teamPlayersResult] = await Promise.all([
         supabase
           .from('lineups')
           .select('*')
@@ -718,15 +738,14 @@ const LeaguePage: React.FC = () => {
           .eq('league_id', leagueId)
           .eq('week_start_date', lineupWeek)
           .maybeSingle(),
-        lineupWeek !== currentWeek
-          ? supabase
-              .from('lineups')
-              .select('*')
-              .eq('user_id', user.id)
-              .eq('league_id', leagueId)
-              .eq('week_start_date', currentWeek)
-              .maybeSingle()
-          : Promise.resolve({ data: null, error: null }),
+        supabase
+          .from('lineups')
+          .select('week_start_date, player_ids')
+          .eq('user_id', user.id)
+          .eq('league_id', leagueId)
+          .lt('week_start_date', lineupWeek)
+          .order('week_start_date', { ascending: false })
+          .limit(12),
         teamPlayerIds.size > 0
           ? supabase.from('chess_players').select('*').in('id', Array.from(teamPlayerIds))
           : Promise.resolve({ data: [] as ChessPlayer[], error: null }),
@@ -740,12 +759,17 @@ const LeaguePage: React.FC = () => {
       const playersById = new Map(rosterPlayers.map((player) => [player.id, player]))
 
       let lineupToDisplay = lineupResult.data
-      if (!lineupToDisplay && !lineupResult.error && scoredLineupResult.data) {
-        lineupToDisplay = {
-          ...scoredLineupResult.data,
-          id: '',
-          week_start_date: lineupWeek,
-          total_points: 0,
+      if (!lineupToDisplay && !lineupResult.error) {
+        const carriedIds = carriedLineupPlayerIds(priorLineupsResult.data || [], lineupWeek, teamPlayerIds)
+        if (carriedIds.length > 0) {
+          lineupToDisplay = {
+            id: '',
+            user_id: user.id,
+            league_id: leagueId,
+            week_start_date: lineupWeek,
+            player_ids: carriedIds,
+            total_points: 0,
+          }
         }
       }
 
@@ -967,9 +991,11 @@ const LeaguePage: React.FC = () => {
 
   const getEditableLineupWeekStart = async () => {
     const currentWeek = getCurrentWeekStart()
-    return (await hasImportedGamesForWeek(currentWeek))
-      ? addDaysToYmd(currentWeek, 7)
-      : currentWeek
+    const gamesImported = await hasImportedGamesForWeek(currentWeek)
+    if (!league?.start_date || !league?.end_date) {
+      return gamesImported ? addDaysToYmd(currentWeek, 7) : currentWeek
+    }
+    return getOpenLineupMonday(league.start_date, league.end_date, currentWeek, gamesImported)
   }
 
   const saveLineup = async () => {
@@ -1266,9 +1292,13 @@ const LeaguePage: React.FC = () => {
     ;(async () => {
       try {
         const currentWeek = getCurrentWeekStart()
-        const lineupWeek = (await hasImportedGamesForWeek(currentWeek))
-          ? addDaysToYmd(currentWeek, 7)
-          : currentWeek
+        const gamesImported = await hasImportedGamesForWeek(currentWeek)
+        const lineupWeek = getOpenLineupMonday(
+          leagueSnapshot.start_date,
+          leagueSnapshot.end_date,
+          currentWeek,
+          gamesImported,
+        )
         const sheets = await loadParticipantSheets({
           league: leagueSnapshot,
           participants,
@@ -1307,9 +1337,13 @@ const LeaguePage: React.FC = () => {
     try {
       const isBot = Boolean(bot && participantId === bot.id)
       const currentWeek = getCurrentWeekStart()
-      const lineupWeek = (await hasImportedGamesForWeek(currentWeek))
-        ? addDaysToYmd(currentWeek, 7)
-        : currentWeek
+      const gamesImported = await hasImportedGamesForWeek(currentWeek)
+      const lineupWeek = getOpenLineupMonday(
+        league.start_date,
+        league.end_date,
+        currentWeek,
+        gamesImported,
+      )
       const sheets = await loadParticipantSheets({
         league,
         participants: [{ id: participantId, isBot }],
@@ -2237,10 +2271,7 @@ const LeaguePage: React.FC = () => {
                                   <ExpandablePlayerName playerName={row.player_name} />
                                 </td>
                                 <td className="px-2 py-1 text-center text-neutral-700">
-                                  {row.wins !== undefined && row.total_games !== undefined 
-                                    ? `${row.wins}/${row.total_games}`
-                                    : '-'
-                                  }
+                                  {formatTournamentRecord(row.wins, row.total_games)}
                                 </td>
                                 <td className="px-2 py-1 text-right text-neutral-700">{Number(row.player_points).toFixed(2)}</td>
                               </tr>
@@ -2274,10 +2305,7 @@ const LeaguePage: React.FC = () => {
                                   <ExpandablePlayerName playerName={row.player_name} />
                                 </td>
                                 <td className="px-2 py-1 text-center text-neutral-700">
-                                  {row.wins !== undefined && row.total_games !== undefined 
-                                    ? `${row.wins}/${row.total_games}` 
-                                    : '-'
-                                  }
+                                  {formatTournamentRecord(row.wins, row.total_games)}
                                 </td>
                                 <td className="px-2 py-1 text-right text-neutral-700">{Number(row.player_points).toFixed(2)}</td>
                               </tr>
@@ -2450,7 +2478,7 @@ const LeaguePage: React.FC = () => {
                                   <tr key={`early-${row.player_id || row.player_name}`} className="border-b border-neutral-100 last:border-b-0">
                                     <td className="px-2 py-1">{row.player_name}</td>
                                     <td className="px-2 py-1 text-center">
-                                      {row.wins !== undefined && row.total_games !== undefined ? `${row.wins}/${row.total_games}` : '-'}
+                                      {formatTournamentRecord(row.wins, row.total_games)}
                                     </td>
                                     <td className="px-2 py-1 text-right">{Number(row.player_points).toFixed(2)}</td>
                                   </tr>
@@ -2483,7 +2511,7 @@ const LeaguePage: React.FC = () => {
                                   <tr key={`late-${row.player_id || row.player_name}`} className="border-b border-neutral-100 last:border-b-0">
                                     <td className="px-2 py-1">{row.player_name}</td>
                                     <td className="px-2 py-1 text-center">
-                                      {row.wins !== undefined && row.total_games !== undefined ? `${row.wins}/${row.total_games}` : '-'}
+                                      {formatTournamentRecord(row.wins, row.total_games)}
                                     </td>
                                     <td className="px-2 py-1 text-right">{Number(row.player_points).toFixed(2)}</td>
                                   </tr>

@@ -3,8 +3,25 @@ import { Bot, League } from '../types'
 import {
   compareCalendarDates,
   getLeagueLineupWeekBounds,
+  getLocalDateString,
   mondayYmdToTuesdayDot,
 } from './calendarDate'
+
+/** Latest saved lineup still on the current roster, for a week that has no row yet. */
+export function carriedLineupPlayerIds(
+  lineups: Array<{ week_start_date?: string | null; player_ids?: string[] | null }>,
+  beforeWeek: string,
+  teamPlayerIds: Set<string>,
+): string[] {
+  const earlier = lineups
+    .filter((row) => row.week_start_date && compareCalendarDates(String(row.week_start_date), beforeWeek) < 0)
+    .sort((a, b) => compareCalendarDates(String(b.week_start_date), String(a.week_start_date)))
+  for (const row of earlier) {
+    const ids = (row.player_ids || []).filter((id) => teamPlayerIds.has(id))
+    if (ids.length > 0) return ids
+  }
+  return []
+}
 import { isPlayerAlreadyOwnedError } from './leagueStatus'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined
@@ -90,11 +107,10 @@ export async function fetchLineupParticipantDisplayWeeks(
 
   let query = supabase
     .from('lineups')
-    .select('week_start_date')
+    .select('week_start_date, total_points, player_ids')
     .eq('league_id', league.id)
     .gte('week_start_date', minMonday)
     .lte('week_start_date', maxMonday)
-    .gt('total_points', 0)
     .order('week_start_date', { ascending: true })
 
   if (participant.botId) {
@@ -111,8 +127,16 @@ export async function fetchLineupParticipantDisplayWeeks(
     return []
   }
 
+  const today = getLocalDateString()
+  const scoredRows = data.filter((row) => {
+    if (Number(row.total_points) !== 0) return true
+    const hasPlayers = (row.player_ids || []).length > 0
+    const tuesday = mondayYmdToTuesdayDot(String(row.week_start_date)).replace(/\./g, '-')
+    return hasPlayers && compareCalendarDates(tuesday, today) <= 0
+  })
+
   const uniqueMondays = Array.from(
-    new Set(data.map((row) => String(row.week_start_date)))
+    new Set(scoredRows.map((row) => String(row.week_start_date)))
   )
   return uniqueMondays.map(mondayYmdToTuesdayDot)
 }
@@ -169,20 +193,17 @@ export async function fetchLineupPlayerBreakdown(userId: string, leagueId: strin
           };
         }
 
-        // Calculate wins and total games
+        // Chess.com score: a win is 1, a draw is 0.5.
         let wins = 0;
         let totalGames = 0;
         
         games?.forEach(game => {
           if (game.white === player.player_name || game.black === player.player_name) {
             totalGames++;
-            if (game.result === '1-0' && game.white === player.player_name) {
-              wins++;
-            } else if (game.result === '0-1' && game.black === player.player_name) {
-              wins++;
-            }
+            wins += tournamentPointsForGame(game, player.player_name);
           }
         });
+        wins = roundTournamentScore(wins);
 
         return {
           ...player,
@@ -287,6 +308,11 @@ export async function fetchLineupParticipantBreakdownByRounds(
     // Process each player
     const early: Array<{ player_id: string, player_name: string, player_points: number, wins?: number, total_games?: number }> = [];
     const late: Array<{ player_id: string, player_name: string, player_points: number, wins?: number, total_games?: number }> = [];
+    const played: Array<{
+      player: { id: string, name: string },
+      earlyStats: { wins: number, total_games: number, points: number },
+      lateStats: { wins: number, total_games: number, points: number },
+    }> = [];
     
     for (const player of players) {
       // Query each side separately to avoid PostgREST OR encoding issues with chess.com usernames.
@@ -317,26 +343,25 @@ export async function fetchLineupParticipantBreakdownByRounds(
       // Calculate stats for each round
       const earlyStats = calculateRoundStats(earlyGames, player.name);
       const lateStats = calculateRoundStats(lateGames, player.name);
-      
-      // Add to results if there are games or points
-      if (earlyStats.points > 0 || earlyStats.total_games > 0) {
-        early.push({
-          player_id: player.id,
-          player_name: player.name,
-          player_points: earlyStats.points,
-          wins: earlyStats.wins,
-          total_games: earlyStats.total_games
-        });
+      played.push({ player, earlyStats, lateStats });
+    }
+
+    const anyEarly = played.some((row) => row.earlyStats.total_games > 0);
+    const anyLate = played.some((row) => row.lateStats.total_games > 0);
+
+    for (const { player, earlyStats, lateStats } of played) {
+      // A negative fantasy total still counts. Only skip a round the player missed
+      // when nobody on the lineup played that round.
+      if (earlyStats.total_games > 0 || earlyStats.points !== 0) {
+        early.push(playedRow(player, earlyStats));
+      } else if (anyEarly) {
+        early.push(didNotPlayRow(player));
       }
-      
-      if (lateStats.points > 0 || lateStats.total_games > 0) {
-        late.push({
-          player_id: player.id,
-          player_name: player.name,
-          player_points: lateStats.points,
-          wins: lateStats.wins,
-          total_games: lateStats.total_games
-        });
+
+      if (lateStats.total_games > 0 || lateStats.points !== 0) {
+        late.push(playedRow(player, lateStats));
+      } else if (anyLate) {
+        late.push(didNotPlayRow(player));
       }
     }
     
@@ -347,10 +372,47 @@ export async function fetchLineupParticipantBreakdownByRounds(
   }
 }
 
+type RoundStats = { wins: number, total_games: number, points: number }
+type BreakdownPlayer = { id: string, name: string }
+
+/** Chess.com tournament points for one game: 1 for a win, 0.5 for a draw. */
+function tournamentPointsForGame(game: { result?: string | null, white?: string | null, black?: string | null }, playerName: string): number {
+  const result = game.result || ''
+  const isWhite = game.white === playerName
+  const isBlack = game.black === playerName
+  if (result === '1/2-1/2' && (isWhite || isBlack)) return 0.5
+  if (result === '1-0' && isWhite) return 1
+  if (result === '0-1' && isBlack) return 1
+  return 0
+}
+
+function roundTournamentScore(score: number): number {
+  return Math.round(score * 10) / 10
+}
+
+function playedRow(player: BreakdownPlayer, stats: RoundStats) {
+  return {
+    player_id: player.id,
+    player_name: player.name,
+    player_points: stats.points,
+    wins: stats.wins,
+    total_games: stats.total_games,
+  }
+}
+
+function didNotPlayRow(player: BreakdownPlayer) {
+  return {
+    player_id: player.id,
+    player_name: player.name,
+    player_points: 0,
+  }
+}
+
 /**
- * Helper function to calculate stats for a round
+ * Chess.com record plus fantasy points for one Titled Tuesday session.
+ * Draws count as half a point, matching the published tournament score.
  */
-function calculateRoundStats(games: any[], playerName: string): { wins: number, total_games: number, points: number } {
+function calculateRoundStats(games: any[], playerName: string): RoundStats {
   let wins = 0;
   let totalGames = 0;
   let points = 0;
@@ -358,21 +420,23 @@ function calculateRoundStats(games: any[], playerName: string): { wins: number, 
   games.forEach(game => {
     if (game.white === playerName || game.black === playerName) {
       totalGames++;
-      if (game.result === '1-0' && game.white === playerName) {
-        wins++;
-        points += game.white_points || 0;
-      } else if (game.result === '0-1' && game.black === playerName) {
-        wins++;
-        points += game.black_points || 0;
-      } else if (game.white === playerName) {
-        points += game.white_points || 0;
-      } else if (game.black === playerName) {
-        points += game.black_points || 0;
-      }
+      wins += tournamentPointsForGame(game, playerName);
+      const fantasyPoints = game.white === playerName ? game.white_points : game.black_points;
+      points += Number(fantasyPoints) || 0;
     }
   });
 
-  return { wins, total_games: totalGames, points };
+  return { wins: roundTournamentScore(wins), total_games: totalGames, points };
+}
+
+/** Record column: "8.5/11". Missing scores stay blank instead of the word null. */
+export function formatTournamentRecord(score: number | null | undefined, games: number | null | undefined): string {
+  if (score == null || games == null || Number.isNaN(Number(score)) || Number.isNaN(Number(games))) {
+    return '-'
+  }
+  const rounded = roundTournamentScore(Number(score))
+  const text = Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1)
+  return `${text}/${games}`
 }
 
 /**

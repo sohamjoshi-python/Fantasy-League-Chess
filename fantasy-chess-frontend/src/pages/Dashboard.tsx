@@ -5,10 +5,10 @@ import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { League, Team, Lineup, ChessPlayer } from '../types'
 import { Crown, Users, Trophy, Calendar, Plus, ExternalLink } from 'lucide-react'
-import { fetchLineupPlayerBreakdownByRounds, fetchUserLeagueDisplayWeeks } from '../lib/supabase'
+import { carriedLineupPlayerIds, fetchLineupPlayerBreakdownByRounds, fetchUserLeagueDisplayWeeks, formatTournamentRecord } from '../lib/supabase'
 import PlayerDetailModal from '../components/PlayerDetailModal'
 import { DashboardPageSkeleton, PointBreakdownSkeleton, SkeletonBlock } from '../components/ui/LoadingSpinner'
-import { addDaysToYmd, getLocalDateString, getWeekStartMonday } from '../lib/calendarDate'
+import { getLocalDateString, getOpenLineupMonday, getWeekStartMonday } from '../lib/calendarDate'
 import { keepIfSame } from '../lib/keepIfSame'
 import { formatCalendarDate } from '../lib/leagueStatus'
 
@@ -230,7 +230,9 @@ const Dashboard: React.FC = () => {
 
       const gamesImported = await gamesImportedPromise
       if (!isCurrent()) return
-      const lineupWeek = gamesImported ? addDaysToYmd(currentWeek, 7) : currentWeek
+      const lineupWeek = activeLeague
+        ? getOpenLineupMonday(activeLeague.start_date, activeLeague.end_date, currentWeek, gamesImported)
+        : currentWeek
       setEditableLineupWeek((prev) => prev === lineupWeek ? prev : lineupWeek)
 
       const pastLineupsPromise = past.length > 0
@@ -244,7 +246,7 @@ const Dashboard: React.FC = () => {
       if (activeLeague) {
         if (generation !== undefined) setRosterLoading(true)
         const league = activeLeague
-        const [teamResult, lineupResult, scoredLineupResult, pastLineupsResult] = await Promise.all([
+        const [teamResult, lineupResult, priorLineupsResult, pastLineupsResult] = await Promise.all([
           supabase
             .from('teams')
             .select('*')
@@ -258,15 +260,14 @@ const Dashboard: React.FC = () => {
             .eq('league_id', league.id)
             .eq('week_start_date', lineupWeek)
             .maybeSingle(),
-          lineupWeek !== currentWeek
-            ? supabase
-                .from('lineups')
-                .select('*')
-                .eq('user_id', user.id)
-                .eq('league_id', league.id)
-                .eq('week_start_date', currentWeek)
-                .maybeSingle()
-            : Promise.resolve({ data: null, error: null }),
+          supabase
+            .from('lineups')
+            .select('week_start_date, player_ids')
+            .eq('user_id', user.id)
+            .eq('league_id', league.id)
+            .lt('week_start_date', lineupWeek)
+            .order('week_start_date', { ascending: false })
+            .limit(12),
           pastLineupsPromise,
         ])
 
@@ -281,15 +282,20 @@ const Dashboard: React.FC = () => {
         let lineupToDisplay = lineupResult.data
         if (lineupResult.error) {
           console.error('Error loading lineup:', lineupResult.error)
-        } else if (!lineupToDisplay && scoredLineupResult.data) {
-          if (scoredLineupResult.error) {
-            console.error('Error loading scored lineup template:', scoredLineupResult.error)
+        } else if (!lineupToDisplay) {
+          if (priorLineupsResult.error) {
+            console.error('Error loading previous lineup:', priorLineupsResult.error)
           } else {
-            lineupToDisplay = {
-              ...scoredLineupResult.data,
-              id: '',
-              week_start_date: lineupWeek,
-              total_points: 0,
+            const carriedIds = carriedLineupPlayerIds(priorLineupsResult.data || [], lineupWeek, teamPlayerIds)
+            if (carriedIds.length > 0) {
+              lineupToDisplay = {
+                id: '',
+                user_id: user.id,
+                league_id: league.id,
+                week_start_date: lineupWeek,
+                player_ids: carriedIds,
+                total_points: 0,
+              }
             }
           }
         }
@@ -534,10 +540,7 @@ const Dashboard: React.FC = () => {
                           <tr key={row.player_id || row.player_name} className="border-b border-neutral-100 last:border-b-0">
                             <td className="px-2 py-1 text-neutral-900">{row.player_name}</td>
                             <td className="px-2 py-1 text-center text-neutral-900">
-                              {row.wins !== undefined && row.total_games !== undefined 
-                                ? `${row.wins}/${row.total_games}` 
-                                : '-'
-                              }
+                              {formatTournamentRecord(row.wins, row.total_games)}
                             </td>
                             <td className="px-2 py-1 text-right text-neutral-900">{Number(row.player_points).toFixed(2)}</td>
                           </tr>
@@ -569,10 +572,7 @@ const Dashboard: React.FC = () => {
                           <tr key={row.player_id || row.player_name} className="border-b border-neutral-100 last:border-b-0">
                             <td className="px-2 py-1 text-neutral-900">{row.player_name}</td>
                             <td className="px-2 py-1 text-center text-neutral-900">
-                              {row.wins !== undefined && row.total_games !== undefined 
-                                ? `${row.wins}/${row.total_games}` 
-                                : '-'
-                              }
+                              {formatTournamentRecord(row.wins, row.total_games)}
                             </td>
                             <td className="px-2 py-1 text-right text-neutral-900">{Number(row.player_points).toFixed(2)}</td>
                           </tr>

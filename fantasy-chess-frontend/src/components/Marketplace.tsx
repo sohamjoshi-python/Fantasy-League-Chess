@@ -12,7 +12,7 @@ import TradingTab from './TradingTab';
 import { getTradeNotifications, markNotificationSeen } from '../lib/supabase';
 import { TradeNotificationWithDetails } from '../types';
 import PlayerDetailModal from './PlayerDetailModal';
-import { addDaysToYmd, getWeekStartMonday, leagueSeasonHasEndedLocal } from '../lib/calendarDate';
+import { addDaysToYmd, getOpenLineupMonday, getWeekStartMonday, leagueSeasonHasEndedLocal } from '../lib/calendarDate';
 import { isPlayerAlreadyOwnedError } from '../lib/leagueStatus';
 
 interface MarketplaceProps {
@@ -103,6 +103,7 @@ interface League {
   marketplace_started: boolean;
   draft_completed: boolean;
   creator_id: string;
+  start_date: string;
   end_date: string;
 }
 
@@ -290,7 +291,7 @@ export default function Marketplace({ leagueId, onTeamUpdate }: MarketplaceProps
       // Load league data first
       const { data: leagueData, error: leagueError } = await supabase
         .from('leagues')
-        .select('id, name, marketplace_started, draft_completed, creator_id, end_date')
+        .select('id, name, marketplace_started, draft_completed, creator_id, start_date, end_date')
         .eq('id', leagueId)
         .single();
       
@@ -813,15 +814,16 @@ export default function Marketplace({ leagueId, onTeamUpdate }: MarketplaceProps
 
   const getEditableLineupWeekStart = async () => {
     const currentWeek = getCurrentWeekStart()
-    return (await hasImportedGamesForWeek(currentWeek))
-      ? addDaysToYmd(currentWeek, 7)
-      : currentWeek
+    const gamesImported = await hasImportedGamesForWeek(currentWeek)
+    if (!league?.start_date || !league?.end_date) {
+      return gamesImported ? addDaysToYmd(currentWeek, 7) : currentWeek
+    }
+    return getOpenLineupMonday(league.start_date, league.end_date, currentWeek, gamesImported)
   }
 
   const removePlayerFromEditableLineup = async (playerId: string) => {
     if (!user?.id) return
 
-    const currentWeek = getCurrentWeekStart()
     const lineupWeek = await getEditableLineupWeekStart()
     const { data: targetLineup, error: targetLineupError } = await supabase
       .from('lineups')
@@ -852,14 +854,14 @@ export default function Marketplace({ leagueId, onTeamUpdate }: MarketplaceProps
       return
     }
 
-    if (lineupWeek === currentWeek) return
-
     const { data: scoredLineup, error: scoredLineupError } = await supabase
       .from('lineups')
       .select('player_ids')
       .eq('user_id', user.id)
       .eq('league_id', leagueId)
-      .eq('week_start_date', currentWeek)
+      .lt('week_start_date', lineupWeek)
+      .order('week_start_date', { ascending: false })
+      .limit(1)
       .maybeSingle()
 
     if (scoredLineupError || !scoredLineup?.player_ids) {
