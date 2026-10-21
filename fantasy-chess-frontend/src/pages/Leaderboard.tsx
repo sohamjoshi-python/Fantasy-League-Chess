@@ -137,18 +137,18 @@ const Leaderboard: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-royalBlue to-purple-900">
-      <div className="max-w-6xl mx-auto p-6">
+      <div className="max-w-6xl mx-auto px-4 py-8 sm:p-6">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2 flex items-center justify-center">
-            <Trophy className="w-10 h-10 mr-3 text-gold" />
+          <h1 className="text-2xl sm:text-4xl font-bold text-white mb-2 flex flex-wrap items-center justify-center gap-2">
+            <Trophy className="w-8 h-8 sm:w-10 sm:h-10 text-gold" />
             Fantasy Chess Leaderboards
           </h1>
           <p className="text-white/80 text-lg">Track the best players across all leagues</p>
         </div>
 
         {/* Tab Navigation */}
-        <div className="bg-white/10 backdrop-blur-sm rounded-lg p-1 mb-8">
+        <div className="bg-white/15 rounded-lg p-1 mb-8">
           <div className="flex flex-wrap justify-center gap-2">
             <button
               onClick={() => setActiveTab('wins')}

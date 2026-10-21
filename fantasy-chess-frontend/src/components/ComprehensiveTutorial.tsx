@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { X, Trophy, Users, Target, Coins, Store, CheckCircle, Crown, Calendar, Plus, Medal, User, ChevronDown, ChevronUp } from 'lucide-react';
 import TutorialCallout from './TutorialCallout';
 import TutorialMiniSite from './TutorialMiniSite';
+import MobileTutorial from './MobileTutorial';
+import { useIsPhone } from '../hooks/useIsPhone';
 
 interface TutorialStep {
   id: string;
@@ -218,6 +220,11 @@ const ComprehensiveTutorial: React.FC = () => {
 
 
   const [leagueJoined] = useState(false);
+  const isPhone = useIsPhone();
+
+  if (isPhone) {
+    return <MobileTutorial />;
+  }
 
   if (!showTutorial || !sampleData) {
     return null;
@@ -242,14 +249,14 @@ const ComprehensiveTutorial: React.FC = () => {
   };
 
   const renderDashboard = () => (
-    <div className="w-full max-w-6xl mx-auto bg-white min-h-screen">
+    <div className="w-full max-w-6xl mx-auto bg-white">
       <h1 className="text-4xl lg:text-5xl font-extrabold text-neutral-900 mb-8 text-center tracking-tight font-serif drop-shadow relative">
         Dashboard
         <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-24 h-1 bg-gradient-to-r from-royalBlue to-gold rounded-full"></div>
       </h1>
 
       {!leagueJoined ? (
-        <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
+        <div className="flex flex-col items-center justify-center px-4 py-8">
           <div className="text-center max-w-md mx-auto bg-white rounded-xl shadow-lg border-2 border-gray-100 p-8">
             <Crown className="h-12 w-12 lg:h-16 lg:w-16 text-royalBlue mx-auto mb-4" />
             <h2 className="text-xl lg:text-2xl font-bold mb-4 text-neutral-900">No Active League</h2>
@@ -312,10 +319,10 @@ const ComprehensiveTutorial: React.FC = () => {
       <div className="bg-white rounded-lg shadow p-6">
         <h1 className="text-2xl font-bold text-gray-900">Join a League</h1>
         <p className="text-gray-600">Create a league, browse public leagues, or join with a code</p>
-        <div className="flex space-x-1 mt-4 bg-neutral-100 p-1 rounded-lg max-w-lg">
-          <div className="flex-1 py-2 px-3 rounded-md text-sm text-neutral-600 text-center">Create League</div>
-          <div className="flex-1 py-2 px-3 rounded-md text-sm font-medium bg-white text-royalBlue shadow-sm border border-royalBlue text-center">Public Leagues</div>
-          <div className="flex-1 py-2 px-3 rounded-md text-sm text-neutral-600 text-center">Join with Code</div>
+        <div className="flex gap-1 mt-4 bg-neutral-100 p-1 rounded-lg max-w-lg overflow-x-auto">
+          <div className="flex-1 min-w-0 py-2 px-2 sm:px-3 rounded-md text-xs sm:text-sm text-neutral-600 text-center">Create League</div>
+          <div className="flex-1 min-w-0 py-2 px-2 sm:px-3 rounded-md text-xs sm:text-sm font-medium bg-white text-royalBlue shadow-sm border border-royalBlue text-center">Public Leagues</div>
+          <div className="flex-1 min-w-0 py-2 px-2 sm:px-3 rounded-md text-xs sm:text-sm text-neutral-600 text-center">Join with Code</div>
         </div>
       </div>
 
@@ -382,7 +389,7 @@ const ComprehensiveTutorial: React.FC = () => {
   );
 
   const renderLeague = () => (
-    <div className="w-full max-w-6xl mx-auto bg-white min-h-screen">
+    <div className="w-full max-w-6xl mx-auto bg-white">
       <h1 className="text-4xl lg:text-5xl font-extrabold text-neutral-900 mb-8 text-center tracking-tight font-serif drop-shadow relative">
         Tutorial Champions League
         <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-32 h-1 bg-gradient-to-r from-royalBlue to-gold rounded-full"></div>
@@ -412,10 +419,10 @@ const ComprehensiveTutorial: React.FC = () => {
         {/* Marketplace Section - Only show AFTER start marketplace is clicked */}
                   {(currentStepData.page === 'league' && (currentStepData.id === 'marketplace-start' || 
                     currentStepData.target === 'buy-magnus' || currentStepData.target === 'buy-ding')) && (
-          <div className="bg-white rounded-lg shadow-lg p-4 border-2 border-blue-200 max-h-[80vh] overflow-y-auto overflow-x-hidden">
-            <div className="flex items-center justify-between mb-4">
+          <div className="bg-white rounded-lg shadow-lg p-4 border-2 border-blue-200">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
               <h3 className="text-xl font-bold text-gray-900">Turn-Based Marketplace</h3>
-              <div className="text-lg font-semibold text-amber-700 bg-amber-100 px-4 py-2 rounded">
+              <div className="text-lg font-semibold text-amber-700 bg-amber-100 px-4 py-2 rounded self-start">
                 Coins: {currentStepData.target === 'buy-ding' ? '0' : '50'} 🪙
               </div>
             </div>
@@ -460,11 +467,11 @@ const ComprehensiveTutorial: React.FC = () => {
               </div>
 
               {/* Players List */}
-              <div className="space-y-3 max-h-96 overflow-y-auto overflow-x-hidden">
+              <div className="space-y-3">
                 {/* Magnus Carlsen - Show as purchased in team-building step */}
                 {currentStepData.target === 'buy-ding' ? (
                   <div className="p-4 border rounded-lg bg-green-50 border-green-300 opacity-75">
-                    <div className="flex justify-between items-center">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
                       <div>
                         <span className="font-medium text-green-700">Magnus Carlsen ✓</span>
                         <span className="text-green-600 ml-2">ELO: 2850 • Purchased</span>
@@ -482,7 +489,7 @@ const ComprehensiveTutorial: React.FC = () => {
                         : 'border-gray-200 hover:border-gray-300'
                     }`}
                   >
-                    <div className="flex justify-between items-center">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
                       <div>
                         <span className="font-medium">Magnus Carlsen</span>
                         <span className="text-gray-500 ml-2">ELO: 2850</span>
@@ -506,7 +513,7 @@ const ComprehensiveTutorial: React.FC = () => {
                 )}
 
                 <div className="p-4 border border-gray-200 rounded-lg">
-                  <div className="flex justify-between items-center">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
                     <div>
                       <span className="font-medium">Fabiano Caruana</span>
                       <span className="text-gray-500 ml-2">ELO: 2780</span>
@@ -529,7 +536,7 @@ const ComprehensiveTutorial: React.FC = () => {
                       : 'border-gray-200 hover:border-gray-300 hover:shadow-lg'
                   }`}
                 >
-                  <div className="flex justify-between items-center">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
                     <div>
                       <span className={`font-medium ${
                         currentStepData.target === 'buy-magnus'
@@ -573,7 +580,7 @@ const ComprehensiveTutorial: React.FC = () => {
                 <h4 className="font-semibold text-gray-900 mb-3">Your Team ({currentStepData.target === 'buy-ding' ? '1' : '0'}/10)</h4>
                 {currentStepData.target === 'buy-ding' ? (
                   <div className="space-y-2">
-                    <div className="flex justify-between items-center p-4 border rounded-lg">
+                    <div className="flex flex-col gap-1 sm:flex-row sm:justify-between sm:items-center p-4 border rounded-lg">
                       <div>
                         <span className="font-medium">Magnus Carlsen</span>
                         <span className="text-gray-500 ml-2">ELO: 2850</span>
@@ -619,19 +626,19 @@ const ComprehensiveTutorial: React.FC = () => {
           <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6 border-2 border-gold">
             <h3 className="text-lg lg:text-xl font-bold mb-4 text-neutral-900">Your Team</h3>
             <div className="space-y-2">
-              <div className="flex justify-between items-center p-4 border rounded-lg">
+              <div className="flex flex-col gap-1 sm:flex-row sm:justify-between sm:items-center p-4 border rounded-lg">
                 <div>
                   <span className="font-medium">Magnus Carlsen</span>
                   <span className="text-gray-500 ml-2">ELO: 2850</span>
                 </div>
               </div>
-              <div className="flex justify-between items-center p-4 border rounded-lg">
+              <div className="flex flex-col gap-1 sm:flex-row sm:justify-between sm:items-center p-4 border rounded-lg">
                 <div>
                   <span className="font-medium">Fabiano Caruana</span>
                   <span className="text-gray-500 ml-2">ELO: 2780</span>
                 </div>
               </div>
-              <div className="flex justify-between items-center p-4 border rounded-lg">
+              <div className="flex flex-col gap-1 sm:flex-row sm:justify-between sm:items-center p-4 border rounded-lg">
                 <div>
                   <span className="font-medium">Ding Liren</span>
                   <span className="text-gray-500 ml-2">ELO: 2750</span>
@@ -803,15 +810,15 @@ const ComprehensiveTutorial: React.FC = () => {
       <div className="max-w-6xl mx-auto p-6">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2 flex items-center justify-center">
-            <Trophy className="w-10 h-10 mr-3 text-yellow-500" />
+          <h1 className="text-2xl sm:text-4xl font-bold text-white mb-2 flex flex-wrap items-center justify-center gap-2">
+            <Trophy className="w-8 h-8 sm:w-10 sm:h-10 text-yellow-500" />
             Fantasy Chess Leaderboards
           </h1>
           <p className="text-white/80 text-lg">Track the best players across all leagues</p>
         </div>
 
         {/* Tab Navigation */}
-        <div className="bg-white/10 backdrop-blur-sm rounded-lg p-1 mb-8">
+        <div className="bg-white/15 rounded-lg p-1 mb-8">
           <div className="flex flex-wrap justify-center gap-2">
             <button className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium bg-white text-blue-600">
               <Crown className="w-4 h-4" />
@@ -949,34 +956,35 @@ const ComprehensiveTutorial: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
       
       {/* Header */}
-      <div className="bg-white/90 backdrop-blur-sm shadow-lg border-b border-gray-200/50 fixed top-16 left-0 right-0 z-40">
+      <div className="bg-white shadow-md border-b border-gray-200 sticky top-16 z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg flex items-center justify-center shadow-sm">
+          <div className="flex justify-between items-center gap-2 py-2 sm:py-4">
+            <div className="flex items-center space-x-3 min-w-0">
+              <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg flex items-center justify-center shadow-sm shrink-0">
                 <Trophy className="w-5 h-5 text-white" />
               </div>
-              <h1 className="text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+              <h1 className="text-base sm:text-xl font-bold text-gray-900 truncate">
                 Fantasy Chess Tutorial
               </h1>
             </div>
             <button
               onClick={handleSkipTutorial}
-              className="text-gray-500 hover:text-gray-700 flex items-center space-x-1 relative z-50 transition-colors duration-200 hover:bg-gray-100 px-3 py-2 rounded-lg"
+              className="text-gray-500 hover:text-gray-700 flex items-center space-x-1 shrink-0 transition-colors duration-200 hover:bg-gray-100 px-3 py-2 rounded-lg"
             >
               <X className="w-4 h-4" />
-              <span>Skip Tutorial</span>
+              <span className="hidden sm:inline">Skip Tutorial</span>
+              <span className="sm:hidden">Skip</span>
             </button>
           </div>
         </div>
       </div>
 
-      <div className="pt-32 pb-12">
+      <div className="pb-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Tutorial Steps - Mobile Dropdown / Desktop Sidebar */}
           <div id="tutorial-sidebar" className="lg:col-span-1 order-2 lg:order-1">
-            <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-xl border border-gray-200/50 p-6">
+            <div className="bg-white rounded-xl shadow-xl border border-gray-200/50 p-4 sm:p-6">
               {/* Mobile: Collapsible Header */}
               <button
                 onClick={() => setShowStepsDropdown(!showStepsDropdown)}
@@ -1018,7 +1026,7 @@ const ComprehensiveTutorial: React.FC = () => {
 
               {/* Mobile: Collapsible Content */}
               <div className={`lg:block ${showStepsDropdown ? 'block' : 'hidden'}`}>
-                <div className="space-y-3 max-h-[60vh] lg:max-h-none overflow-y-auto">
+                <div className="space-y-3">
                   {tutorialSteps.map((step, index) => (
                     <div
                       key={step.id}
@@ -1070,7 +1078,7 @@ const ComprehensiveTutorial: React.FC = () => {
 
           {/* Main Content */}
           <div id="tutorial-main-panel" className="lg:col-span-2 order-1 lg:order-2">
-            <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-xl border border-gray-200/50 p-8">
+            <div className="bg-white rounded-xl shadow-xl border border-gray-200/50 p-4 sm:p-8">
               <TutorialCallout
                 key={`${currentStepData.id}-${activeTarget}`}
                 targetId={activeTarget}
@@ -1090,7 +1098,7 @@ const ComprehensiveTutorial: React.FC = () => {
               />
 
               {/* Render current page */}
-              <div className="relative z-50">
+              <div>
                 {renderCurrentPage()}
               </div>
 

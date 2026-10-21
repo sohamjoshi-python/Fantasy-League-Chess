@@ -74,7 +74,7 @@ const TutorialMiniSite: React.FC<TutorialMiniSiteProps> = ({
         </div>
       </nav>
 
-      <div className="max-h-[70vh] overflow-y-auto overflow-x-hidden bg-white">
+      <div className="bg-white lg:max-h-[70vh] lg:overflow-y-auto">
         {children}
       </div>
     </div>

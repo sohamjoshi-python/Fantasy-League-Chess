@@ -1729,15 +1729,15 @@ const LeaguePage: React.FC = () => {
           {/* League Header */}
           <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6 mb-6 lg:mb-8 border-2 border-gold">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-4">
-              <div className="flex items-center space-x-2">
-                <h1 className="text-2xl lg:text-3xl font-bold text-neutral-900 mb-2 lg:mb-0">{league?.name}</h1>
+              <div className="flex items-center gap-2 min-w-0">
+                <h1 className="text-2xl lg:text-3xl font-bold text-neutral-900 mb-2 lg:mb-0 break-words min-w-0">{league?.name}</h1>
                 {seasonEnded && (
                   <span className="ml-2 px-2 py-1 bg-red-200 text-red-800 rounded text-xs font-bold">
                     League Ended
                   </span>
                 )}
               </div>
-              <div className="flex items-center space-x-4">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                 <button type="button" onClick={handleReload} className="flex items-center px-3 py-1 bg-neutral-100 rounded hover:bg-neutral-200 text-neutral-700 text-sm font-medium transition-colors">
                   <RefreshCw className="w-4 h-4 mr-1" /> Reload
                 </button>
@@ -2356,7 +2356,7 @@ const LeaguePage: React.FC = () => {
           {/* User Popup Modal */}
           {showUserPopup && selectedUser && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full h-[min(40rem,85vh)] overflow-y-auto border-2 border-gold">
+              <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[85dvh] overflow-y-auto border-2 border-gold">
                 <div className="p-6">
                   <div className="flex items-center justify-between mb-6">
                     <h2 className="text-xl font-bold text-neutral-900">

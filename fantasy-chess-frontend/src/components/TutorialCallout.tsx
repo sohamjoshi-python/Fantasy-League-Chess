@@ -11,7 +11,7 @@ interface TutorialCalloutProps {
   totalSteps: number;
 }
 
-type Placement = 'left' | 'right' | 'bottom';
+type Placement = 'left' | 'right' | 'bottom' | 'top';
 
 const HEADER_OFFSET = 140;
 const VIEWPORT_MARGIN = 12;
@@ -21,12 +21,44 @@ const GOLD = '#F5C542';
 const ARROW_WIDTH = 36;
 const MAX_BUBBLE_WIDTH = 300;
 const MIN_BUBBLE_WIDTH = 200;
+const NARROW_BREAKPOINT = 1024;
+const CALLOUT_BLOCK_ESTIMATE = 210;
 
-const targetIsOnScreen = (rect: DOMRect) =>
-  rect.bottom > 8 &&
-  rect.top < window.innerHeight - 8 &&
-  rect.right > 8 &&
-  rect.left < window.innerWidth - 8;
+const findScrollParent = (element: HTMLElement): HTMLElement | null => {
+  let parent = element.parentElement;
+  while (parent && parent !== document.body && parent !== document.documentElement) {
+    const { overflowY } = window.getComputedStyle(parent);
+    if (
+      (overflowY === 'auto' || overflowY === 'scroll') &&
+      parent.scrollHeight > parent.clientHeight + 2
+    ) {
+      return parent;
+    }
+    parent = parent.parentElement;
+  }
+  return null;
+};
+
+const revealTargetInView = (target: HTMLElement, topPadding: number, bottomPadding: number) => {
+  const rect = target.getBoundingClientRect();
+  const scroller = findScrollParent(target);
+
+  if (scroller) {
+    const bounds = scroller.getBoundingClientRect();
+    const above = rect.top - bounds.top - topPadding;
+    const below = rect.bottom - (bounds.bottom - bottomPadding);
+    if (above < -1) scroller.scrollTop += above;
+    else if (below > 1) scroller.scrollTop += below;
+    return;
+  }
+
+  const above = rect.top - topPadding;
+  const below = rect.bottom - (window.innerHeight - bottomPadding);
+  const nextTop =
+    above < -1 ? window.scrollY + above : below > 1 ? window.scrollY + below : null;
+  if (nextTop == null) return;
+  window.scrollTo({ top: Math.max(0, nextTop), left: 0, behavior: 'auto' });
+};
 
 const findTutorialTarget = (targetId: string): HTMLElement | null => {
   const marked = Array.from(
@@ -48,13 +80,16 @@ const TutorialCallout: React.FC<TutorialCalloutProps> = ({
   totalSteps,
 }) => {
   const clusterRef = useRef<HTMLDivElement>(null);
-  const [coords, setCoords] = useState<{
-    top: number;
-    left: number;
+  const [layout, setLayout] = useState<{
     placement: Placement;
     bubbleWidth: number;
-  } | null>(null);
-  const [ready, setReady] = useState(false);
+    visible: boolean;
+  }>({
+    placement: 'bottom',
+    bubbleWidth: MAX_BUBBLE_WIDTH,
+    visible: false,
+  });
+  const layoutRef = useRef(layout);
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
@@ -65,8 +100,22 @@ const TutorialCallout: React.FC<TutorialCalloutProps> = ({
     let cancelled = false;
     let attempts = 0;
     let scrolledForStep = false;
+    let frame = 0;
 
     const getTarget = () => findTutorialTarget(targetId);
+
+    const commitLayout = (next: { placement: Placement; bubbleWidth: number; visible: boolean }) => {
+      const prev = layoutRef.current;
+      if (
+        prev.placement === next.placement &&
+        prev.bubbleWidth === next.bubbleWidth &&
+        prev.visible === next.visible
+      ) {
+        return;
+      }
+      layoutRef.current = next;
+      setLayout(next);
+    };
 
     const position = () => {
       const target = getTarget();
@@ -74,44 +123,43 @@ const TutorialCallout: React.FC<TutorialCalloutProps> = ({
       if (cancelled || !target || !cluster) return;
 
       const targetRect = target.getBoundingClientRect();
-      if (!targetIsOnScreen(targetRect)) {
-        setReady(false);
-        return;
-      }
+      if (targetRect.width < 1 && targetRect.height < 1) return;
 
       const inMiniNav = Boolean(target.closest('[data-tutorial-mini-nav]'));
       const inTopNav = !inMiniNav && targetRect.top < 90;
       const pinBelow = inTopNav || inMiniNav;
-      const isDesktop = window.innerWidth >= 1024;
+      const narrow = window.innerWidth < NARROW_BREAKPOINT;
+      const isDesktop = !narrow;
       const sidebar = document.getElementById('tutorial-sidebar')?.getBoundingClientRect();
       const mainPanel = document.getElementById('tutorial-main-panel')?.getBoundingClientRect();
 
-      const leftBound = inTopNav
+      const leftBound = inTopNav || narrow
         ? VIEWPORT_MARGIN
-        : isDesktop
-          ? Math.max(VIEWPORT_MARGIN, sidebar?.right ?? 0, mainPanel?.left ?? 0) + 8
-          : VIEWPORT_MARGIN;
-      const rightBound = inTopNav
+        : Math.max(VIEWPORT_MARGIN, sidebar?.right ?? 0, mainPanel?.left ?? 0) + 8;
+      const rightBound = inTopNav || narrow
         ? window.innerWidth - VIEWPORT_MARGIN
         : Math.min(
             window.innerWidth - VIEWPORT_MARGIN,
             isDesktop ? (mainPanel?.right ?? window.innerWidth) - 8 : window.innerWidth - VIEWPORT_MARGIN
           );
 
-      let placement: Placement = 'left';
-      let bubbleWidth = MAX_BUBBLE_WIDTH;
-      let top = 0;
-      let left = 0;
+      let placement: Placement = 'bottom';
+      let bubbleWidth = Math.min(MAX_BUBBLE_WIDTH, Math.max(160, rightBound - leftBound));
+      let top = targetRect.bottom + CLUSTER_GAP;
+      let left = targetRect.left;
 
-      const bubbleEl = cluster.firstElementChild as HTMLElement | null;
-
-      if (pinBelow) {
-        placement = 'bottom';
-        bubbleWidth = Math.min(MAX_BUBBLE_WIDTH, Math.max(MIN_BUBBLE_WIDTH, rightBound - leftBound));
-        if (bubbleEl) bubbleEl.style.width = `${bubbleWidth}px`;
-        top = targetRect.bottom + CLUSTER_GAP;
+      if (pinBelow || narrow) {
+        const spaceBelow = window.innerHeight - targetRect.bottom;
+        const spaceAbove = targetRect.top;
+        const placeAbove = !pinBelow && spaceBelow < CALLOUT_BLOCK_ESTIMATE && spaceAbove > spaceBelow;
+        placement = placeAbove ? 'top' : 'bottom';
+        const clusterHeight = placeAbove ? cluster.offsetHeight || CALLOUT_BLOCK_ESTIMATE : 0;
+        top = placeAbove
+          ? targetRect.top - clusterHeight - CLUSTER_GAP
+          : targetRect.bottom + CLUSTER_GAP;
         left = targetRect.left + targetRect.width / 2 - bubbleWidth / 2;
         left = Math.max(leftBound, Math.min(left, rightBound - bubbleWidth));
+        if (placement === 'top') top = Math.max(VIEWPORT_MARGIN, top);
       } else {
         const spaceLeft = targetRect.left - leftBound - CLUSTER_GAP;
         const spaceRight = rightBound - targetRect.right - CLUSTER_GAP;
@@ -130,7 +178,6 @@ const TutorialCallout: React.FC<TutorialCalloutProps> = ({
           Math.min(MAX_BUBBLE_WIDTH, available - ARROW_WIDTH)
         );
 
-        if (bubbleEl) bubbleEl.style.width = `${bubbleWidth}px`;
         const clusterHeight = cluster.offsetHeight || 200;
         top = targetRect.top + targetRect.height / 2 - clusterHeight / 2;
 
@@ -142,19 +189,32 @@ const TutorialCallout: React.FC<TutorialCalloutProps> = ({
 
         if (placement === 'left' && left < leftBound) {
           bubbleWidth = Math.max(MIN_BUBBLE_WIDTH, bubbleWidth - (leftBound - left));
-          if (bubbleEl) bubbleEl.style.width = `${bubbleWidth}px`;
           clusterWidth = bubbleWidth + ARROW_WIDTH;
           left = Math.min(leftBound, targetRect.left - clusterWidth - CLUSTER_GAP);
         }
         if (placement === 'right' && left + clusterWidth > rightBound) {
           bubbleWidth = Math.max(MIN_BUBBLE_WIDTH, bubbleWidth - (left + clusterWidth - rightBound));
-          if (bubbleEl) bubbleEl.style.width = `${bubbleWidth}px`;
         }
+        top = Math.max(HEADER_OFFSET, Math.min(top, window.innerHeight - clusterHeight - VIEWPORT_MARGIN));
       }
 
-      setCoords({ top, left, placement, bubbleWidth });
-      setReady(true);
+      bubbleWidth = Math.round(bubbleWidth);
+      const docTop = Math.round(top + window.scrollY);
+      const docLeft = Math.round(left + window.scrollX);
+      cluster.style.setProperty('--callout-top', `${docTop}px`);
+      cluster.style.setProperty('--callout-left', `${docLeft}px`);
+      commitLayout({ placement, bubbleWidth, visible: true });
     };
+
+    const schedulePosition = () => {
+      if (frame) return;
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        position();
+      });
+    };
+
+    let scroller: HTMLElement | null = null;
 
     const revealTarget = () => {
       const target = getTarget();
@@ -166,50 +226,50 @@ const TutorialCallout: React.FC<TutorialCalloutProps> = ({
         return;
       }
 
+      const nextScroller = findScrollParent(target);
+      if (nextScroller !== scroller) {
+        scroller?.removeEventListener('scroll', schedulePosition);
+        scroller = nextScroller;
+        scroller?.addEventListener('scroll', schedulePosition, { passive: true });
+      }
+
       if (!scrolledForStep) {
+        scrolledForStep = true;
+        const narrow = window.innerWidth < NARROW_BREAKPOINT;
         const miniNav = target.closest('[data-tutorial-mini-nav]');
-        const miniSite = target.closest('[data-tutorial-mini-site]') as HTMLElement | null;
-        if (miniNav && miniSite) {
-          scrolledForStep = true;
-          miniSite.style.scrollMarginTop = `${HEADER_OFFSET + 16}px`;
-          miniSite.scrollIntoView({ behavior: 'auto', block: 'start', inline: 'nearest' });
-        } else {
-          const targetRect = target.getBoundingClientRect();
-          const inTopNav = targetRect.top < 90;
-          if (!inTopNav && !targetIsOnScreen(targetRect)) {
-            scrolledForStep = true;
-            target.style.scrollMarginTop = `${HEADER_OFFSET + 24}px`;
-            target.style.scrollMarginBottom = '48px';
-            target.scrollIntoView({ behavior: 'auto', block: 'center', inline: 'nearest' });
-          }
+        const topPadding = HEADER_OFFSET + 16;
+        const bottomPadding = narrow ? CALLOUT_BLOCK_ESTIMATE : 48;
+        if (!(miniNav && target.getBoundingClientRect().top < 90)) {
+          revealTargetInView(target, topPadding, bottomPadding);
         }
       }
 
-      requestAnimationFrame(position);
+      schedulePosition();
     };
 
-    setReady(false);
-    setCoords(null);
+    const hidden = { placement: 'bottom' as Placement, bubbleWidth: MAX_BUBBLE_WIDTH, visible: false };
+    layoutRef.current = hidden;
+    setLayout(hidden);
     const start = window.setTimeout(revealTarget, 40);
-    const retry = window.setTimeout(revealTarget, 250);
+    const retry = window.setTimeout(revealTarget, 280);
 
-    window.addEventListener('resize', position);
-    window.addEventListener('scroll', position, true);
+    window.addEventListener('resize', schedulePosition);
 
     return () => {
       cancelled = true;
       window.clearTimeout(start);
       window.clearTimeout(retry);
-      window.removeEventListener('resize', position);
-      window.removeEventListener('scroll', position, true);
+      if (frame) cancelAnimationFrame(frame);
+      window.removeEventListener('resize', schedulePosition);
+      scroller?.removeEventListener('scroll', schedulePosition);
     };
   }, [targetId, title, description, action, stepNumber]);
 
   if (typeof document === 'undefined' || dismissed) return null;
 
-  const visible = ready && coords;
-  const pointRight = coords?.placement === 'left';
-  const pointUp = coords?.placement === 'bottom';
+  const pointRight = layout.placement === 'left';
+  const pointUp = layout.placement === 'bottom';
+  const pointDown = layout.placement === 'top';
 
   return createPortal(
     <div
@@ -218,21 +278,23 @@ const TutorialCallout: React.FC<TutorialCalloutProps> = ({
       aria-live="polite"
       className="pointer-events-none"
       style={{
-        position: 'fixed',
-        top: coords?.top ?? -9999,
-        left: coords?.left ?? VIEWPORT_MARGIN,
+        position: 'absolute',
+        top: 'var(--callout-top, -9999px)',
+        left: 'var(--callout-left, 12px)',
         zIndex: 60,
-        opacity: visible ? 1 : 0,
+        opacity: layout.visible ? 1 : 0,
         display: 'flex',
-        flexDirection: pointUp ? 'column-reverse' : pointRight ? 'row' : 'row-reverse',
+        flexDirection: pointUp ? 'column-reverse' : pointDown ? 'column' : pointRight ? 'row' : 'row-reverse',
         alignItems: 'center',
       }}
     >
       <div
-        className="rounded-xl shadow-2xl pointer-events-auto relative"
+        className="rounded-xl shadow-2xl relative"
         style={{
-          width: coords?.bubbleWidth ?? MAX_BUBBLE_WIDTH,
+          width: layout.bubbleWidth,
+          maxWidth: 'calc(100vw - 24px)',
           backgroundColor: BUBBLE_BG,
+          pointerEvents: layout.visible ? 'auto' : 'none',
         }}
       >
         <button
@@ -275,10 +337,12 @@ const TutorialCallout: React.FC<TutorialCalloutProps> = ({
         style={{
           display: 'block',
           flexShrink: 0,
-          transform: pointUp ? 'rotate(-90deg)' : pointRight ? 'none' : 'scaleX(-1)',
+          transform: pointUp ? 'rotate(-90deg)' : pointDown ? 'rotate(90deg)' : pointRight ? 'none' : 'scaleX(-1)',
           filter: 'drop-shadow(0 2px 3px rgba(0,0,0,0.35))',
           marginLeft: pointRight ? -2 : 0,
-          marginRight: pointRight ? 0 : -2,
+          marginRight: pointRight ? 0 : pointDown || pointUp ? 0 : -2,
+          marginTop: pointDown ? -2 : 0,
+          marginBottom: pointUp ? -2 : 0,
         }}
       >
         <path d="M2 11 H16 V4 L34 14 L16 24 V17 H2 Z" fill={GOLD} stroke={BUBBLE_BG} strokeWidth="1.5" strokeLinejoin="round" />

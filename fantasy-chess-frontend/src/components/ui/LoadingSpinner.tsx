@@ -112,7 +112,7 @@ export const PointBreakdownSkeleton: React.FC = () => (
 const cardShell = 'bg-white rounded-lg shadow-lg border-2 p-4 lg:p-6';
 
 export const DashboardPageSkeleton: React.FC = () => (
-  <div className="w-full max-w-6xl mx-auto bg-white min-h-screen pt-24" aria-busy="true" aria-label="Loading dashboard">
+  <div className="w-full max-w-6xl mx-auto bg-white min-h-screen px-4 pt-6 lg:pt-10" aria-busy="true" aria-label="Loading dashboard">
     <div className="mb-8 flex flex-col items-center">
       <SkeletonBlock className="h-12 w-56" />
       <SkeletonBlock className="mt-3 h-1 w-16" />
@@ -191,7 +191,7 @@ export const LeaguePageSkeleton: React.FC = () => (
 );
 
 export const ProfilePageSkeleton: React.FC = () => (
-  <div className="w-full max-w-4xl mx-auto pt-24 px-4 pb-12" aria-busy="true" aria-label="Loading profile">
+  <div className="w-full max-w-4xl mx-auto px-4 pt-6 lg:pt-10 pb-12" aria-busy="true" aria-label="Loading profile">
     <div className={`${cardShell} border-royalBlue`}>
       <div className="mb-6 flex items-center gap-4">
         <SkeletonBlock className="h-16 w-16 rounded-full" />

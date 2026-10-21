@@ -922,7 +922,7 @@ export default function Marketplace({ leagueId, onTeamUpdate }: MarketplaceProps
   }
 
   return (
-    <div className="bg-white shadow-md p-4 sm:p-6 w-full max-w-full overflow-hidden">
+    <div className="bg-white shadow-md p-4 sm:p-6 w-full max-w-full min-w-0 overflow-x-clip">
       {/* Trading Marketplace Header */}
       <div className="mb-6 text-center">
         <h2 className="text-2xl font-bold text-green-600 mb-2">🛒 Trading Marketplace</h2>

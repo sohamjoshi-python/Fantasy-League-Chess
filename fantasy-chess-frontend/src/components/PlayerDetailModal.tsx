@@ -20,10 +20,10 @@ const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({ player, onClose }
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="sticky top-0 bg-gradient-to-r from-royalBlue to-blue-600 text-white p-6 rounded-t-xl flex justify-between items-start">
-          <div className="flex-1">
-            <h2 className="text-3xl font-bold mb-2">{player.name}</h2>
-            <div className="flex items-center gap-4 text-sm">
+        <div className="sticky top-0 bg-gradient-to-r from-royalBlue to-blue-600 text-white p-4 sm:p-6 rounded-t-xl flex justify-between items-start gap-3">
+          <div className="flex-1 min-w-0">
+            <h2 className="text-2xl sm:text-3xl font-bold mb-2 break-words">{player.name}</h2>
+            <div className="flex flex-wrap items-center gap-2 text-sm">
               <span className="bg-white/20 px-3 py-1 rounded-full">
                 ELO: {player.elo}
               </span>

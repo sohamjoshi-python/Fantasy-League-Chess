@@ -32,7 +32,7 @@ const PlayerCard = memo<PlayerCardProps>(({
   };
 
   return (
-    <div className={`border rounded-lg p-6 transition-all duration-300 ease-in-out hover:shadow-lg transform hover:scale-[1.02] ${
+    <div className={`border rounded-lg p-4 sm:p-6 transition-shadow duration-300 ease-in-out hover:shadow-lg ${
       canAfford ? 'bg-green-50 border-green-200 hover:bg-green-100' : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
     }`}>
       {canAfford && (
@@ -42,11 +42,11 @@ const PlayerCard = memo<PlayerCardProps>(({
           </span>
         </div>
       )}
-      <div className="flex justify-between items-start">
-        <div className="flex-1">
-          <div className="flex items-center space-x-2 mb-2">
+      <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start">
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-wrap items-center gap-2 mb-2">
             <h5 
-              className={`font-semibold text-lg ${onPlayerClick ? 'cursor-pointer hover:text-royalBlue transition-colors' : ''}`}
+              className={`font-semibold text-base sm:text-lg break-words ${onPlayerClick ? 'cursor-pointer hover:text-royalBlue transition-colors' : ''}`}
               onClick={() => onPlayerClick?.(player)}
             >
               {player.name}
@@ -65,15 +65,15 @@ const PlayerCard = memo<PlayerCardProps>(({
             ) : null}
           </div>
         </div>
-        <div className="text-right ml-4">
-          <div className="text-2xl font-bold text-amber-600">
+        <div className="sm:text-right sm:ml-4 shrink-0">
+          <div className="text-xl sm:text-2xl font-bold text-amber-600">
             {price} {currencyType === 'gems' ? '💎' : '🪙'}
           </div>
           {isUserTurn && canBuy && (
             <button
               onClick={handleBuyClick}
               disabled={!userCoinBalance || userCoinBalance < price}
-              className={`mt-2 px-4 py-2 rounded-md font-medium transition-all duration-200 ease-in-out transform hover:scale-105 ${
+              className={`mt-2 w-full sm:w-auto px-4 py-2 rounded-md font-medium transition-colors duration-200 ease-in-out ${
                 userCoinBalance && userCoinBalance >= price
                   ? 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-md'
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'

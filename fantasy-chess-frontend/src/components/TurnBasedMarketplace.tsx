@@ -1678,7 +1678,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
         </div>
 
         {/* Players List */}
-        <div className={`space-y-3 max-h-96 overflow-y-auto ${dataLoading ? 'min-h-96' : ''}`}>
+        <div className={`space-y-3 max-h-96 overflow-y-auto overscroll-contain touch-pan-y ${dataLoading ? 'min-h-96' : ''}`}>
           {dataLoading ? (
             <LoadingSpinner size="lg" text="Loading players..." className="py-8" />
           ) : (
@@ -1709,7 +1709,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
         {userTeam.length > 0 ? (
           <div className="space-y-2">
             {userTeam.map(player => (
-              <div key={player.id} className="flex justify-between items-center p-4 border rounded-lg">
+              <div key={player.id} className="flex flex-col gap-1 sm:flex-row sm:justify-between sm:items-center p-4 border rounded-lg">
                 <div>
                   <span className="font-medium">{player.name}</span>
                   <span className="text-gray-500 ml-2">ELO: {player.elo}</span>
@@ -1734,7 +1734,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
       {/* Turn History */}
       <div>
         <h4 className="font-semibold text-gray-900 mb-3">Recent Turns</h4>
-        <div className="space-y-2 max-h-48 overflow-y-auto">
+        <div className="space-y-2 max-h-48 overflow-y-auto overscroll-contain touch-pan-y">
           {turnHistory.map(turn => (
             <div key={turn.id} className="text-sm p-2 bg-gray-50 rounded">
               <span className="font-medium">Turn {turn.turn_number + 1}:</span>{' '}

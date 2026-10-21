@@ -26,14 +26,14 @@ const Home: React.FC = () => {
   }, [navigate]);
   
   return (
-    <div className="w-full min-h-screen bg-white flex flex-col items-center font-sans pt-20">
+    <div className="w-full min-h-screen bg-white flex flex-col items-center font-sans">
       {/* Hero Section */}
-      <section className="w-full bg-white py-20 shadow-sm border-b border-royalBlue">
+      <section className="w-full bg-white py-10 sm:py-20 shadow-sm border-b border-royalBlue">
         <div className="max-w-4xl mx-auto flex flex-col items-center text-center px-4">
           <div className="w-28 h-28 mb-4 bg-white rounded-full p-0 shadow-lg border-2 border-royalBlue">
             <img src={logo} alt="Fantasy League Chess Logo" className="w-full h-full object-contain" />
           </div>
-          <h1 className="text-5xl font-extrabold text-neutral-900 mb-4 tracking-tight font-serif drop-shadow">{brandName}</h1>
+          <h1 className="text-4xl sm:text-5xl font-extrabold text-neutral-900 mb-4 tracking-tight font-serif drop-shadow">{brandName}</h1>
           <p className="text-lg text-neutral-700 mb-10 max-w-xl">
             The ultimate fantasy sports experience for chess fans. Draft titled players, set your lineup, trade in the marketplace, and compete for glory every Titled Tuesday.</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -47,8 +47,8 @@ const Home: React.FC = () => {
       </section>
 
       {/* About Section */}
-      <section className="w-full py-12 flex justify-center bg-white mt-12">
-        <div className="max-w-2xl w-full bg-white rounded-2xl shadow-lg p-8 flex flex-col items-center border-2 border-royalBlue">
+      <section className="w-full py-12 flex justify-center bg-white mt-6 sm:mt-12 px-4">
+        <div className="max-w-2xl w-full bg-white rounded-2xl shadow-lg p-6 sm:p-8 flex flex-col items-center border-2 border-royalBlue">
           <h2 className="text-2xl font-bold mb-2 text-neutral-900">About {brandName}</h2>
           <p className="text-neutral-700 mb-6">
             {brandNameFull} brings the thrill of fantasy sports to the chess world. Join or create leagues, draft your favorite titled players, trade in the marketplace, and compete with friends or the global community.
@@ -58,7 +58,7 @@ const Home: React.FC = () => {
 
 
       {/* How It Works Section */}
-      <section className="w-full py-12 bg-white flex justify-center">
+      <section className="w-full py-12 bg-white flex justify-center px-4">
         <div className="max-w-5xl w-full grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="bg-white rounded-xl shadow-lg p-6 flex flex-col items-center border-2 border-royalBlue hover:shadow-xl transition-shadow">
             <Users className="w-10 h-10 mb-3 text-royalBlue" />
@@ -86,7 +86,7 @@ const Home: React.FC = () => {
       </section>
 
       {/* Coin System Section */}
-      <section className="w-full py-12 flex justify-center bg-white">
+      <section className="w-full py-12 flex justify-center bg-white px-4">
         <div className="max-w-4xl w-full">
           <div className="text-center mb-8">
             <Coins className="w-16 h-16 mx-auto mb-4 text-royalBlue" />
@@ -119,7 +119,7 @@ const Home: React.FC = () => {
       </section>
 
       {/* Features Section */}
-      <section className="w-full py-12 flex justify-center bg-white">
+      <section className="w-full py-12 flex justify-center bg-white px-4">
         <div className="max-w-5xl w-full grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="bg-white rounded-xl shadow-lg p-6 flex items-center gap-4 border-2 border-royalBlue hover:shadow-xl transition-shadow">
             <Star className="w-8 h-8 text-royalBlue" />
@@ -167,8 +167,8 @@ const Home: React.FC = () => {
       </section>
 
       {/* Scoring System Section */}
-      <section className="w-full py-12 flex justify-center bg-white">
-        <div className="max-w-2xl w-full bg-white rounded-2xl shadow-lg p-8 flex flex-col items-center border-2 border-royalBlue">
+      <section className="w-full py-12 flex justify-center bg-white px-4">
+        <div className="max-w-2xl w-full bg-white rounded-2xl shadow-lg p-6 sm:p-8 flex flex-col items-center border-2 border-royalBlue">
           <h2 className="text-2xl font-bold mb-2 text-neutral-900">Scoring System</h2>
           <ul className="text-neutral-700 text-base mb-4 space-y-1">
             <li><span className="font-semibold">Upsets:</span> Beating a higher-rated opponent is the largest source of points</li>
@@ -183,7 +183,7 @@ const Home: React.FC = () => {
 
 
       {/* Contact & Feedback Section */}
-      <div className="w-full py-12 flex justify-center bg-white">
+      <div className="w-full py-12 flex justify-center bg-white px-4">
         <div className="max-w-4xl w-full">
           <div className="text-center mb-8">
             <HelpCircle className="w-16 h-16 mx-auto mb-4 text-royalBlue" />

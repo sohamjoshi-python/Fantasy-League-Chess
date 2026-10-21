@@ -373,8 +373,8 @@ const Dashboard: React.FC = () => {
   }
 
   return (
-    <div className="w-full max-w-6xl mx-auto bg-white min-h-screen pt-24">
-      <h1 className="text-4xl lg:text-5xl font-extrabold text-neutral-900 mb-8 text-center tracking-tight font-serif drop-shadow relative">
+    <div className="w-full max-w-6xl mx-auto bg-white min-h-screen px-4 pt-6 lg:pt-10">
+      <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-neutral-900 mb-8 text-center tracking-tight font-serif drop-shadow relative">
         Dashboard
         <span className="block w-16 h-1 bg-royalBlue rounded-full mx-auto mt-3"></span>
       </h1>

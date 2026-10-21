@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Code+Pro:wght@500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Inter:wght@400;600;700&family=Source+Code+Pro:wght@500&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -11,8 +11,59 @@ html, body {
   padding: 0;
 }
 
+html {
+  /* A few pixels of sideways overflow makes iOS Safari pan diagonally while scrolling. */
+  overflow-x: clip;
+  overscroll-behavior-x: none;
+}
+
+/* 100vh on iPhone includes the area behind the Safari toolbar, so the page jumps as the bar shows and hides. */
+@supports (min-height: 100svh) {
+  .min-h-screen {
+    min-height: 100svh;
+  }
+
+  .h-screen {
+    height: 100svh;
+  }
+}
+
+/* Dialogs should scroll inside themselves and leave the page still. */
+@media (max-width: 1023px) {
+  .fixed.inset-0.flex {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    align-items: safe center;
+    justify-content: safe center;
+    padding: 0.75rem;
+    padding-top: max(0.75rem, env(safe-area-inset-top));
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
+}
+
+html:has(.fixed.inset-0.flex),
+body:has(.fixed.inset-0.flex) {
+  overflow: hidden;
+}
+
+/* Full-screen phone tutorial should fill the screen, not sit in the dialog inset. */
+.phone-tutorial.fixed.inset-0.flex {
+  align-items: stretch;
+  justify-content: flex-start;
+  overflow: hidden;
+  overscroll-behavior: none;
+  padding: 0;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.coach-script {
+  font-family: Caveat, cursive;
+}
+
 #root {
   min-height: 100vh;
+  min-height: 100svh;
   display: flex;
   flex-direction: column;
 }
@@ -68,6 +119,11 @@ input:focus, textarea:focus, select:focus {
   }
 }
 
+button,
+a {
+  touch-action: manipulation;
+}
+
 /* Ensure proper button sizing on mobile */
 @media (max-width: 640px) {
   button {
@@ -76,7 +132,16 @@ input:focus, textarea:focus, select:focus {
   
   input, textarea, select {
     min-height: 44px; /* Better touch targets */
+    /* iOS Safari zooms in on focused fields under 16px and the page scroll jumps. */
+    font-size: 16px;
   }
+}
+
+/* Keep a finger-scroll inside a panel from dragging the page with it. */
+.overflow-y-auto,
+.overflow-x-auto,
+.overflow-auto {
+  overscroll-behavior: contain;
 }
 
 :root {
@@ -95,6 +160,11 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  min-height: 100svh;
+  overflow-x: clip;
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+  padding-bottom: env(safe-area-inset-bottom);
   font-family: 'Inter', system-ui, sans-serif;
   background: #ffffff; /* Pure white background */
   color: #111827; /* text-neutral-900 */

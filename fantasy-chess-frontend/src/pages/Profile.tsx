@@ -102,7 +102,7 @@ const Profile: React.FC<ProfileProps> = ({ showOnlyShop = false, onCloseShop }) 
 
   if (showOnlyShop) {
     return (
-      <div className="w-full max-w-4xl mx-auto pt-24 px-4 pb-12">
+      <div className="w-full max-w-4xl mx-auto px-4 pt-6 lg:pt-10 pb-12">
         <AvatarShop onClose={onCloseShop} onBalanceChange={() => loadProfile({ silent: true })} />
       </div>
     )
@@ -113,7 +113,7 @@ const Profile: React.FC<ProfileProps> = ({ showOnlyShop = false, onCloseShop }) 
   }
 
   return (
-    <div className="w-full max-w-4xl mx-auto pt-24 px-4 pb-12">
+    <div className="w-full max-w-4xl mx-auto px-4 pt-6 lg:pt-10 pb-12">
       <div className="bg-white rounded-lg shadow-lg p-6 border-2 border-royalBlue">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div className="flex items-center gap-4">

@@ -206,7 +206,7 @@ const Navbar: React.FC = () => {
 
         {/* Mobile Menu */}
         {showMobileMenu && (
-          <div className="lg:hidden border-t border-gray-200 py-4 space-y-2">
+          <div className="lg:hidden max-h-[calc(100svh-4rem)] overflow-y-auto overscroll-contain border-t border-gray-200 py-4 space-y-2">
             {user ? (
               <>
                 <div className="px-4 py-2 border-b border-gray-200 mb-2">
