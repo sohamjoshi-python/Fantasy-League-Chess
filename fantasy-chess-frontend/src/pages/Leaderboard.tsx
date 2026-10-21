@@ -4,6 +4,13 @@ import { resolveAvatarUrl } from '../lib/avatars';
 import { Trophy, Target, Clock, Calendar, Medal, Crown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getLocalDateString, getWeekStartMonday, addDaysToYmd } from '../lib/calendarDate';
 import { LeaderboardPageSkeleton } from '../components/ui/LoadingSpinner';
+import { readView, writeView } from '../lib/viewCache';
+
+interface LeaderboardCache {
+  wins: LeaderboardEntry[]
+  points: LeaderboardEntry[]
+  recent: RecentWinner[]
+}
 
 interface LeaderboardEntry {
   user_id: string;
@@ -39,12 +46,13 @@ interface WeeklyPerformer {
 type LeaderboardType = 'wins' | 'points' | 'recent' | 'weekly';
 
 const Leaderboard: React.FC = () => {
+  const cachedBoard = readView<LeaderboardCache>('leaderboard');
   const [activeTab, setActiveTab] = useState<LeaderboardType>('wins');
-  const [winsData, setWinsData] = useState<LeaderboardEntry[]>([]);
-  const [pointsData, setPointsData] = useState<LeaderboardEntry[]>([]);
-  const [recentWinners, setRecentWinners] = useState<RecentWinner[]>([]);
+  const [winsData, setWinsData] = useState<LeaderboardEntry[]>(cachedBoard?.wins || []);
+  const [pointsData, setPointsData] = useState<LeaderboardEntry[]>(cachedBoard?.points || []);
+  const [recentWinners, setRecentWinners] = useState<RecentWinner[]>(cachedBoard?.recent || []);
   const [weeklyPerformers, setWeeklyPerformers] = useState<WeeklyPerformer[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!cachedBoard);
   const [selectedWeek, setSelectedWeek] = useState<string>('');
 
   useEffect(() => {
@@ -58,19 +66,20 @@ const Leaderboard: React.FC = () => {
   }, [selectedWeek]);
 
   const fetchAllLeaderboards = async () => {
-    setLoading(true);
+    if (!readView('leaderboard')) setLoading(true);
     try {
-      // Fetch league wins leaderboard
-      const { data: winsData } = await supabase.rpc('get_league_wins_leaderboard');
-      setWinsData(winsData || []);
-
-      // Fetch total points leaderboard
-      const { data: pointsData } = await supabase.rpc('get_total_points_leaderboard');
-      setPointsData(pointsData || []);
-
-      // Fetch recent winners
-      const { data: recentData } = await supabase.rpc('get_recent_winners');
-      setRecentWinners(recentData || []);
+      const [winsResult, pointsResult, recentResult] = await Promise.all([
+        supabase.rpc('get_league_wins_leaderboard'),
+        supabase.rpc('get_total_points_leaderboard'),
+        supabase.rpc('get_recent_winners'),
+      ]);
+      const wins = winsResult.data || [];
+      const points = pointsResult.data || [];
+      const recent = recentResult.data || [];
+      setWinsData(wins);
+      setPointsData(points);
+      setRecentWinners(recent);
+      writeView<LeaderboardCache>('leaderboard', { wins, points, recent });
 
       setSelectedWeek(getWeekStartMonday());
 
@@ -82,9 +91,13 @@ const Leaderboard: React.FC = () => {
   };
 
   const fetchWeeklyPerformers = async (weekDate: string) => {
+    const cached = readView<WeeklyPerformer[]>(`weekly:${weekDate}`);
+    if (cached) setWeeklyPerformers(cached);
     try {
       const { data } = await supabase.rpc('get_weekly_top_performers', { week_date: weekDate });
-      setWeeklyPerformers(data || []);
+      const rows = data || [];
+      setWeeklyPerformers(rows);
+      writeView(`weekly:${weekDate}`, rows);
     } catch (error) {
       console.error('Error fetching weekly performers:', error);
     }

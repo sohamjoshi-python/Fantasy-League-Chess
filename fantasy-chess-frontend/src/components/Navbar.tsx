@@ -5,6 +5,8 @@ import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { LogIn, UserPlus, HelpCircle, Bell, Menu, X } from 'lucide-react'
 import { getUnreadNotificationCount, supabase } from '../lib/supabase'
+import { prefetchUser, readView } from '../lib/viewCache'
+import type { User as ProfileUser } from '../types'
 import Inbox from './Inbox'
 import logo from '../assets/fantasy-league-chess-logo-updated.png'
 import { useResponsiveBrandName } from '../utils/browserDetection';
@@ -22,12 +24,39 @@ const Navbar: React.FC = () => {
   const [isSignUp, setIsSignUp] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
   const [displayName, setDisplayName] = useState('')
-  // Add state for dropdown
+  const instantName = user
+    ? readView<ProfileUser>(`${user.id}:profile`)?.username
+      || (user.user_metadata?.display_name as string | undefined)
+      || (user.user_metadata?.username as string | undefined)
+      || ''
+    : ''
+  const shownName = displayName || instantName
+
+  useEffect(() => {
+    if (!user) {
+      setDisplayName('')
+      return
+    }
+    let cancelled = false
+    prefetchUser(user.id).then((profile) => {
+      if (cancelled) return
+      if (profile?.username) setDisplayName(profile.username)
+      else setDisplayName((user.user_metadata?.display_name as string | undefined) || `User_${user.id.slice(0, 6)}`)
+    })
+    const onProfile = () => {
+      const profile = readView<ProfileUser>(`${user.id}:profile`)
+      if (profile?.username) setDisplayName(profile.username)
+    }
+    window.addEventListener('flc-profile', onProfile)
+    return () => {
+      cancelled = true
+      window.removeEventListener('flc-profile', onProfile)
+    }
+  }, [user?.id])
 
   useEffect(() => {
     if (user) {
       loadUnreadCount();
-      loadDisplayName();
       // Refresh unread count every 30 seconds
       const interval = setInterval(loadUnreadCount, 30000);
       const channel = supabase
@@ -54,36 +83,6 @@ const Navbar: React.FC = () => {
     const { success, count } = await getUnreadNotificationCount();
     if (success && count !== undefined) {
       setUnreadCount(count);
-    }
-  };
-
-  const loadDisplayName = async () => {
-    if (!user) return;
-    
-    try {
-      const { data: userData, error } = await supabase
-        .from('users')
-        .select('username')
-        .eq('id', user.id)
-        .maybeSingle(); // Use maybeSingle to handle missing users gracefully
-      
-      if (error) {
-        console.error('Error loading username:', error);
-        setDisplayName(`User_${user.id.slice(0, 6)}`);
-        return;
-      }
-      
-      if (userData?.username) {
-        setDisplayName(userData.username);
-      } else {
-        // User doesn't exist in users table yet - this happens during signup
-        // Use display_name from auth metadata as fallback
-        const displayName = user.user_metadata?.display_name || `User_${user.id.slice(0, 6)}`;
-        setDisplayName(displayName);
-      }
-    } catch (error) {
-      console.error('Error loading display name:', error);
-      setDisplayName(`User_${user.id.slice(0, 6)}`);
     }
   };
 
@@ -159,7 +158,7 @@ const Navbar: React.FC = () => {
                     onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
                   >
                     <span className="inline-block min-w-[7rem] text-right font-semibold text-neutral-900">
-                      {displayName || <span className="inline-block h-4 w-24 animate-pulse rounded bg-neutral-200" />}
+                      {shownName || <span className="inline-block h-4 w-24 animate-pulse rounded bg-neutral-200" />}
                     </span>
                     <svg className="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"/></svg>
                   </button>
@@ -227,7 +226,7 @@ const Navbar: React.FC = () => {
               <>
                 <div className="px-4 py-2 border-b border-gray-200 mb-2">
                   <span className="inline-block min-h-[1.75rem] min-w-[8rem] font-semibold text-neutral-900 text-lg">
-                    {displayName || <span className="inline-block h-5 w-32 animate-pulse rounded bg-neutral-200" />}
+                    {shownName || <span className="inline-block h-5 w-32 animate-pulse rounded bg-neutral-200" />}
                   </span>
                 </div>
                 <Link

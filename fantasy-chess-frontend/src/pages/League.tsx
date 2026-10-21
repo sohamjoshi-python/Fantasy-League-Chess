@@ -35,6 +35,17 @@ import Marketplace from '../components/Marketplace';
 import TurnBasedMarketplace from '../components/TurnBasedMarketplace';
 import PlayerDetailModal from '../components/PlayerDetailModal';
 import { LeaguePageSkeleton, PointBreakdownSkeleton, SkeletonBlock } from '../components/ui/LoadingSpinner';
+import { readView, writeView } from '../lib/viewCache';
+
+interface LeagueCache {
+  league: League
+  teamPlayers: ChessPlayer[]
+  currentLineup: Lineup | null
+  lineupPlayers: ChessPlayer[]
+  standings: any[]
+  editableLineupWeek: string
+  bot: Bot | null
+}
 
 // Remove: import { useQuery } from '@tanstack/react-query';
 // Remove: fetchLeague function
@@ -583,8 +594,29 @@ const LeaguePage: React.FC = () => {
   useEffect(() => {
     if (leagueId && user) {
       const generation = ++loadGeneration.current
-      setInitialLoading(true)
-      setDetailsLoading(true)
+      const cached = readView<LeagueCache>(`${user.id}:league:${leagueId}`)
+      if (cached) {
+        setLeague(cached.league)
+        setTeamPlayers(cached.teamPlayers)
+        setCurrentLineup(cached.currentLineup)
+        setLineupPlayers(cached.lineupPlayers)
+        setStandings(cached.standings)
+        setEditableLineupWeek(cached.editableLineupWeek)
+        setBot(cached.bot)
+        setSelectedLineupPlayers(cached.currentLineup?.player_ids || [])
+        setInitialLoading(false)
+        setDetailsLoading(false)
+        setError('')
+      } else {
+        setLeague(null)
+        setTeamPlayers([])
+        setCurrentLineup(null)
+        setLineupPlayers([])
+        setStandings([])
+        setBot(null)
+        setInitialLoading(true)
+        setDetailsLoading(true)
+      }
       loadLeagueData(generation)
     }
   }, [leagueId, user?.id])
@@ -642,7 +674,7 @@ const LeaguePage: React.FC = () => {
     if (!leagueId || !user) return
 
     try {
-      if (generation !== undefined) setLoading(true)
+      if (generation !== undefined && !(leagueId && user && readView(`${user.id}:league:${leagueId}`))) setLoading(true)
       const currentWeek = getCurrentWeekStart()
       const gamesImportedPromise = hasImportedGamesForWeek(currentWeek)
 
@@ -700,8 +732,9 @@ const LeaguePage: React.FC = () => {
         ...(leagueRow.draft_order || [])
       ]));
       void fetchUserMap(allUserIds)
+      const standingsPromise = loadStandings(leagueId, undefined, leagueRow)
 
-      const [teamResult, botResult, gamesImported] = await Promise.all([
+      const [teamResult, botResult, gamesImported, standingsData] = await Promise.all([
         supabase
           .from('teams')
           .select('*')
@@ -714,6 +747,7 @@ const LeaguePage: React.FC = () => {
           .eq('league_id', leagueId)
           .maybeSingle(),
         gamesImportedPromise,
+        standingsPromise,
       ])
 
       if (generation !== undefined && generation !== loadGeneration.current) return
@@ -749,7 +783,6 @@ const LeaguePage: React.FC = () => {
         teamPlayerIds.size > 0
           ? supabase.from('chess_players').select('*').in('id', Array.from(teamPlayerIds))
           : Promise.resolve({ data: [] as ChessPlayer[], error: null }),
-        loadStandings(leagueId, botData, leagueRow),
       ])
 
       if (generation !== undefined && generation !== loadGeneration.current) return
@@ -773,22 +806,24 @@ const LeaguePage: React.FC = () => {
         }
       }
 
+      let shownLineup: Lineup | null = null
+      let shownLineupPlayers: ChessPlayer[] = []
       if (lineupToDisplay && !lineupResult.error) {
         const currentTeamLineupIds = ((lineupToDisplay.player_ids || []) as string[]).filter((id) =>
           teamPlayerIds.has(id)
         )
-        setCurrentLineup(keepIfSame({
+        shownLineup = {
           ...lineupToDisplay,
           player_ids: currentTeamLineupIds,
-        }))
+        }
+        setCurrentLineup(keepIfSame(shownLineup))
         if (!isEditingLineupRef.current) {
           setSelectedLineupPlayers(keepIfSame(currentTeamLineupIds))
         }
-        setLineupPlayers(keepIfSame(
-          currentTeamLineupIds
-            .map((id) => playersById.get(id))
-            .filter((player): player is ChessPlayer => Boolean(player))
-        ))
+        shownLineupPlayers = currentTeamLineupIds
+          .map((id) => playersById.get(id))
+          .filter((player): player is ChessPlayer => Boolean(player))
+        setLineupPlayers(keepIfSame(shownLineupPlayers))
       } else if (!lineupResult.error) {
         setCurrentLineup(keepIfSame<Lineup | null>(null))
         if (!isEditingLineupRef.current) {
@@ -797,9 +832,23 @@ const LeaguePage: React.FC = () => {
         setLineupPlayers(keepIfSame<ChessPlayer[]>([]))
       }
 
+      if (user && leagueId) {
+        writeView<LeagueCache>(`${user.id}:league:${leagueId}`, {
+          league: leagueRow,
+          teamPlayers: rosterPlayers,
+          currentLineup: shownLineup,
+          lineupPlayers: shownLineupPlayers,
+          standings: standingsData || [],
+          editableLineupWeek: lineupWeek,
+          bot: botData,
+        })
+      }
+
     } catch (error) {
       console.error('Error loading league data:', error)
-      setError('Failed to load league data')
+      if (!(user && leagueId && readView(`${user.id}:league:${leagueId}`))) {
+        setError('Failed to load league data')
+      }
     } finally {
       setLoading(false)
       if (generation !== undefined && generation === loadGeneration.current) {
@@ -823,7 +872,7 @@ const LeaguePage: React.FC = () => {
         .eq('id', leagueId)
         .single()).data
 
-      if (!leagueData) return
+      if (!leagueData) return []
 
       // Get all unique user IDs (creator + members)
       const allUserIds = Array.from(new Set([
@@ -839,7 +888,7 @@ const LeaguePage: React.FC = () => {
         }
       })
 
-      const [payoutResult, userDetailsResult, lineupsResult] = await Promise.all([
+      const [payoutResult, userDetailsResult, lineupsResult, botFetch] = await Promise.all([
         leagueData.payout_processed
           ? Promise.resolve({ data: null, error: null })
           : supabase
@@ -859,7 +908,15 @@ const LeaguePage: React.FC = () => {
           .from('lineups')
           .select('user_id, bot_id, total_points')
           .eq('league_id', leagueId),
+        botData
+          ? Promise.resolve({ data: botData, error: null })
+          : supabase
+              .from('bots')
+              .select('*')
+              .eq('league_id', leagueId)
+              .maybeSingle(),
       ])
+      const resolvedBot = botData || botFetch.data || null
 
       if (payoutResult.error) {
         console.warn('Could not load payout row for standings coin display:', payoutResult.error)
@@ -901,11 +958,11 @@ const LeaguePage: React.FC = () => {
         .filter(userId => {
           // Filter out bots - they will be added separately
           // Check if this user ID matches the bot ID
-          return !botData || userId !== botData.id
+          return !resolvedBot || userId !== resolvedBot.id
         })
         .map(userId => {
           // Double-check this isn't a bot
-          if (botData && userId === botData.id) {
+          if (resolvedBot && userId === resolvedBot.id) {
             return null
           }
           return {
@@ -922,19 +979,19 @@ const LeaguePage: React.FC = () => {
         .filter((item): item is NonNullable<typeof item> => item !== null) // Type-safe filter
 
       // Add bot to standings if it exists
-      if (botData) {
+      if (resolvedBot) {
         // Sum up all lineups for this bot by bot_id
         let botPoints = 0
         if (lineups) {
           botPoints = lineups
-            .filter(lineup => lineup.bot_id === botData.id)
+            .filter(lineup => lineup.bot_id === resolvedBot.id)
             .reduce((sum, lineup) => sum + (lineup.total_points || 0), 0)
         }
         standingsData.push({
-          user_id: botData.id,
-          display_name: `${botData.name} ðŸ¤–`, // Use bot.name from the bots table
+          user_id: resolvedBot.id,
+          display_name: `${resolvedBot.name} ðŸ¤–`, // Use bot.name from the bots table
           total_points: botPoints,
-          coin_delta: payoutWinnerId === botData.id
+          coin_delta: payoutWinnerId === resolvedBot.id
             ? prizeAmount - buyIn
             : -buyIn,
           rank: 0,
@@ -953,8 +1010,10 @@ const LeaguePage: React.FC = () => {
       })
 
       setStandings(keepIfSame(standingsData))
+      return standingsData
     } catch (error) {
       console.error('Error loading standings:', error)
+      return []
     }
   }
 

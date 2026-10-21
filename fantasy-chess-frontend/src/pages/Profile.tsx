@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { resolveAvatarUrl } from '../lib/avatars'
 import { publicErrorMessage } from '../lib/publicError'
+import { prefetchUser, readView, writeProfile } from '../lib/viewCache'
 import { User } from '../types'
 import AvatarShop from '../components/AvatarShop'
 import { ProfilePageSkeleton } from '../components/ui/LoadingSpinner'
@@ -17,9 +18,10 @@ interface ProfileProps {
 const Profile: React.FC<ProfileProps> = ({ showOnlyShop = false, onCloseShop }) => {
   const { user, signOut } = useAuth()
   const navigate = useNavigate()
-  const [profile, setProfile] = useState<User | null>(null)
-  const [username, setUsername] = useState('')
-  const [loading, setLoading] = useState(true)
+  const cachedProfile = user ? readView<User>(`${user.id}:profile`) : null
+  const [profile, setProfile] = useState<User | null>(cachedProfile)
+  const [username, setUsername] = useState(cachedProfile?.username || '')
+  const [loading, setLoading] = useState(!cachedProfile)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -53,15 +55,12 @@ const Profile: React.FC<ProfileProps> = ({ showOnlyShop = false, onCloseShop }) 
   }, [user])
 
   const loadProfile = async ({ silent = false }: { silent?: boolean } = {}) => {
-    if (!silent) setLoading(true)
-    const { data } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', user?.id)
-      .single()
+    if (!user?.id) return
+    if (!silent && !readView(`${user.id}:profile`)) setLoading(true)
+    const data = await prefetchUser(user.id, silent)
     if (data) {
       setProfile(data)
-      setUsername(data.username || '')
+      if (!silent) setUsername(data.username || '')
     }
     if (!silent) setLoading(false)
   }
@@ -91,7 +90,15 @@ const Profile: React.FC<ProfileProps> = ({ showOnlyShop = false, onCloseShop }) 
       .eq('id', user?.id)
     if (!error) {
       setMessage('Profile updated!')
-      loadProfile()
+      if (user?.id) {
+        const next = {
+          ...(profile || { id: user.id, coins: 0, email: user.email || '' }),
+          id: user.id,
+          username,
+        }
+        setProfile(next)
+        writeProfile(user.id, next)
+      }
     } else if (error.code === '23505' || (error.message && error.message.includes('duplicate key'))) {
       setMessage('That username is already taken. Please choose another.')
     } else {

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
+import { clearUserViews, warmAccount } from '../lib/viewCache'
 import { sendWelcomeEmail } from '../lib/resend-email'
 
 interface AuthContextType {
@@ -143,6 +144,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Get initial session
     setLoading(true)
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) warmAccount(session.user.id)
       setUser(session?.user ?? null)
     }).finally(() => setLoading(false))
 
@@ -152,6 +154,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } = supabase.auth.onAuthStateChange((event, session) => {
       // Handle different auth events
       if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED') {
+        if (session?.user) warmAccount(session.user.id)
         setUser(session?.user ?? null)
         setLoading(false)
       }
@@ -254,6 +257,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }
 
   const signOut = async () => {
+    if (user) clearUserViews(user.id)
     const { error } = await supabase.auth.signOut()
     if (error) throw error
   }

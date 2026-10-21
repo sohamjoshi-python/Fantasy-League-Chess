@@ -1033,29 +1033,24 @@ export async function getUnreadNotificationCount(): Promise<{ success: boolean, 
   const userId = await currentUserId();
   if (!userId) return { success: true, count: 0 };
 
-  const [{ data: unread, error }, { data: unseenTrades }] = await Promise.all([
+  const [{ count, error }, { count: tradeCount, error: tradeError }] = await Promise.all([
     supabase
       .from('notifications')
-      .select('data')
+      .select('*', { count: 'exact', head: true })
       .eq('is_read', false)
       .eq('user_id', userId),
     supabase
       .from('trade_notifications')
-      .select('trade_id')
+      .select('*', { count: 'exact', head: true })
       .eq('seen', false)
       .eq('user_id', userId),
   ]);
 
-  if (error && !unseenTrades) {
+  if (error && tradeError) {
     return { success: false, error };
   }
 
-  const listedTradeIds = new Set(
-    (unread || []).map((note) => note.data?.tradeId).filter(Boolean)
-  );
-  const extraTrades = (unseenTrades || []).filter((note) => !listedTradeIds.has(note.trade_id)).length;
-
-  return { success: true, count: (unread?.length || 0) + extraTrades };
+  return { success: true, count: (count || 0) + (tradeCount || 0) };
 } 
 
 // Trading System Functions

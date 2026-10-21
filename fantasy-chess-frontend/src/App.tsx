@@ -1,28 +1,31 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from '@vercel/speed-insights/react'
 import Navbar from './components/Navbar'
 import NewUserRedirect from './components/NewUserRedirect'
-import Home from './pages/Home'
-import Dashboard from './pages/Dashboard'
-import JoinLeague from './pages/JoinLeague'
-import LeaguePage from './pages/League'
-import Profile from './pages/Profile'
-import Help from './pages/Help'
-import Onboarding from './pages/Onboarding'
-import SignUp from './pages/SignUp'
-import SignIn from './pages/SignIn'
-import ResetPassword from './pages/ResetPassword'
-import Tutorial from './pages/Tutorial'
-import EmailConfirmationSuccess from './pages/EmailConfirmationSuccess'
-import Feedback from './pages/Feedback'
-import Leaderboard from './pages/Leaderboard';
-import PlayerHistory from './pages/PlayerHistory';
-import Tos from './pages/tos';
-import Privacy from './pages/privacy';
 import { useNavigate } from 'react-router-dom';
 import Footer from './components/Footer';
 import ProtectedRoute from './components/ProtectedRoute';
+import { LoadingSpinner } from './components/ui/LoadingSpinner';
+
+const Home = lazy(() => import('./pages/Home'))
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+const JoinLeague = lazy(() => import('./pages/JoinLeague'))
+const LeaguePage = lazy(() => import('./pages/League'))
+const Profile = lazy(() => import('./pages/Profile'))
+const Help = lazy(() => import('./pages/Help'))
+const Onboarding = lazy(() => import('./pages/Onboarding'))
+const SignUp = lazy(() => import('./pages/SignUp'))
+const SignIn = lazy(() => import('./pages/SignIn'))
+const ResetPassword = lazy(() => import('./pages/ResetPassword'))
+const Tutorial = lazy(() => import('./pages/Tutorial'))
+const EmailConfirmationSuccess = lazy(() => import('./pages/EmailConfirmationSuccess'))
+const Feedback = lazy(() => import('./pages/Feedback'))
+const Leaderboard = lazy(() => import('./pages/Leaderboard'))
+const PlayerHistory = lazy(() => import('./pages/PlayerHistory'))
+const Tos = lazy(() => import('./pages/tos'))
+const Privacy = lazy(() => import('./pages/privacy'))
 
 function AvatarShopPage() {
   const navigate = useNavigate();
@@ -41,6 +44,7 @@ function App() {
       <div className="min-h-screen flex flex-col w-full">
         <Navbar />
         <main className="flex-1 w-full px-0 py-0">
+          <Suspense fallback={<div className="flex items-center justify-center py-24"><LoadingSpinner size="lg" /></div>}>
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
@@ -61,6 +65,7 @@ function App() {
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/player/:playerName" element={<ProtectedRoute><PlayerHistory /></ProtectedRoute>} />
           </Routes>
+          </Suspense>
         </main>
         <Footer />
       </div>

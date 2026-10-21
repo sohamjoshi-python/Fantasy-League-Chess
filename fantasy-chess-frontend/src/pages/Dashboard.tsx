@@ -11,6 +11,19 @@ import { DashboardPageSkeleton, PointBreakdownSkeleton, SkeletonBlock } from '..
 import { getLocalDateString, getOpenLineupMonday, getWeekStartMonday } from '../lib/calendarDate'
 import { keepIfSame } from '../lib/keepIfSame'
 import { formatCalendarDate } from '../lib/leagueStatus'
+import { readView, startLeaguesQuery, writeView } from '../lib/viewCache'
+
+interface DashboardCache {
+  activeLeagues: League[]
+  futureLeagues: League[]
+  pastLeagues: any[]
+  currentLeague: League | null
+  selectedActiveLeagueId: string | null
+  userTeam: Team | null
+  currentLineup: Lineup | null
+  lineupPlayers: ChessPlayer[]
+  editableLineupWeek: string
+}
 
 function getCurrentWeekStart() {
   return getWeekStartMonday();
@@ -27,14 +40,15 @@ function getTuesdayDateForWeek(weekStartDate: string) {
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth()
-  const [currentLeague, setCurrentLeague] = useState<League | null>(null)
-  const [userTeam, setUserTeam] = useState<Team | null>(null)
-  const [currentLineup, setCurrentLineup] = useState<Lineup | null>(null)
-  const [lineupPlayers, setLineupPlayers] = useState<ChessPlayer[]>([])
-  const [editableLineupWeek, setEditableLineupWeek] = useState<string>('')
-  const [pastLeagues, setPastLeagues] = useState<any[]>([])
-  const [futureLeagues, setFutureLeagues] = useState<League[]>([])
-  const [initialLoading, setInitialLoading] = useState(true)
+  const cachedDashboard = user ? readView<DashboardCache>(`${user.id}:dashboard`) : null
+  const [currentLeague, setCurrentLeague] = useState<League | null>(cachedDashboard?.currentLeague ?? null)
+  const [userTeam, setUserTeam] = useState<Team | null>(cachedDashboard?.userTeam ?? null)
+  const [currentLineup, setCurrentLineup] = useState<Lineup | null>(cachedDashboard?.currentLineup ?? null)
+  const [lineupPlayers, setLineupPlayers] = useState<ChessPlayer[]>(cachedDashboard?.lineupPlayers ?? [])
+  const [editableLineupWeek, setEditableLineupWeek] = useState<string>(cachedDashboard?.editableLineupWeek ?? '')
+  const [pastLeagues, setPastLeagues] = useState<any[]>(cachedDashboard?.pastLeagues ?? [])
+  const [futureLeagues, setFutureLeagues] = useState<League[]>(cachedDashboard?.futureLeagues ?? [])
+  const [initialLoading, setInitialLoading] = useState(!cachedDashboard)
   const [rosterLoading, setRosterLoading] = useState(false)
   const [playerBreakdown, setPlayerBreakdown] = useState<{ 
     early: Array<{ player_id: string, player_name: string, player_points: number, wins?: number, total_games?: number }>, 
@@ -45,8 +59,8 @@ const Dashboard: React.FC = () => {
   const [availableWeeks, setAvailableWeeks] = useState<string[]>([]);
   const [selectedWeek, setSelectedWeek] = useState<string | null>(null);
   const [weeksReady, setWeeksReady] = useState(false);
-  const [activeLeagues, setActiveLeagues] = useState<League[]>([]);
-  const [selectedActiveLeagueId, setSelectedActiveLeagueId] = useState<string | null>(null);
+  const [activeLeagues, setActiveLeagues] = useState<League[]>(cachedDashboard?.activeLeagues ?? []);
+  const [selectedActiveLeagueId, setSelectedActiveLeagueId] = useState<string | null>(cachedDashboard?.selectedActiveLeagueId ?? null);
   const [selectedPlayerForModal, setSelectedPlayerForModal] = useState<ChessPlayer | null>(null);
   const loadGeneration = React.useRef(0);
   const lastLoadedBreakdownKey = React.useRef('');
@@ -143,24 +157,26 @@ const Dashboard: React.FC = () => {
     ) => {
       if (past.length === 0) {
         setPastLeagues(keepIfSame<any[]>([]))
-        return
+        return []
       }
       if (result.error) {
         console.error('Error loading past league lineups:', result.error)
         setPastLeagues(keepIfSame<any[]>([]))
-        return
+        return []
       }
       const leagueTotals = new Map<string, number>()
       ;(result.data || []).forEach((lineup) => {
         const current = leagueTotals.get(lineup.league_id) || 0
         leagueTotals.set(lineup.league_id, current + (lineup.total_points || 0))
       })
-      setPastLeagues(keepIfSame(past.map(league => ({
+      const rows = past.map(league => ({
         league_id: league.id,
         league_name: league.name,
         total_points: leagueTotals.get(league.id) || 0,
         end_date: league.end_date
-      })).sort((a, b) => b.end_date.localeCompare(a.end_date))))
+      })).sort((a, b) => b.end_date.localeCompare(a.end_date))
+      setPastLeagues(keepIfSame(rows))
+      return rows
     }
 
     try {
@@ -173,7 +189,9 @@ const Dashboard: React.FC = () => {
       const maxRetries = 3;
 
       while (retryCount < maxRetries) {
-        const { data, error } = await supabase
+        const { data, error } = retryCount === 0
+          ? await startLeaguesQuery(user.id).then((rows) => ({ data: rows, error: null })).catch((error) => ({ data: null, error }))
+          : await supabase
           .from('leagues')
           .select('*')
           .contains('member_ids', [user.id])
@@ -228,13 +246,6 @@ const Dashboard: React.FC = () => {
         setInitialLoading(false)
       }
 
-      const gamesImported = await gamesImportedPromise
-      if (!isCurrent()) return
-      const lineupWeek = activeLeague
-        ? getOpenLineupMonday(activeLeague.start_date, activeLeague.end_date, currentWeek, gamesImported)
-        : currentWeek
-      setEditableLineupWeek((prev) => prev === lineupWeek ? prev : lineupWeek)
-
       const pastLineupsPromise = past.length > 0
         ? supabase
             .from('lineups')
@@ -243,16 +254,32 @@ const Dashboard: React.FC = () => {
             .in('league_id', past.map(l => l.id))
         : Promise.resolve({ data: null, error: null })
 
-      if (activeLeague) {
-        if (generation !== undefined) setRosterLoading(true)
-        const league = activeLeague
-        const [teamResult, lineupResult, priorLineupsResult, pastLineupsResult] = await Promise.all([
-          supabase
+      const teamPromise = activeLeague
+        ? supabase
             .from('teams')
             .select('*')
             .eq('user_id', user.id)
-            .eq('league_id', league.id)
-            .maybeSingle(),
+            .eq('league_id', activeLeague.id)
+            .maybeSingle()
+        : null
+
+      const gamesImported = await gamesImportedPromise
+      if (!isCurrent()) return
+      const lineupWeek = activeLeague
+        ? getOpenLineupMonday(activeLeague.start_date, activeLeague.end_date, currentWeek, gamesImported)
+        : currentWeek
+      setEditableLineupWeek((prev) => prev === lineupWeek ? prev : lineupWeek)
+
+      let shownTeam: Team | null = null
+      let shownLineup: Lineup | null = null
+      let shownPlayers: ChessPlayer[] = []
+      let pastRows: any[] = []
+
+      if (activeLeague && teamPromise) {
+        if (generation !== undefined && !cachedDashboard) setRosterLoading(true)
+        const league = activeLeague
+        const [teamResult, lineupResult, priorLineupsResult, pastLineupsResult] = await Promise.all([
+          teamPromise,
           supabase
             .from('lineups')
             .select('*')
@@ -277,7 +304,8 @@ const Dashboard: React.FC = () => {
         if (teamResult.error) {
           console.error('Error loading team:', teamResult.error)
         }
-        setUserTeam(keepIfSame(teamResult.data ?? null))
+        shownTeam = teamResult.data ?? null
+        setUserTeam(keepIfSame(shownTeam))
 
         let lineupToDisplay = lineupResult.data
         if (lineupResult.error) {
@@ -304,10 +332,11 @@ const Dashboard: React.FC = () => {
           const currentTeamLineupIds = (lineupToDisplay.player_ids || []).filter((id: string) =>
             teamPlayerIds.has(id)
           )
-          setCurrentLineup(keepIfSame({
+          shownLineup = {
             ...lineupToDisplay,
             player_ids: currentTeamLineupIds,
-          }))
+          }
+          setCurrentLineup(keepIfSame(shownLineup))
           if (currentTeamLineupIds.length > 0) {
             const { data: lineupPlayerData, error: lineupPlayersError } = await supabase
               .from('chess_players')
@@ -317,6 +346,7 @@ const Dashboard: React.FC = () => {
             if (lineupPlayersError) {
               console.error('Error loading lineup players:', lineupPlayersError)
             } else if (lineupPlayerData) {
+              shownPlayers = lineupPlayerData
               setLineupPlayers(keepIfSame(lineupPlayerData))
             }
           } else {
@@ -327,11 +357,25 @@ const Dashboard: React.FC = () => {
           setLineupPlayers(keepIfSame<ChessPlayer[]>([]))
         }
 
-        applyPastLeagues(past, pastLineupsResult)
+        pastRows = applyPastLeagues(past, pastLineupsResult)
       } else {
         const pastLineupsResult = await pastLineupsPromise
         if (!isCurrent()) return
-        applyPastLeagues(past, pastLineupsResult)
+        pastRows = applyPastLeagues(past, pastLineupsResult)
+      }
+
+      if (isCurrent()) {
+        writeView<DashboardCache>(`${user.id}:dashboard`, {
+          activeLeagues: active,
+          futureLeagues: future,
+          pastLeagues: pastRows,
+          currentLeague: activeLeague,
+          selectedActiveLeagueId: activeLeague?.id ?? null,
+          userTeam: shownTeam,
+          currentLineup: shownLineup,
+          lineupPlayers: shownPlayers,
+          editableLineupWeek: lineupWeek,
+        })
       }
     } catch (error) {
       console.error('Error loading dashboard data:', error)
