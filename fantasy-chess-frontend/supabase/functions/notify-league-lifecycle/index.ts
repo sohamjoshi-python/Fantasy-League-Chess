@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2"
 import { getSecretKey } from "../_shared/supabaseKeys.ts"
 import { GENERIC_ERROR, logServerError } from "../_shared/publicError.ts"
+import { insertSiteNotification, recipientIsActive } from "../_shared/siteNotification.ts"
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -131,8 +132,46 @@ async function sendResendEmail(args: {
   userId?: string
   leagueId?: string
   templateId: string
+  notificationTitle: string
+  notificationMessage: string
+  notificationType: string
+  notificationLink: string
   supabase: SupabaseClient
 }) {
+  const notified = args.userId
+    ? await insertSiteNotification(args.supabase, {
+      userId: args.userId,
+      leagueId: args.leagueId,
+      title: args.notificationTitle,
+      message: args.notificationMessage,
+      type: args.notificationType,
+      data: { link: args.notificationLink, source: "notify-league-lifecycle" },
+    })
+    : false
+
+  const active = await recipientIsActive(args.supabase, args.userId)
+  if (active) {
+    try {
+      await args.supabase.from("emails").insert({
+        id: crypto.randomUUID(),
+        user_id: args.userId,
+        league_id: args.leagueId,
+        template_id: args.templateId,
+        to_email: args.to,
+        subject: args.subject,
+        html_content: args.htmlContent,
+        text_content: args.textContent,
+        metadata: { source: "notify-league-lifecycle", templateId: args.templateId, notified, skipReason: "user_active" },
+        sent_at: new Date().toISOString(),
+        status: "skipped",
+      })
+    } catch (dbError) {
+      console.error("Database error storing email:", dbError)
+    }
+    if (!notified) throw new Error("Could not save notification")
+    return
+  }
+
   const resendApiKey = Deno.env.get("RESEND_API_KEY")
   if (!resendApiKey) {
     throw new Error("Missing RESEND_API_KEY environment variable.")
@@ -154,8 +193,7 @@ async function sendResendEmail(args: {
   })
 
   if (!resendResponse.ok) {
-    const errorData = await resendResponse.text()
-    throw new Error(`Resend API error: ${resendResponse.status} - ${errorData}`)
+    throw new Error(`Resend API error: ${resendResponse.status}`)
   }
 
   try {
@@ -168,7 +206,7 @@ async function sendResendEmail(args: {
       subject: args.subject,
       html_content: args.htmlContent,
       text_content: args.textContent,
-      metadata: { source: "notify-league-lifecycle", templateId: args.templateId },
+      metadata: { source: "notify-league-lifecycle", templateId: args.templateId, notified },
       sent_at: new Date().toISOString(),
       status: "sent",
     })
@@ -246,6 +284,12 @@ async function notifyLeague(
         userId: member.id,
         leagueId: league.id,
         templateId: event,
+        notificationTitle: event === "marketplace_started" ? "The draft is open" : "Your league has started",
+        notificationMessage: event === "marketplace_started"
+          ? `The snake draft for ${league.name || "your league"} has started.`
+          : `${league.name || "Your league"} starts today.`,
+        notificationType: event === "marketplace_started" ? "draft_start" : "league_start",
+        notificationLink: `/league/${league.id}`,
         supabase,
       })
       emailsSent += 1

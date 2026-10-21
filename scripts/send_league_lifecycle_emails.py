@@ -197,7 +197,12 @@ def load_recipients(base_url: str, service_key: str, member_ids: list[str]) -> l
     ]
 
 
-def send_email(base_url: str, service_key: str, to_email: str, user_id: str, league_id: str, event: str, payload: dict) -> None:
+def send_email(base_url: str, service_key: str, to_email: str, user_id: str, league_id: str, league_name: str, event: str, payload: dict) -> None:
+    message = (
+        f"The snake draft for {league_name} has started."
+        if event == "marketplace_started"
+        else f"{league_name} starts today."
+    )
     request_json(
         "POST",
         f"{base_url}/functions/v1/send-resend-email",
@@ -208,8 +213,15 @@ def send_email(base_url: str, service_key: str, to_email: str, user_id: str, lea
             "htmlContent": payload["htmlContent"],
             "textContent": payload["textContent"],
             "emailType": "custom",
+            "delivery": "activity",
             "userId": user_id,
             "leagueId": league_id,
+            "notification": {
+                "title": "The draft is open" if event == "marketplace_started" else "Your league has started",
+                "message": message,
+                "type": "draft_start" if event == "marketplace_started" else "league_start",
+                "link": f"/league/{league_id}",
+            },
             "metadata": {"source": "github_league_lifecycle", "event": event},
         },
     )
@@ -233,7 +245,7 @@ def process_leagues(base_url: str, service_key: str, leagues: list[dict], event:
                     if event == "marketplace_started"
                     else create_email(name, league_name, league_id, league.get("start_date"))
                 )
-                send_email(base_url, service_key, recipient["email"], recipient["id"], league_id, event, payload)
+                send_email(base_url, service_key, recipient["email"], recipient["id"], league_id, league_name, event, payload)
                 emails_sent += 1
                 print(f"Sent {event} email to {recipient['email']} for {league_name}")
             leagues_notified += 1

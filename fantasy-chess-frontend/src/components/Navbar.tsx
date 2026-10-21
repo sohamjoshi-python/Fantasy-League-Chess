@@ -30,7 +30,23 @@ const Navbar: React.FC = () => {
       loadDisplayName();
       // Refresh unread count every 30 seconds
       const interval = setInterval(loadUnreadCount, 30000);
-      return () => clearInterval(interval);
+      const channel = supabase
+        .channel(`notifications:${user.id}`)
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
+          () => { loadUnreadCount(); }
+        )
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'trade_notifications', filter: `user_id=eq.${user.id}` },
+          () => { loadUnreadCount(); }
+        )
+        .subscribe();
+      return () => {
+        clearInterval(interval);
+        supabase.removeChannel(channel);
+      };
     }
   }, [user]);
 

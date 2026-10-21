@@ -409,7 +409,7 @@ serve(async (req) => {
             const { data: previousEmails, error: previousEmailsError } = await supabase
               .from('emails')
               .select('user_id, to_email')
-              .eq('status', 'sent')
+              .in('status', ['sent', 'skipped'])
               .eq('metadata->>source', 'process_weekly_results')
               .eq('metadata->>weekDate', tuesdayDate)
 
@@ -455,8 +455,15 @@ serve(async (req) => {
                   htmlContent,
                   textContent,
                   emailType: 'custom',
+                  delivery: 'activity',
                   userEmail: user.email,
                   userId: user.id,
+                  notification: {
+                    title: 'Weekly results',
+                    message: subject,
+                    type: 'weekly_results',
+                    link: '/dashboard',
+                  },
                   metadata: {
                     source: 'process_weekly_results',
                     weekDate: tuesdayDate,

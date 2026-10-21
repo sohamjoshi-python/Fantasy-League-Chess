@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { getSecretKey } from '../_shared/supabaseKeys.ts';
 import { GENERIC_ERROR, logServerError } from '../_shared/publicError.ts';
+import { insertSiteNotification, recipientIsActive, type SiteDelivery } from '../_shared/siteNotification.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,21 +15,29 @@ serve(async (req) => {
   }
 
   try {
-    const { to, subject, htmlContent, textContent, templateId, userId, leagueId, metadata, emailType, userEmail } = await req.json();
+    const {
+      to,
+      subject,
+      htmlContent,
+      textContent,
+      templateId,
+      userId,
+      leagueId,
+      metadata,
+      emailType,
+      userEmail,
+      delivery,
+      notification,
+    } = await req.json();
     const recipientEmail = to || userEmail;
+    const siteDelivery: SiteDelivery =
+      delivery === 'activity' || delivery === 'notification' ? delivery : 'email';
     
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
     const SUPABASE_SERVICE_KEY = getSecretKey();
     const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
 
-    if (!RESEND_API_KEY) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Missing RESEND_API_KEY environment variable.' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    if (!recipientEmail) {
+    if (!recipientEmail && siteDelivery === 'email') {
       return new Response(
         JSON.stringify({ success: false, error: 'Missing recipient email.' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -57,57 +66,87 @@ serve(async (req) => {
       }
     }
 
-    let emailSent = false;
-    let errorMessage = '';
-    let providerUsed = 'Resend';
+    let finalSubject = subject;
+    let finalHtmlContent = htmlContent;
+    let finalTextContent = textContent;
 
-    try {
-      // Create email content based on type
-      let finalSubject = subject;
-      let finalHtmlContent = htmlContent;
-      let finalTextContent = textContent;
-
-      if (emailType === 'welcome') {
-        finalSubject = welcomeSubject;
-        finalHtmlContent = createWelcomeEmailHTML();
-        finalTextContent = createWelcomeEmailText();
-      } else if (emailType === 'weekly_results') {
-        finalSubject = 'Your Weekly Fantasy Chess Results';
-        finalHtmlContent = createWeeklyResultsEmailHTML();
-        finalTextContent = createWeeklyResultsEmailText();
-      }
-
-      // Send email via Resend API
-      const resendResponse = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${RESEND_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          from: 'Fantasy League Chess <noreply@fantasyleaguechess.com>',
-          to: [recipientEmail],
-          subject: finalSubject,
-          html: finalHtmlContent,
-          text: finalTextContent,
-        }),
-      });
-
-      if (!resendResponse.ok) {
-        const errorData = await resendResponse.text();
-        throw new Error(`Resend API error: ${resendResponse.status} - ${errorData}`);
-      }
-
-      const resendResult = await resendResponse.json();
-      emailSent = true;
-      console.log('Email sent successfully via Resend:', resendResult);
-
-    } catch (error: any) {
-      logServerError('send-resend-email', error);
-      errorMessage = 'Resend failed';
+    if (emailType === 'welcome') {
+      finalSubject = welcomeSubject;
+      finalHtmlContent = createWelcomeEmailHTML();
+      finalTextContent = createWelcomeEmailText();
+    } else if (emailType === 'weekly_results') {
+      finalSubject = 'Your Weekly Fantasy Chess Results';
+      finalHtmlContent = createWeeklyResultsEmailHTML();
+      finalTextContent = createWeeklyResultsEmailText();
     }
 
-    // Store email record in database for tracking
+    const skipSiteNotification = emailType === 'welcome' || metadata?.source === 'feedback_form';
+    let notified = false;
+    if (userId && !skipSiteNotification && siteDelivery !== 'email') {
+      const note = notification || {};
+      const rawMessage = note.message || finalSubject || 'You have a new update.';
+      const message = String(rawMessage).replace(/\s+/g, ' ').trim().slice(0, 240);
+      notified = await insertSiteNotification(supabase, {
+        userId,
+        leagueId,
+        title: note.title || finalSubject || 'Fantasy League Chess',
+        message,
+        type: note.type || 'general',
+        data: {
+          ...(metadata || {}),
+          link: note.link || null,
+        },
+      });
+    }
+
+    const userIsHere = siteDelivery === 'activity' && await recipientIsActive(supabase, userId);
+    const shouldEmail = siteDelivery === 'email' || (siteDelivery === 'activity' && !userIsHere);
+    let emailSent = false;
+    let errorMessage = '';
+    const providerUsed = 'Resend';
+    const skipReason = siteDelivery === 'notification'
+      ? 'notification_only'
+      : userIsHere
+        ? 'user_active'
+        : '';
+
+    if (shouldEmail) {
+      if (!RESEND_API_KEY) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Missing RESEND_API_KEY environment variable.', notified }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      try {
+        const resendResponse = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${RESEND_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            from: 'Fantasy League Chess <noreply@fantasyleaguechess.com>',
+            to: [recipientEmail],
+            subject: finalSubject,
+            html: finalHtmlContent,
+            text: finalTextContent,
+          }),
+        });
+
+        if (!resendResponse.ok) {
+          throw new Error(`Resend API error: ${resendResponse.status}`);
+        }
+
+        await resendResponse.json();
+        emailSent = true;
+      } catch (error: any) {
+        logServerError('send-resend-email', error);
+        errorMessage = 'Resend failed';
+      }
+    }
+
+    const status = emailSent ? 'sent' : shouldEmail ? 'failed' : 'skipped';
+
     try {
       await supabase
         .from('emails')
@@ -120,26 +159,33 @@ serve(async (req) => {
           subject: finalSubject,
           html_content: finalHtmlContent,
           text_content: finalTextContent,
-          metadata: { ...metadata, providerUsed, errorMessage },
+          metadata: { ...metadata, providerUsed, errorMessage, notified, skipReason },
           sent_at: new Date().toISOString(),
-          status: emailSent ? 'sent' : 'failed',
+          status,
         });
     } catch (dbError) {
       console.error('Database error storing email:', dbError);
-      // Don't fail the email send if database storage fails
     }
 
-    if (emailSent) {
+    if (emailSent || (!shouldEmail && notified)) {
       return new Response(
-        JSON.stringify({ success: true, emailId, providerUsed, message: 'Email sent successfully via Resend' }),
+        JSON.stringify({
+          success: true,
+          emailId,
+          providerUsed,
+          emailed: emailSent,
+          notified,
+          skipped: !shouldEmail,
+          message: emailSent ? 'Email sent successfully via Resend' : 'Notification saved without an email',
+        }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
-    } else {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Failed to send email.' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
     }
+
+    return new Response(
+      JSON.stringify({ success: false, error: 'Failed to send email.', notified }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
 
   } catch (err: any) {
     logServerError('send-resend-email', err);

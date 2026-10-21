@@ -159,10 +159,10 @@ export interface Notification {
   league_id?: string
   title: string
   message: string
-  type: 'league_start' | 'weekly_results' | 'league_end' | 'draft_start' | 'payout_processed' | 'player_removed' | 'league_joined'
+  type: 'league_start' | 'weekly_results' | 'league_end' | 'draft_start' | 'marketplace_turn' | 'trade_listed' | 'trade_completed' | 'payout_processed' | 'player_removed' | 'league_joined' | 'general'
   is_read: boolean
   created_at: string
-  data?: any
+  data?: { link?: string | null }
 }
 
 // Trading System Types

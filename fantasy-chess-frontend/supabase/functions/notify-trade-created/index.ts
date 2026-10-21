@@ -2,7 +2,6 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { getSecretKey } from '../_shared/supabaseKeys.ts'
 import { GENERIC_ERROR, logServerError } from '../_shared/publicError.ts'
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -189,10 +188,9 @@ serve(async (req) => {
     const emailErrors: string[] = []
 
     for (const member of members || []) {
-      if (!member.email) continue
+      if (!member.email || member.id === trade.seller_id) continue
 
-      const recipientIsSeller = member.id === trade.seller_id
-      const sellerDescription = recipientIsSeller ? 'you' : sellerName
+      const sellerDescription = sellerName
       const { htmlContent, textContent } = createTradeListedEmailContent({
         recipientName: member.username || member.email.split('@')[0] || 'there',
         playerName,
@@ -203,7 +201,7 @@ serve(async (req) => {
         timeLeft,
         expiresAt,
         tradeUrl,
-        recipientIsSeller,
+        recipientIsSeller: false,
       })
 
       const { error } = await supabase.functions.invoke('send-resend-email', {
@@ -213,14 +211,21 @@ serve(async (req) => {
           htmlContent,
           textContent,
           emailType: 'custom',
+          delivery: 'activity',
           userId: member.id,
           leagueId: trade.league_id,
+          notification: {
+            title: `${playerName} is up for trade`,
+            message: `${sellerName} listed ${playerName} in ${league.name} for ${trade.price} coins.`,
+            type: 'trade_listed',
+            link: `/league/${trade.league_id}`,
+          },
           metadata: {
             source: 'trade_created',
             tradeId: trade.id,
             playerId: trade.player_id,
             sellerId: trade.seller_id,
-            recipientIsSeller,
+            recipientIsSeller: false,
           },
         },
       })

@@ -2,7 +2,6 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { getSecretKey } from '../_shared/supabaseKeys.ts'
 import { GENERIC_ERROR, logServerError } from '../_shared/publicError.ts'
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -154,7 +153,8 @@ serve(async (req) => {
     const emailErrors: string[] = []
 
     for (const member of members || []) {
-      if (!member.email) continue
+      if (!member.email || member.id === trade.buyer_id) continue
+      const isSeller = member.id === trade.seller_id
 
       const { htmlContent, textContent } = createTradeAcceptedEmailContent({
         recipientName: member.username || member.email.split('@')[0] || 'there',
@@ -174,8 +174,15 @@ serve(async (req) => {
           htmlContent,
           textContent,
           emailType: 'custom',
+          delivery: isSeller ? 'activity' : 'notification',
           userId: member.id,
           leagueId: trade.league_id,
+          notification: {
+            title: `${playerName} was sold`,
+            message: `${sellerName} sold ${playerName} to ${buyerName} in ${league.name} for ${trade.price} coins.`,
+            type: 'trade_completed',
+            link: `/league/${trade.league_id}`,
+          },
           metadata: {
             source: 'trade_accepted',
             tradeId: trade.id,

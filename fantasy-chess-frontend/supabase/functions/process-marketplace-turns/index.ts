@@ -226,8 +226,15 @@ serve(async (req) => {
             htmlContent: payload.htmlContent,
             textContent: payload.textContent,
             emailType: "custom",
+            delivery: "activity",
             userId: recipient.user_id,
             leagueId: recipient.league_id,
+            notification: {
+              title: "The draft is open",
+              message: `The snake draft for ${leagueName} has started.`,
+              type: "draft_start",
+              link: `/league/${recipient.league_id}`,
+            },
             metadata: { source: "process_marketplace_turns", event: "marketplace_started" },
           }),
         })
@@ -283,8 +290,15 @@ serve(async (req) => {
           htmlContent: payload.htmlContent,
           textContent: payload.textContent,
           emailType: "custom",
+          delivery: "activity",
           userId: recipient.user_id,
           leagueId: recipient.league_id,
+          notification: {
+            title: "Your turn to draft",
+            message: `It's your pick in ${leagueName}.`,
+            type: "marketplace_turn",
+            link: `/league/${recipient.league_id}`,
+          },
           metadata: {
             source: "process_marketplace_turns",
             turnNumber: recipient.turn_number,

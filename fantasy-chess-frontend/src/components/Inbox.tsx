@@ -3,7 +3,8 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { fetchNotifications, markNotificationAsRead, markAllNotificationsAsRead, deleteNotification, getUnreadNotificationCount } from '../lib/supabase';
 import { Notification } from '../types';
-import { Bell, Check, Trash2, Calendar, Trophy, Users, Play, Award, UserX, UserPlus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Bell, Check, Trash2, Calendar, Trophy, Users, Play, Award, UserX, UserPlus, Repeat } from 'lucide-react';
 
 interface InboxProps {
   isOpen: boolean;
@@ -12,6 +13,7 @@ interface InboxProps {
 
 const Inbox: React.FC<InboxProps> = ({ isOpen, onClose }) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -77,7 +79,11 @@ const Inbox: React.FC<InboxProps> = ({ isOpen, onClose }) => {
       case 'league_end':
         return <Award className="w-5 h-5 text-purple-600" />;
       case 'draft_start':
+      case 'marketplace_turn':
         return <Users className="w-5 h-5 text-blue-600" />;
+      case 'trade_listed':
+      case 'trade_completed':
+        return <Repeat className="w-5 h-5 text-emerald-700" />;
       case 'payout_processed':
         return <Trophy className="w-5 h-5 text-gold" />;
       case 'player_removed':
@@ -103,6 +109,14 @@ const Inbox: React.FC<InboxProps> = ({ isOpen, onClose }) => {
     } else {
       return date.toLocaleDateString();
     }
+  };
+
+  const openNotification = (notification: Notification) => {
+    if (!notification.is_read) handleMarkAsRead(notification.id);
+    const link = notification.data?.link;
+    if (!link) return;
+    onClose();
+    navigate(link);
   };
 
   if (!isOpen) return null;
@@ -168,7 +182,11 @@ const Inbox: React.FC<InboxProps> = ({ isOpen, onClose }) => {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between">
-                        <div className="flex-1">
+                        <button
+                          type="button"
+                          onClick={() => openNotification(notification)}
+                          className={`flex-1 text-left ${notification.data?.link ? 'cursor-pointer' : 'cursor-default'}`}
+                        >
                           <h3 className={`font-semibold text-sm ${
                             notification.is_read ? 'text-gray-700' : 'text-gray-900'
                           }`}>
@@ -185,7 +203,7 @@ const Inbox: React.FC<InboxProps> = ({ isOpen, onClose }) => {
                               {formatDate(notification.created_at)}
                             </span>
                           </div>
-                        </div>
+                        </button>
                         <div className="flex items-center space-x-1 ml-2">
                           {!notification.is_read && (
                             <button

@@ -211,6 +211,7 @@ const Feedback: React.FC = () => {
         htmlContent,
         textContent,
         emailType: 'custom',
+        delivery: 'email',
         userId: user?.id,
         metadata: {
           source: 'feedback_form',

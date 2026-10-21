@@ -143,8 +143,15 @@ def send_email(base_url: str, service_key: str, recipient: dict, payload: dict) 
             "htmlContent": payload["htmlContent"],
             "textContent": payload["textContent"],
             "emailType": "custom",
+            "delivery": "activity",
             "userId": recipient["user_id"],
             "leagueId": recipient["league_id"],
+            "notification": {
+                "title": "Your turn to draft",
+                "message": f"It's your pick in {recipient.get('league_name') or 'your league'}.",
+                "type": "marketplace_turn",
+                "link": f"/league/{recipient['league_id']}",
+            },
             "metadata": {
                 "source": "github_marketplace_turn",
                 "turnNumber": recipient.get("turn_number"),

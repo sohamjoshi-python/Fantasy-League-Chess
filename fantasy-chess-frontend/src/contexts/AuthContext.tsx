@@ -174,6 +174,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => subscription.unsubscribe()
   }, [])
 
+  useEffect(() => {
+    if (!user) return
+    let stopped = false
+    const beat = () => {
+      if (stopped || document.visibilityState === 'hidden') return
+      supabase.rpc('touch_last_active').then(() => undefined, () => undefined)
+    }
+    beat()
+    const interval = window.setInterval(beat, 60_000)
+    document.addEventListener('visibilitychange', beat)
+    return () => {
+      stopped = true
+      window.clearInterval(interval)
+      document.removeEventListener('visibilitychange', beat)
+    }
+  }, [user])
+
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) throw error

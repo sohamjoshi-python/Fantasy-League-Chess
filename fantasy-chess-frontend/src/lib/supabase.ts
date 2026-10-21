@@ -867,25 +867,115 @@ export async function autoMarketplaceForBot(botId: string, leagueId: string): Pr
   }
 }
 
+async function currentUserId(): Promise<string | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+  return user?.id ?? null;
+}
+
+const tradeNotificationId = (id: string) => `trade:${id}`
+const isTradeNotificationId = (id: string) => id.startsWith('trade:')
+
+async function fetchTradeInbox(userId: string) {
+  const { data: notes, error } = await supabase
+    .from('trade_notifications')
+    .select('id, trade_id, created_at, seen')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(100);
+
+  if (error || !notes?.length) return [];
+
+  const tradeIds = notes.map((note) => note.trade_id).filter(Boolean);
+  const { data: trades } = await supabase
+    .from('trades')
+    .select('id, league_id, price, seller_id, player_id, status')
+    .in('id', tradeIds);
+
+  const tradeById = new Map((trades || []).map((trade) => [trade.id, trade]));
+  const playerIds = [...new Set((trades || []).map((trade) => trade.player_id).filter(Boolean))];
+  const sellerIds = [...new Set((trades || []).map((trade) => trade.seller_id).filter(Boolean))];
+  const [{ data: players }, { data: sellers }] = await Promise.all([
+    playerIds.length
+      ? supabase.from('chess_players').select('id, name').in('id', playerIds)
+      : Promise.resolve({ data: [] as { id: string, name: string }[] }),
+    sellerIds.length
+      ? supabase.from('users').select('id, username').in('id', sellerIds)
+      : Promise.resolve({ data: [] as { id: string, username: string }[] }),
+  ]);
+  const playerName = new Map((players || []).map((player) => [player.id, player.name]));
+  const sellerName = new Map((sellers || []).map((seller) => [seller.id, seller.username]));
+
+  return notes.flatMap((note) => {
+    const trade = tradeById.get(note.trade_id);
+    const name = (trade && playerName.get(trade.player_id)) || 'A player';
+    const seller = (trade && sellerName.get(trade.seller_id)) || 'A league member';
+    const price = trade?.price ?? '';
+    const sold = trade?.status === 'accepted';
+    return [{
+      id: tradeNotificationId(note.id),
+      user_id: userId,
+      league_id: trade?.league_id,
+      title: sold ? `${name} was sold` : `${name} is up for trade`,
+      message: sold
+        ? `${name} is no longer available.`
+        : `${seller} listed ${name}${price === '' ? '' : ` for ${price} coins`}.`,
+      type: sold ? 'trade_completed' : 'trade_listed',
+      is_read: Boolean(note.seen),
+      created_at: note.created_at,
+      data: { link: trade?.league_id ? `/league/${trade.league_id}` : null, tradeId: note.trade_id },
+    }];
+  });
+}
+
 // Notification functions
 export async function fetchNotifications(): Promise<{ success: boolean, notifications?: any[], error?: any }> {
-  const { data, error } = await supabase
-    .from('notifications')
-    .select('*')
-    .order('created_at', { ascending: false });
-  
-  if (error) {
-    return { success: false, error };
-  }
-  
-  return { success: true, notifications: data };
+  const userId = await currentUserId();
+  if (!userId) return { success: false, error: 'Not signed in' };
+
+  const [{ data, error }, tradeNotes] = await Promise.all([
+    supabase
+      .from('notifications')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false }),
+    fetchTradeInbox(userId),
+  ]);
+
+  const siteNotes = error ? [] : (data || []);
+  const listedTradeIds = new Set(
+    siteNotes
+      .filter((note) => note.type === 'trade_listed' && note.data?.tradeId)
+      .map((note) => note.data.tradeId)
+  );
+  const notifications = [
+    ...tradeNotes.filter((note) => !listedTradeIds.has(note.data?.tradeId)),
+    ...siteNotes,
+  ].sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
+
+  return { success: true, notifications };
 }
 
 export async function markNotificationAsRead(notificationId: string): Promise<{ success: boolean, error?: any }> {
+  const userId = await currentUserId();
+  if (!userId) return { success: false, error: 'Not signed in' };
+
+  if (isTradeNotificationId(notificationId)) {
+    const { error } = await supabase
+      .from('trade_notifications')
+      .update({ seen: true })
+      .eq('id', notificationId.slice('trade:'.length))
+      .eq('user_id', userId);
+    if (error) return { success: false, error };
+    return { success: true };
+  }
+
   const { error } = await supabase
     .from('notifications')
     .update({ is_read: true })
-    .eq('id', notificationId);
+    .eq('id', notificationId)
+    .eq('user_id', userId);
   
   if (error) {
     return { success: false, error };
@@ -895,12 +985,23 @@ export async function markNotificationAsRead(notificationId: string): Promise<{ 
 }
 
 export async function markAllNotificationsAsRead(): Promise<{ success: boolean, error?: any }> {
-  const { error } = await supabase
-    .from('notifications')
-    .update({ is_read: true })
-    .eq('is_read', false);
+  const userId = await currentUserId();
+  if (!userId) return { success: false, error: 'Not signed in' };
+
+  const [{ error }, { error: tradeError }] = await Promise.all([
+    supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('is_read', false)
+      .eq('user_id', userId),
+    supabase
+      .from('trade_notifications')
+      .update({ seen: true })
+      .eq('seen', false)
+      .eq('user_id', userId),
+  ]);
   
-  if (error) {
+  if (error && tradeError) {
     return { success: false, error };
   }
   
@@ -908,10 +1009,18 @@ export async function markAllNotificationsAsRead(): Promise<{ success: boolean, 
 }
 
 export async function deleteNotification(notificationId: string): Promise<{ success: boolean, error?: any }> {
+  const userId = await currentUserId();
+  if (!userId) return { success: false, error: 'Not signed in' };
+
+  if (isTradeNotificationId(notificationId)) {
+    return markNotificationAsRead(notificationId);
+  }
+
   const { error } = await supabase
     .from('notifications')
     .delete()
-    .eq('id', notificationId);
+    .eq('id', notificationId)
+    .eq('user_id', userId);
   
   if (error) {
     return { success: false, error };
@@ -921,16 +1030,32 @@ export async function deleteNotification(notificationId: string): Promise<{ succ
 }
 
 export async function getUnreadNotificationCount(): Promise<{ success: boolean, count?: number, error?: any }> {
-  const { count, error } = await supabase
-    .from('notifications')
-    .select('*', { count: 'exact', head: true })
-    .eq('is_read', false);
-  
-  if (error) {
+  const userId = await currentUserId();
+  if (!userId) return { success: true, count: 0 };
+
+  const [{ data: unread, error }, { data: unseenTrades }] = await Promise.all([
+    supabase
+      .from('notifications')
+      .select('data')
+      .eq('is_read', false)
+      .eq('user_id', userId),
+    supabase
+      .from('trade_notifications')
+      .select('trade_id')
+      .eq('seen', false)
+      .eq('user_id', userId),
+  ]);
+
+  if (error && !unseenTrades) {
     return { success: false, error };
   }
-  
-  return { success: true, count: count || 0 };
+
+  const listedTradeIds = new Set(
+    (unread || []).map((note) => note.data?.tradeId).filter(Boolean)
+  );
+  const extraTrades = (unseenTrades || []).filter((note) => !listedTradeIds.has(note.trade_id)).length;
+
+  return { success: true, count: (unread?.length || 0) + extraTrades };
 } 
 
 // Trading System Functions

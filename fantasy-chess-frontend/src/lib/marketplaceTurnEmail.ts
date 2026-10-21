@@ -166,8 +166,17 @@ async function sendClaimedEmails(
         htmlContent: payload.htmlContent,
         textContent: payload.textContent,
         emailType: 'custom',
+        delivery: 'activity',
         userId: recipient.user_id,
         leagueId: recipient.league_id,
+        notification: {
+          title: source === 'marketplace_started' ? 'The draft is open' : 'Your league has started',
+          message: source === 'marketplace_started'
+            ? `The snake draft for ${leagueName} has started.`
+            : `${leagueName} starts today.`,
+          type: source === 'marketplace_started' ? 'draft_start' : 'league_start',
+          link: `/league/${recipient.league_id}`,
+        },
         metadata: {
           source,
           ...(extraMetadata ? extraMetadata(recipient) : {}),
@@ -257,8 +266,15 @@ export async function notifyMarketplaceTurnIfNeeded(leagueId: string): Promise<v
           htmlContent: payload.htmlContent,
           textContent: payload.textContent,
           emailType: 'custom',
+          delivery: 'activity',
           userId: recipient.user_id,
           leagueId: recipient.league_id,
+          notification: {
+            title: 'Your turn to draft',
+            message: `It's your pick in ${leagueName}.`,
+            type: 'marketplace_turn',
+            link: `/league/${recipient.league_id}`,
+          },
           metadata: {
             source: 'marketplace_turn',
             turnNumber: recipient.turn_number,
