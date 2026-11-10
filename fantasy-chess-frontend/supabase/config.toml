@@ -319,7 +319,7 @@ s3_secret_key = "env(S3_SECRET_KEY)"
 # Edge function scheduling is configured in the Supabase Dashboard
 # Go to Edge Functions → weekly-coin-distribution → Add Schedule
 # Cron expression: 0 1 * * 1 (every Monday at 1:00 AM UTC)
-# auto-start-marketplace is triggered by GitHub Actions twice daily.
+# auto-start-marketplace is triggered by GitHub Actions every 15 minutes.
 
 # Account deletion. Requires a valid user JWT; the function derives the account to
 # delete from the caller's own token, so a user can only delete themselves.

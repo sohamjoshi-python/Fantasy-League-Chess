@@ -75,8 +75,8 @@ function addDaysToYmd(dateValue: string, days: number): string {
 }
 
 function isFinalLeagueWeek(league: any, tuesdayDate: string): boolean {
-  if (!league?.end_date) return false
-  return league.end_date >= tuesdayDate && league.end_date <= addDaysToYmd(tuesdayDate, 1)
+  if (!league?.end_date || tuesdayDate > league.end_date) return false
+  return addDaysToYmd(tuesdayDate, 7) > league.end_date
 }
 
 function createWeeklyResultsEmail(

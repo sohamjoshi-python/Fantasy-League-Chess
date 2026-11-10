@@ -4,7 +4,11 @@ import { autoMarketplaceForBot } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { ChessPlayer, League, CurrentMarketplaceTurn, MarketplaceTurn } from '../types';
 import {
+  draftOpensAt,
+  earliestDraftScheduleDate,
   formatCalendarDate,
+  formatScheduledDateTime,
+  scheduledDraftDate,
   formatMarketplaceTurnRemaining,
   getMarketplaceAutoStartDate,
   getMarketplaceTurnMsRemaining,
@@ -107,7 +111,11 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
 
   // Local state for UI interactions
   const [loading, setLoading] = useState(false);
+  const [scheduling, setScheduling] = useState(false);
+  const [scheduleInput, setScheduleInput] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const onUpdateRef = useRef(onUpdate);
+  onUpdateRef.current = onUpdate;
   const botProcessingRef = useRef(false);
   const syncInProgressRef = useRef(false);
   const skipExpiredRef = useRef(false);
@@ -681,6 +689,68 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
       setError('Failed to start marketplace');
     } finally {
       setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    setScheduleInput(league.marketplace_scheduled_at ? scheduledDraftDate(league.marketplace_scheduled_at) : '');
+  }, [league.marketplace_scheduled_at]);
+
+  useEffect(() => {
+    if (league.marketplace_started || !league.marketplace_scheduled_at) return;
+    const scheduledFor = league.marketplace_scheduled_at;
+    let timer = 0;
+    let stopped = false;
+    const waitForScheduledDraft = () => {
+      if (stopped) return;
+      const scheduledAt = new Date(scheduledFor).getTime();
+      if (Number.isNaN(scheduledAt)) return;
+      const delay = scheduledAt - Date.now();
+      if (delay <= 0) {
+        void supabase.rpc('auto_start_due_marketplaces').then(({ error: autoStartError }) => {
+          if (!stopped && !autoStartError) onUpdateRef.current();
+        });
+        return;
+      }
+      timer = window.setTimeout(waitForScheduledDraft, Math.min(delay, 60_000));
+    };
+    waitForScheduledDraft();
+    return () => {
+      stopped = true;
+      window.clearTimeout(timer);
+    };
+  }, [league.id, league.marketplace_started, league.marketplace_scheduled_at, league.member_ids?.length]);
+
+  const saveSchedule = async (dateYmd: string | null) => {
+    if (!isOwner || !user) return;
+    try {
+      setScheduling(true);
+      setError(null);
+      let nextIso: string | null = null;
+      if (dateYmd) {
+        const latest = getMarketplaceAutoStartDate(league.start_date);
+        if (dateYmd < earliestDraftScheduleDate()) {
+          setError('Pick today only if it is still before 10:00 AM Pacific. Otherwise pick a later date.');
+          return;
+        }
+        if (league.start_date && dateYmd > latest) {
+          setError('The draft date has to be at least a week before the league starts.');
+          return;
+        }
+        nextIso = draftOpensAt(dateYmd).toISOString();
+      }
+      const { data: saved, error: saveError } = await supabase
+        .from('leagues')
+        .update({ marketplace_scheduled_at: nextIso })
+        .eq('id', league.id)
+        .eq('creator_id', user.id)
+        .select('id');
+      if (saveError || !saved?.length) throw saveError || new Error('Schedule was not saved');
+      onUpdate();
+    } catch {
+      setError(dateYmd ? 'Could not save the draft schedule.' : 'Could not clear the draft schedule.');
+    } finally {
+      setScheduling(false);
     }
   };
 
@@ -1433,6 +1503,12 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
   if (!league.marketplace_started) {
     const autoStartDate = getMarketplaceAutoStartDate(league.start_date)
     const autoStartDue = isMarketplaceAutoStartDue(league)
+    const scheduledLabel = league.marketplace_scheduled_at
+      ? formatScheduledDateTime(league.marketplace_scheduled_at)
+      : ''
+    const scheduleMin = earliestDraftScheduleDate()
+    const scheduleMax = autoStartDate
+    const canScheduleDate = scheduleMin <= scheduleMax
     return (
       <div className="bg-white rounded-lg shadow-lg p-6 border-2 border-blue-200">
         <h3 className="text-xl font-bold mb-4 text-gray-900">Turn-Based Marketplace</h3>
@@ -1440,20 +1516,68 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
           The marketplace allows players to take turns buying chess players. Each player can have up to {league.max_players_per_team || 10} players on their team.
         </p>
         <p className="text-gray-600 mb-4">
-          {autoStartDue
+          {scheduledLabel
+            ? autoStartDue
+              ? `The draft was scheduled for ${scheduledLabel}. It will open as soon as this league has at least 2 members.`
+              : `The draft is scheduled for ${scheduledLabel}. It opens once at least 2 people have joined.`
+            : autoStartDue
             ? 'The marketplace is due to start automatically now. It will open as soon as this league has at least 2 members.'
-            : `If the owner does not start it sooner, the marketplace will start automatically on ${formatCalendarDate(autoStartDate)} (one week before the league start date).`}
+            : `If the owner does not start it sooner or schedule a date, the marketplace will start automatically on ${formatCalendarDate(autoStartDate)} (one week before the league start date).`}
         </p>
         
         {isOwner && (
           <div className="space-y-4">
           <button
             onClick={startMarketplace}
-            disabled={loading}
+            disabled={loading || scheduling}
               className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
           >
               {loading ? 'Starting Marketplace...' : 'Start Turn-Based Marketplace'}
           </button>
+            <div className="border-t border-blue-100 pt-4">
+              <h4 className="font-semibold text-gray-900 mb-1">Schedule the draft</h4>
+              <p className="text-sm text-gray-600 mb-3">
+                {canScheduleDate
+                  ? `Pick a date. The draft opens at 10:00 AM Pacific. The latest date is ${formatCalendarDate(scheduleMax)}, one week before the league starts.`
+                  : `There is no earlier date that is still a week before the league starts, so the draft stays on ${formatCalendarDate(scheduleMax)}.`}
+              </p>
+              {canScheduleDate && (
+              <>
+              <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="draft-schedule">
+                Draft date
+              </label>
+              <input
+                id="draft-schedule"
+                type="date"
+                value={scheduleInput}
+                min={scheduleMin}
+                max={scheduleMax}
+                onChange={(event) => setScheduleInput(event.target.value)}
+                className="w-full border border-blue-200 rounded-lg px-3 py-2 text-gray-900"
+              />
+              <div className="flex flex-col sm:flex-row gap-2 mt-3">
+                <button
+                  type="button"
+                  onClick={() => saveSchedule(scheduleInput || null)}
+                  disabled={scheduling || loading || !scheduleInput}
+                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
+                >
+                  {scheduling ? 'Saving...' : 'Save schedule'}
+                </button>
+              </div>
+              </>
+              )}
+              {league.marketplace_scheduled_at && (
+                <button
+                  type="button"
+                  onClick={() => saveSchedule(null)}
+                  disabled={scheduling || loading}
+                  className={`${canScheduleDate ? '' : 'mt-3 '}border border-blue-300 text-blue-700 font-semibold py-2 px-4 rounded-lg hover:bg-blue-50 disabled:opacity-60`}
+                >
+                  Use automatic date
+                </button>
+              )}
+            </div>
             {(error || dataError) && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
                 {error || dataError}
@@ -1464,9 +1588,13 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
         
         {!isOwner && (
           <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded">
-            {autoStartDue
+            {scheduledLabel
+              ? autoStartDue
+                ? 'The scheduled draft date has passed. Waiting for the draft to open...'
+                : `The draft is scheduled for ${scheduledLabel}.`
+              : autoStartDue
               ? 'Waiting for the marketplace to start automatically...'
-              : `Waiting for the league owner to start the marketplace, or it will start automatically on ${formatCalendarDate(autoStartDate)}.`}
+              : `Waiting for the league owner to start the marketplace, schedule a date, or it will start automatically on ${formatCalendarDate(autoStartDate)}.`}
           </div>
         )}
       </div>

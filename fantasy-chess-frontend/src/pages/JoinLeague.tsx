@@ -456,7 +456,7 @@ const JoinLeague: React.FC = () => {
                   <span className="relative group cursor-pointer align-middle">
                     <svg className="w-4 h-4 text-royalBlue inline-block" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
                     <span className="absolute left-1/2 top-full mt-2 -translate-x-1/2 w-64 bg-white text-neutral-900 text-xs rounded shadow-lg border border-royalBlue px-3 py-2 z-50 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-normal">
-                      The start date is when points start accumulating. Leagues must start at least 7 days from today. The turn-based marketplace starts one week before this date if the owner has not started it sooner. Players cannot join after the marketplace starts.
+                      The start date is when points start accumulating. Leagues must start at least 7 days from today. The owner can start the draft immediately, schedule an earlier date at 10:00 AM Pacific, or leave it to open one week before this date. A scheduled date still has to be at least a week before the league starts. Players cannot join after the marketplace starts.
                     </span>
                   </span>
                 </label>
@@ -469,7 +469,7 @@ const JoinLeague: React.FC = () => {
                   className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-royalBlue text-neutral-900"
                 />
                 <p className="text-xs text-neutral-500 mt-1">
-                  Earliest allowed start date: {formatCalendarDate(getMinLeagueStartDateString())}. The turn-based marketplace auto-starts one week before this date.
+                  Earliest allowed start date: {formatCalendarDate(getMinLeagueStartDateString())}. The draft opens at 10:00 AM Pacific, either on a scheduled date at least a week before this date, when the owner starts it, or automatically one week before.
                 </p>
               </div>
             </div>

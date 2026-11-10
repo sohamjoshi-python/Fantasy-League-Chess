@@ -43,6 +43,71 @@ export function getMarketplaceAutoStartDate(startDateYmd: string): string {
   return addDaysToYmd(startDateYmd, -7)
 }
 
+/** Scheduled drafts open at 10:00 AM Pacific. The owner picks the date only. */
+export const DRAFT_OPEN_HOUR = 10
+export const DRAFT_TIME_ZONE = 'America/Los_Angeles'
+
+export function ymdInTimeZone(date: Date, timeZone = DRAFT_TIME_ZONE): string {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date)
+  const value = (type: string) => parts.find((part) => part.type === type)?.value || ''
+  return `${value('year')}-${value('month')}-${value('day')}`
+}
+
+function zoneOffsetMs(instant: Date, timeZone: string): number {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hourCycle: 'h23',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }).formatToParts(instant)
+  const value = (type: string) => Number(parts.find((part) => part.type === type)?.value || '0')
+  const asUtc = Date.UTC(value('year'), value('month') - 1, value('day'), value('hour') % 24, value('minute'), value('second'))
+  return asUtc - instant.getTime()
+}
+
+/** 10:00 AM Pacific on a YYYY-MM-DD date. */
+export function draftOpensAt(ymd: string): Date {
+  const [year, month, day] = ymd.split('-').map(Number)
+  const utcGuess = new Date(Date.UTC(year, month - 1, day, DRAFT_OPEN_HOUR, 0, 0))
+  const firstPass = new Date(utcGuess.getTime() - zoneOffsetMs(utcGuess, DRAFT_TIME_ZONE))
+  return new Date(utcGuess.getTime() - zoneOffsetMs(firstPass, DRAFT_TIME_ZONE))
+}
+
+/** Today if 10:00 AM Pacific is still ahead, otherwise tomorrow. */
+export function earliestDraftScheduleDate(): string {
+  const today = ymdInTimeZone(new Date())
+  return draftOpensAt(today).getTime() > Date.now() ? today : addDaysToYmd(today, 1)
+}
+
+/** Pacific calendar date stored on a scheduled draft. */
+export function scheduledDraftDate(iso: string): string {
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return ''
+  return ymdInTimeZone(date)
+}
+
+/** "Tue, Oct 28 at 10:00 AM Pacific". */
+export function formatScheduledDateTime(iso: string): string {
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return ''
+  const day = new Intl.DateTimeFormat('en-US', {
+    timeZone: DRAFT_TIME_ZONE,
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  }).format(date)
+  return `${day} at 10:00 AM Pacific`
+}
+
 /** Monday of the week containing `date` (local), as YYYY-MM-DD. */
 export function getWeekStartMonday(date: Date = new Date()): string {
   const d = new Date(date)
@@ -64,15 +129,16 @@ export function parseCalendarYmd(ymd: string): Date {
 }
 
 /**
- * League end date: Wednesday after the last eligible Titled Tuesday in the
- * month after the start month. This keeps the league active through the
- * Tuesday scoring/email job and the Wednesday backup job.
- * e.g. start 2026-05-15 -> last TT 2026-06-30 -> end 2026-07-01
+ * League end date is the same calendar day one month after the start.
+ * 2026-10-01 ends 2026-11-01. A 31st rolls back to the last day of the next month.
  */
 export function getLeagueEndDateFromStart(startDateYmd: string): string {
-  const d = parseCalendarYmd(startDateYmd)
-  d.setMonth(d.getMonth() + 2, 0)
-  return addDaysToYmd(getLastTuesdayOnOrBefore(getLocalDateString(d)), 1)
+  const start = parseCalendarYmd(startDateYmd)
+  const day = start.getDate()
+  const end = new Date(start.getFullYear(), start.getMonth() + 1, 1, 12)
+  const lastDay = new Date(end.getFullYear(), end.getMonth() + 1, 0).getDate()
+  end.setDate(Math.min(day, lastDay))
+  return getLocalDateString(end)
 }
 
 /** Monday lineup week_start_date → Titled Tuesday display (YYYY.MM.DD). */

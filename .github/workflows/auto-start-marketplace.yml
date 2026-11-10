@@ -2,9 +2,9 @@ name: Auto-Start Turn-Based Marketplace
 
 on:
   schedule:
-    # Twice daily so leagues open on the calendar day one week before start_date (PT).
-    - cron: "0 9 * * *"
-    - cron: "0 17 * * *"
+    # Every 15 minutes so a scheduled draft opens close to its chosen time,
+    # and unscheduled drafts still open on the week-before date.
+    - cron: "*/15 * * * *"
   workflow_dispatch:
 
 permissions: {}

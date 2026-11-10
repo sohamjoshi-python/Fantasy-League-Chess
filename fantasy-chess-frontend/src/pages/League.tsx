@@ -8,6 +8,7 @@ import { addDaysToYmd, compareCalendarDates, getLeagueLineupWeekBounds, getLocal
 import { keepIfSame } from '../lib/keepIfSame'
 import {
   formatCalendarDate,
+  formatScheduledDateTime,
   getTeamBuildingStatusLabel,
   isCoinMarketplaceAvailable,
   isMarketplaceAutoStartDue,
@@ -1851,7 +1852,7 @@ const LeaguePage: React.FC = () => {
                   <span className="relative group cursor-pointer ml-1">
                     <svg className="w-3 h-3 text-royalBlue inline-block" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
                     <span className="absolute left-1/2 -translate-x-1/2 mt-2 w-64 bg-white text-neutral-900 text-xs rounded shadow-lg border border-royalBlue px-3 py-2 z-50 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                      The start date is when points begin accumulating. After a league starts, this card shows the end date, and the original start date remains listed below it. The turn-based marketplace auto-starts one week before the start date if it has not been started manually.
+                      The start date is when points begin accumulating. After a league starts, this card shows the end date, and the original start date remains listed below it. The owner can start the draft immediately, schedule an earlier date at 10:00 AM Pacific, or leave it to open one week before the start date. A scheduled date still has to be at least a week before the league starts.
                     </span>
                   </span>
                 </span>
@@ -1866,6 +1867,11 @@ const LeaguePage: React.FC = () => {
                 <Crown className="h-4 w-4 lg:h-5 lg:w-5 text-gold" />
                 <span className="text-xs lg:text-sm text-neutral-600">
                   Draft: {getTeamBuildingStatusLabel(league)}
+                  {league.marketplace_scheduled_at && !league.marketplace_started && (
+                    <span className="block text-[11px] lg:text-xs text-neutral-500">
+                      Scheduled {formatScheduledDateTime(league.marketplace_scheduled_at)}
+                    </span>
+                  )}
                 </span>
               </div>
             </div>

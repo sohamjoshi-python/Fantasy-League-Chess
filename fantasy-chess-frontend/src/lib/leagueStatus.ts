@@ -8,7 +8,11 @@ import {
 } from './calendarDate'
 
 export {
+  draftOpensAt,
+  earliestDraftScheduleDate,
+  formatScheduledDateTime,
   getMarketplaceAutoStartDate,
+  scheduledDraftDate,
   getMinLeagueStartDateString,
   leagueSeasonHasEndedLocal,
   leagueSeasonHasStartedLocal,
@@ -50,7 +54,7 @@ export function isLeagueJoinClosed(
   )
 }
 
-/** True when the turn-based marketplace should auto-start (week before start_date, if not already started). */
+/** True when the turn-based marketplace should auto-start. A scheduled time replaces the week-before default. */
 export function isMarketplaceAutoStartDue(
   league: Pick<
     League,
@@ -59,6 +63,7 @@ export function isMarketplaceAutoStartDue(
     | 'marketplace_started'
     | 'marketplace_completed'
     | 'draft_completed'
+    | 'marketplace_scheduled_at'
   >
 ): boolean {
   if (league.marketplace_started || league.marketplace_completed || league.draft_completed) {
@@ -66,6 +71,10 @@ export function isMarketplaceAutoStartDue(
   }
   if (!league.start_date || leagueSeasonHasEndedLocal(league.end_date)) {
     return false
+  }
+  if (league.marketplace_scheduled_at) {
+    const scheduledAt = new Date(league.marketplace_scheduled_at).getTime()
+    return !Number.isNaN(scheduledAt) && Date.now() >= scheduledAt
   }
   return compareCalendarDates(getLocalDateString(), getMarketplaceAutoStartDate(league.start_date)) >= 0
 }

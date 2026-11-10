@@ -130,7 +130,7 @@ const Help: React.FC<HelpProps> = ({ variant }) => {
                 <h4 className="font-semibold text-blue-900 mb-1">What is the Start Date?</h4>
                 <p className="text-sm text-blue-900">
                   The <strong>start date</strong> is when your league officially begins and points start accumulating for all teams. New leagues must start at least <strong>7 days</strong> from today. <br/>
-                  <strong>Important:</strong> The turn-based marketplace starts one week before the start date if the owner has not started it sooner. No points are earned before the start date, and no new members can join after the marketplace starts.
+                  <strong>Important:</strong> The owner can start the turn-based marketplace immediately, schedule an earlier date, or leave it to open one week before the start date. A scheduled draft opens at 10:00 AM Pacific and still has to be at least a week before the league starts. No points are earned before the start date, and no new members can join after the marketplace starts.
                 </p>
               </div>
               <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 my-4">
@@ -269,7 +269,7 @@ const Help: React.FC<HelpProps> = ({ variant }) => {
                   <h3 className="font-semibold text-neutral-900">Two Marketplace Types</h3>
                   <p className="text-neutral-700">There are two ways to trade players:</p>
                   <ul className="list-disc list-inside text-neutral-700 mt-2 space-y-1">
-                    <li><strong>Turn-Based Marketplace:</strong> Take turns buying players. Each turn has a pick clock that shrinks so the draft finishes before the league starts (up to 12 hours, as little as 15 minutes). If you don't pick, the turn is skipped. You can also end your turn to leave the rest of the snake draft and keep remaining coins for later. The owner can start this early; otherwise it starts automatically one week before the league start date.</li>
+                    <li><strong>Turn-Based Marketplace:</strong> Take turns buying players. Each turn has a pick clock that shrinks so the draft finishes before the league starts (up to 12 hours, as little as 15 minutes). If you don't pick, the turn is skipped. You can also end your turn to leave the rest of the snake draft and keep remaining coins for later. The owner can start it immediately, schedule an earlier date at 10:00 AM Pacific, or leave it to start automatically one week before the league start date. A scheduled date still has to be at least a week before the league starts.</li>
                     <li><strong>Regular Marketplace:</strong> After the snake draft ends, buy and sell players freely throughout the season</li>
                   </ul>
                 </div>
