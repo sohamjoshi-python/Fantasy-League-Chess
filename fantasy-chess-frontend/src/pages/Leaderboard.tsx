@@ -1,15 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 import { resolveAvatarUrl } from '../lib/avatars';
 import { Trophy, Target, Clock, Calendar, Medal, Crown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getLocalDateString, getWeekStartMonday, addDaysToYmd } from '../lib/calendarDate';
 import { LeaderboardPageSkeleton } from '../components/ui/LoadingSpinner';
-import { readView, writeView } from '../lib/viewCache';
+import { forgetView, forgetViewsWithPrefix, readView, writeView } from '../lib/viewCache';
 
 interface LeaderboardCache {
   wins: LeaderboardEntry[]
   points: LeaderboardEntry[]
-  recent: RecentWinner[]
 }
 
 interface LeaderboardEntry {
@@ -45,28 +45,64 @@ interface WeeklyPerformer {
 
 type LeaderboardType = 'wins' | 'points' | 'recent' | 'weekly';
 
+const TOP_LEADERBOARD_COUNT = 10;
+const PRIVATE_LEAGUE_LABEL = 'Private league';
+
+function LeagueName({ name }: { name: string }) {
+  if (name === PRIVATE_LEAGUE_LABEL) {
+    return <p className="text-sm italic text-violet-600">{PRIVATE_LEAGUE_LABEL}</p>;
+  }
+  return <p className="text-sm text-neutral-600">{name}</p>;
+}
+
+function rowsForViewer<T extends { user_id: string }>(rows: T[], userId?: string | null) {
+  const ranked = rows.map((row, index) => ({ row, rank: index + 1 }));
+  const top = ranked.slice(0, TOP_LEADERBOARD_COUNT);
+  if (!userId) return top;
+  const ownBelowTop = ranked.filter((item) => item.row.user_id === userId && item.rank > TOP_LEADERBOARD_COUNT);
+  return [...top, ...ownBelowTop];
+}
+
+const SHARED_LEADERBOARD_CACHE = 'leaderboard:v2';
+
+function recentWinnersCacheKey(userId?: string | null) {
+  return userId ? `${userId}:recent-winners` : null;
+}
+
+function weeklyPerformersCacheKey(userId: string | null | undefined, weekDate: string) {
+  return userId ? `${userId}:weekly:${weekDate}` : null;
+}
+
 const Leaderboard: React.FC = () => {
-  const cachedBoard = readView<LeaderboardCache>('leaderboard');
+  const { user } = useAuth();
+  const cachedBoard = readView<LeaderboardCache>(SHARED_LEADERBOARD_CACHE);
+  const recentKey = recentWinnersCacheKey(user?.id);
+  const cachedRecent = recentKey ? readView<RecentWinner[]>(recentKey) : null;
   const [activeTab, setActiveTab] = useState<LeaderboardType>('wins');
   const [winsData, setWinsData] = useState<LeaderboardEntry[]>(cachedBoard?.wins || []);
   const [pointsData, setPointsData] = useState<LeaderboardEntry[]>(cachedBoard?.points || []);
-  const [recentWinners, setRecentWinners] = useState<RecentWinner[]>(cachedBoard?.recent || []);
+  const [recentWinners, setRecentWinners] = useState<RecentWinner[]>(user?.id ? cachedRecent || [] : []);
   const [weeklyPerformers, setWeeklyPerformers] = useState<WeeklyPerformer[]>([]);
   const [loading, setLoading] = useState(!cachedBoard);
   const [selectedWeek, setSelectedWeek] = useState<string>('');
 
   useEffect(() => {
-    fetchAllLeaderboards();
+    forgetView('leaderboard');
+    forgetViewsWithPrefix('weekly:');
   }, []);
+
+  useEffect(() => {
+    fetchAllLeaderboards();
+  }, [user?.id]);
 
   useEffect(() => {
     if (selectedWeek) {
       fetchWeeklyPerformers(selectedWeek);
     }
-  }, [selectedWeek]);
+  }, [selectedWeek, user?.id]);
 
   const fetchAllLeaderboards = async () => {
-    if (!readView('leaderboard')) setLoading(true);
+    if (!readView(SHARED_LEADERBOARD_CACHE)) setLoading(true);
     try {
       const [winsResult, pointsResult, recentResult] = await Promise.all([
         supabase.rpc('get_league_wins_leaderboard'),
@@ -79,7 +115,12 @@ const Leaderboard: React.FC = () => {
       setWinsData(wins);
       setPointsData(points);
       setRecentWinners(recent);
-      writeView<LeaderboardCache>('leaderboard', { wins, points, recent });
+      writeView<LeaderboardCache>(SHARED_LEADERBOARD_CACHE, {
+        wins: wins.slice(0, TOP_LEADERBOARD_COUNT),
+        points: points.slice(0, TOP_LEADERBOARD_COUNT),
+      });
+      const recentKey = recentWinnersCacheKey(user?.id);
+      if (recentKey) writeView(recentKey, recent.slice(0, TOP_LEADERBOARD_COUNT));
 
       setSelectedWeek(getWeekStartMonday());
 
@@ -91,13 +132,14 @@ const Leaderboard: React.FC = () => {
   };
 
   const fetchWeeklyPerformers = async (weekDate: string) => {
-    const cached = readView<WeeklyPerformer[]>(`weekly:${weekDate}`);
+    const weeklyKey = weeklyPerformersCacheKey(user?.id, weekDate);
+    const cached = weeklyKey ? readView<WeeklyPerformer[]>(weeklyKey) : null;
     if (cached) setWeeklyPerformers(cached);
     try {
       const { data } = await supabase.rpc('get_weekly_top_performers', { week_date: weekDate });
       const rows = data || [];
       setWeeklyPerformers(rows);
-      writeView(`weekly:${weekDate}`, rows);
+      if (weeklyKey) writeView(weeklyKey, rows.slice(0, TOP_LEADERBOARD_COUNT));
     } catch (error) {
       console.error('Error fetching weekly performers:', error);
     }
@@ -143,6 +185,11 @@ const Leaderboard: React.FC = () => {
     if (rank === 2) return <Medal className="w-5 h-5 text-amber-600" />;
     return <span className="text-lg font-bold text-neutral-600">{rank + 1}</span>;
   };
+
+  const visibleWins = rowsForViewer(winsData, user?.id);
+  const visiblePoints = rowsForViewer(pointsData, user?.id);
+  const visibleRecent = rowsForViewer(recentWinners, user?.id);
+  const visibleWeekly = rowsForViewer(weeklyPerformers, user?.id);
 
   if (loading) {
     return <LeaderboardPageSkeleton />;
@@ -227,28 +274,33 @@ const Leaderboard: React.FC = () => {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {winsData.map((entry, index) => (
-                    <div key={entry.user_id} className="flex items-center gap-4 p-4 bg-neutral-50 rounded-lg hover:bg-neutral-100 transition-colors">
+                  {visibleWins.map((item, index) => (
+                    <div key={item.row.user_id}>
+                      {item.rank > TOP_LEADERBOARD_COUNT && visibleWins[index - 1]?.rank <= TOP_LEADERBOARD_COUNT && (
+                        <p className="mb-2 text-sm font-medium text-neutral-500">Your rank</p>
+                      )}
+                    <div className={`flex items-center gap-4 p-4 rounded-lg transition-colors ${item.row.user_id === user?.id ? 'bg-royalBlue/10 border border-royalBlue' : 'bg-neutral-50 hover:bg-neutral-100'}`}>
                       <div className="flex items-center justify-center w-8">
-                        {getRankIcon(index)}
+                        {getRankIcon(item.rank - 1)}
                       </div>
                       <img 
-                        src={resolveAvatarUrl(entry.avatar_url)} 
+                        src={resolveAvatarUrl(item.row.avatar_url)} 
                         alt="Avatar" 
                         className="w-12 h-12 rounded-full border-2 border-gold" 
                       />
                       <div className="flex-1">
-                        <h3 className="font-semibold text-lg">{entry.username}</h3>
+                        <h3 className="font-semibold text-lg">{item.row.username}{item.row.user_id === user?.id ? ' (You)' : ''}</h3>
                         <p className="text-sm text-neutral-600">
-                          {entry.total_leagues} leagues played
+                          {item.row.total_leagues} leagues played
                         </p>
                       </div>
                       <div className="text-right">
-                        <div className="text-2xl font-bold text-gold">{entry.wins} wins</div>
+                        <div className="text-2xl font-bold text-gold">{item.row.wins} wins</div>
                         <div className="text-sm text-neutral-600">
-                          {formatGems(entry.total_prize_money || 0)}
+                          {formatGems(item.row.total_prize_money || 0)}
                         </div>
                       </div>
+                    </div>
                     </div>
                   ))}
                 </div>
@@ -271,33 +323,38 @@ const Leaderboard: React.FC = () => {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {pointsData.map((entry, index) => (
-                    <div key={entry.user_id} className="flex items-center gap-4 p-4 bg-neutral-50 rounded-lg hover:bg-neutral-100 transition-colors">
+                  {visiblePoints.map((item, index) => (
+                    <div key={item.row.user_id}>
+                      {item.rank > TOP_LEADERBOARD_COUNT && visiblePoints[index - 1]?.rank <= TOP_LEADERBOARD_COUNT && (
+                        <p className="mb-2 text-sm font-medium text-neutral-500">Your rank</p>
+                      )}
+                    <div className={`flex items-center gap-4 p-4 rounded-lg transition-colors ${item.row.user_id === user?.id ? 'bg-royalBlue/10 border border-royalBlue' : 'bg-neutral-50 hover:bg-neutral-100'}`}>
                       <div className="flex items-center justify-center w-8">
-                        {getRankIcon(index)}
+                        {getRankIcon(item.rank - 1)}
                       </div>
                       <img 
-                        src={resolveAvatarUrl(entry.avatar_url)} 
+                        src={resolveAvatarUrl(item.row.avatar_url)} 
                         alt="Avatar" 
                         className="w-12 h-12 rounded-full border-2 border-gold" 
                       />
                       <div className="flex-1">
-                        <h3 className="font-semibold text-lg">{entry.username}</h3>
+                        <h3 className="font-semibold text-lg">{item.row.username}{item.row.user_id === user?.id ? ' (You)' : ''}</h3>
                         <p className="text-sm text-neutral-600">
-                          {entry.leagues_played} leagues • {entry.average_points_per_league?.toFixed(1)} avg/league
+                          {item.row.leagues_played} leagues • {item.row.average_points_per_league?.toFixed(1)} avg/league
                         </p>
                       </div>
                       <div className="text-right">
-                        <div className="text-2xl font-bold text-gold">{formatPoints(entry.total_points)} pts</div>
+                        <div className="text-2xl font-bold text-gold">{formatPoints(item.row.total_points)} pts</div>
                         <div className="mt-1 flex flex-wrap justify-end gap-2 text-xs font-semibold">
                           <span className="rounded-full bg-green-100 px-2 py-1 text-green-700">
-                            +{formatPoints(entry.points_won)} won
+                            +{formatPoints(item.row.points_won)} won
                           </span>
                           <span className="rounded-full bg-red-100 px-2 py-1 text-red-700">
-                            -{formatPoints(entry.points_lost)} lost
+                            -{formatPoints(item.row.points_lost)} lost
                           </span>
                         </div>
                       </div>
+                    </div>
                     </div>
                   ))}
                 </div>
@@ -320,26 +377,31 @@ const Leaderboard: React.FC = () => {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {recentWinners.map((winner, index) => (
-                    <div key={`${winner.user_id}-${winner.league_name}`} className="flex items-center gap-4 p-4 bg-neutral-50 rounded-lg hover:bg-neutral-100 transition-colors">
+                  {visibleRecent.map((item, index) => (
+                    <div key={`${item.row.user_id}-${item.row.league_name}-${item.rank}`}>
+                      {item.rank > TOP_LEADERBOARD_COUNT && visibleRecent[index - 1]?.rank <= TOP_LEADERBOARD_COUNT && (
+                        <p className="mb-2 text-sm font-medium text-neutral-500">Your rank</p>
+                      )}
+                    <div className={`flex items-center gap-4 p-4 rounded-lg transition-colors ${item.row.user_id === user?.id ? 'bg-royalBlue/10 border border-royalBlue' : 'bg-neutral-50 hover:bg-neutral-100'}`}>
                       <div className="flex items-center justify-center w-8">
-                        <span className="text-lg font-bold text-neutral-600">{index + 1}</span>
+                        <span className="text-lg font-bold text-neutral-600">{item.rank}</span>
                       </div>
                       <img 
-                        src={resolveAvatarUrl(winner.avatar_url)} 
+                        src={resolveAvatarUrl(item.row.avatar_url)} 
                         alt="Avatar" 
                         className="w-12 h-12 rounded-full border-2 border-gold" 
                       />
                       <div className="flex-1">
-                        <h3 className="font-semibold text-lg">{winner.username}</h3>
-                        <p className="text-sm text-neutral-600">{winner.league_name}</p>
+                        <h3 className="font-semibold text-lg">{item.row.username}{item.row.user_id === user?.id ? ' (You)' : ''}</h3>
+                        <LeagueName name={item.row.league_name} />
                       </div>
                       <div className="text-right">
-                        <div className="text-lg font-bold text-gold">{formatGems(winner.prize_amount)}</div>
+                        <div className="text-lg font-bold text-gold">{formatGems(item.row.prize_amount)}</div>
                         <div className="text-sm text-neutral-600">
-                          {formatDate(winner.won_date)}
+                          {formatDate(item.row.won_date)}
                         </div>
                       </div>
+                    </div>
                     </div>
                   ))}
                 </div>
@@ -388,24 +450,29 @@ const Leaderboard: React.FC = () => {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {weeklyPerformers.map((performer, index) => (
-                    <div key={`${performer.user_id}-${performer.league_name}`} className="flex items-center gap-4 p-4 bg-neutral-50 rounded-lg hover:bg-neutral-100 transition-colors">
+                  {visibleWeekly.map((item, index) => (
+                    <div key={`${item.row.user_id}-${item.row.league_name}-${item.rank}`}>
+                      {item.rank > TOP_LEADERBOARD_COUNT && visibleWeekly[index - 1]?.rank <= TOP_LEADERBOARD_COUNT && (
+                        <p className="mb-2 text-sm font-medium text-neutral-500">Your rank</p>
+                      )}
+                    <div className={`flex items-center gap-4 p-4 rounded-lg transition-colors ${item.row.user_id === user?.id ? 'bg-royalBlue/10 border border-royalBlue' : 'bg-neutral-50 hover:bg-neutral-100'}`}>
                       <div className="flex items-center justify-center w-8">
-                        {getRankIcon(index)}
+                        {getRankIcon(item.rank - 1)}
                       </div>
                       <img 
-                        src={resolveAvatarUrl(performer.avatar_url)} 
+                        src={resolveAvatarUrl(item.row.avatar_url)} 
                         alt="Avatar" 
                         className="w-12 h-12 rounded-full border-2 border-gold" 
                       />
                       <div className="flex-1">
-                        <h3 className="font-semibold text-lg">{performer.username}</h3>
-                        <p className="text-sm text-neutral-600">{performer.league_name}</p>
+                        <h3 className="font-semibold text-lg">{item.row.username}{item.row.user_id === user?.id ? ' (You)' : ''}</h3>
+                        <LeagueName name={item.row.league_name} />
                       </div>
                       <div className="text-right">
-                        <div className="text-2xl font-bold text-gold">{performer.week_points.toFixed(1)} pts</div>
+                        <div className="text-2xl font-bold text-gold">{item.row.week_points.toFixed(1)} pts</div>
                         <div className="text-sm text-neutral-600">this week</div>
                       </div>
+                    </div>
                     </div>
                   ))}
                 </div>

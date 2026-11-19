@@ -25,6 +25,32 @@ export function writeView<T>(key: string, value: T) {
   }
 }
 
+export function forgetView(key: string) {
+  memory.delete(key)
+  try {
+    localStorage.removeItem(`flc:${key}`)
+  } catch {
+    // Ignore storage access errors.
+  }
+}
+
+export function forgetViewsWithPrefix(prefix: string) {
+  for (const key of [...memory.keys()]) {
+    if (key.startsWith(prefix)) memory.delete(key)
+  }
+  try {
+    const storagePrefix = `flc:${prefix}`
+    const keys: string[] = []
+    for (let i = 0; i < localStorage.length; i++) {
+      const storageKey = localStorage.key(i)
+      if (storageKey?.startsWith(storagePrefix)) keys.push(storageKey)
+    }
+    keys.forEach((storageKey) => localStorage.removeItem(storageKey))
+  } catch {
+    // Ignore storage access errors.
+  }
+}
+
 export function clearUserViews(userId: string) {
   const prefix = `${userId}:`
   for (const key of memory.keys()) {
