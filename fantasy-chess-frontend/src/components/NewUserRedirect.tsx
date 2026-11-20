@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
+import { peekPendingJoinPath, PENDING_JOIN_KEY } from '../lib/leagueJoinLink'
 
 const NewUserRedirect: React.FC = () => {
   const { user } = useAuth()
@@ -12,6 +13,15 @@ const NewUserRedirect: React.FC = () => {
   useEffect(() => {
     const checkAndRedirect = async () => {
       if (location.pathname === '/reset-password') return
+      if (location.pathname.startsWith('/join/')) {
+        if (user) sessionStorage.removeItem(PENDING_JOIN_KEY)
+        return
+      }
+      const pendingJoin = peekPendingJoinPath()
+      if (user && pendingJoin && location.pathname !== pendingJoin) {
+        navigate(pendingJoin)
+        return
+      }
       if (user && !hasChecked) {
         try {
           // Check if user has been redirected to tutorial before

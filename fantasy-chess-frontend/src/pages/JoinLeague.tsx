@@ -8,6 +8,7 @@ import { Users, Trophy, Calendar, Search, Copy } from 'lucide-react'
 import { getLeagueEndDateFromStart, getMinLeagueStartDateString } from '../lib/calendarDate'
 import { formatCalendarDate, isLeagueJoinClosed } from '../lib/leagueStatus'
 import { publicErrorMessage } from '../lib/publicError'
+import { leagueJoinUrl } from '../lib/leagueJoinLink'
 
 // Helper function to send league joined email
 const sendLeagueJoinedEmail = async (userEmail: string, leagueName: string) => {
@@ -36,6 +37,7 @@ const JoinLeague: React.FC = () => {
   const [publicLeagues, setPublicLeagues] = useState<League[]>([])
   const [publicLeaguesLoading, setPublicLeaguesLoading] = useState(false)
   const [joinCode, setJoinCode] = useState('')
+  const [copiedLeagueId, setCopiedLeagueId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -328,8 +330,13 @@ const JoinLeague: React.FC = () => {
     }
   }
 
-  const copyJoinCode = (code: string) => {
-    navigator.clipboard.writeText(code)
+  const copyInviteLink = async (leagueId: string, code: string) => {
+    try {
+      await navigator.clipboard.writeText(leagueJoinUrl(code))
+      setCopiedLeagueId(leagueId)
+    } catch (copyError) {
+      console.error('Could not copy invite link:', copyError)
+    }
   }
 
   return (
@@ -528,11 +535,11 @@ const JoinLeague: React.FC = () => {
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-base lg:text-lg font-semibold text-neutral-900">{league.name}</h3>
                       <button
-                        onClick={() => copyJoinCode(league.join_code)}
-                        className="text-royalBlue hover:text-purple transition-colors"
-                        title="Copy join code"
+                        onClick={() => copyInviteLink(league.id, league.join_code)}
+                        className="text-royalBlue hover:text-purple transition-colors text-xs font-medium"
+                        title="Copy invite link"
                       >
-                        <Copy className="h-4 w-4" />
+                        {copiedLeagueId === league.id ? 'Link copied' : <Copy className="h-4 w-4" />}
                       </button>
                     </div>
                     

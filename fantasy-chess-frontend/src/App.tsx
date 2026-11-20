@@ -12,6 +12,7 @@ import { LoadingSpinner } from './components/ui/LoadingSpinner';
 const Home = lazy(() => import('./pages/Home'))
 const Dashboard = lazy(() => import('./pages/Dashboard'))
 const JoinLeague = lazy(() => import('./pages/JoinLeague'))
+const JoinInvite = lazy(() => import('./pages/JoinInvite'))
 const LeaguePage = lazy(() => import('./pages/League'))
 const Profile = lazy(() => import('./pages/Profile'))
 const Help = lazy(() => import('./pages/Help'))
@@ -49,6 +50,7 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/join-league" element={<ProtectedRoute><JoinLeague /></ProtectedRoute>} />
+            <Route path="/join/:code" element={<JoinInvite />} />
             <Route path="/league/:leagueId" element={<ProtectedRoute><LeaguePage /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="/help" element={<Help />} />

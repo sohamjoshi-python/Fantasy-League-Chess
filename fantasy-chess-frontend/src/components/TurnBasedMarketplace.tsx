@@ -1481,10 +1481,15 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
 
   // Memoized filtered and sorted players
   const filteredPlayers = useMemo(() => {
+    const searching = debouncedSearchTerm.trim() !== '';
+    const query = debouncedSearchTerm.trim().toLowerCase();
+
     return availablePlayers
-      .filter(player =>
-        player.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
-      )
+      .filter(player => {
+        if (searching && !player.name.toLowerCase().includes(query)) return false;
+        if (searching || userCoinBalance === null) return true;
+        return calculatePlayerPrice(player.elo) <= userCoinBalance;
+      })
       .sort((a, b) => {
         const priceA = calculatePlayerPrice(a.elo);
         const priceB = calculatePlayerPrice(b.elo);
@@ -1789,8 +1794,9 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
         <div className="flex justify-between items-center mb-3">
           <h4 className="font-semibold text-gray-900">Available Players</h4>
           <div className="text-sm text-gray-600">
-            {filteredPlayers.filter(p => userCoinBalance !== null && userCoinBalance >= calculatePlayerPrice(p.elo)).length} affordable
-            {' '}• {filteredPlayers.length} total
+            {debouncedSearchTerm.trim()
+              ? `${filteredPlayers.length} results`
+              : `${filteredPlayers.length} you can afford`}
           </div>
         </div>
         
@@ -1803,12 +1809,25 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
+          {debouncedSearchTerm.trim() === '' && userCoinBalance !== null && (
+            <p className="mt-2 text-xs text-gray-500">
+              Showing players you can afford. Search to find higher prices.
+            </p>
+          )}
         </div>
 
         {/* Players List */}
         <div className={`space-y-3 max-h-96 overflow-y-auto overscroll-contain touch-pan-y ${dataLoading ? 'min-h-96' : ''}`}>
           {dataLoading ? (
             <LoadingSpinner size="lg" text="Loading players..." className="py-8" />
+          ) : filteredPlayers.length === 0 ? (
+            <p className="py-8 text-center text-sm text-gray-500">
+              {debouncedSearchTerm.trim()
+                ? 'No players found matching your search'
+                : availablePlayers.length === 0
+                  ? 'No players available'
+                  : 'No players at or below your coin balance. Search to find others.'}
+            </p>
           ) : (
             <StaggeredTransition staggerDelay={50} direction="slideUp">
               {filteredPlayers.map(player => (

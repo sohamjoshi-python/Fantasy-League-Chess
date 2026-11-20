@@ -18,7 +18,7 @@ import {
 } from '../lib/leagueStatus'
 import { notifyMarketplaceStartedIfNeeded } from '../lib/marketplaceTurnEmail'
 import { isLineupChangeAllowed, lineupChangeBlockedMessage } from '../lib/lineupWindow'
-import { Crown, Trophy, Calendar, Edit, Check, X, RefreshCw, Bot as BotIcon, Plus, Trash2 } from 'lucide-react'
+import { Crown, Trophy, Calendar, Edit, Check, X, RefreshCw, Bot as BotIcon, Plus, Trash2, Link2 } from 'lucide-react'
 import {
   createBot,
   removeBot,
@@ -37,6 +37,7 @@ import TurnBasedMarketplace from '../components/TurnBasedMarketplace';
 import PlayerDetailModal from '../components/PlayerDetailModal';
 import { LeaguePageSkeleton, PointBreakdownSkeleton, SkeletonBlock } from '../components/ui/LoadingSpinner';
 import { readView, writeView } from '../lib/viewCache';
+import { leagueJoinUrl } from '../lib/leagueJoinLink';
 
 interface LeagueCache {
   league: League
@@ -380,6 +381,35 @@ const FinalPodiumCard: React.FC<{
           </span>
         </div>
       </div>
+    </button>
+  )
+}
+
+function CopyInviteLink({ code }: { code: string }) {
+  const [copied, setCopied] = useState(false)
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(leagueJoinUrl(code))
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 2000)
+    } catch (copyError) {
+      console.error('Could not copy invite link:', copyError)
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => void copy()}
+      className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] lg:text-xs font-medium transition-colors ${
+        copied
+          ? 'border-green-300 bg-green-50 text-green-700'
+          : 'border-neutral-300 bg-white text-neutral-700 hover:border-royalBlue hover:text-royalBlue'
+      }`}
+    >
+      {copied ? <Check className="h-3 w-3" /> : <Link2 className="h-3 w-3" />}
+      {copied ? 'Copied' : 'Copy invite link'}
     </button>
   )
 }
@@ -1862,6 +1892,9 @@ const LeaguePage: React.FC = () => {
                 <span className="text-xs lg:text-sm text-neutral-600">
                   Join Code: {league?.join_code}
                 </span>
+                {league?.join_code && (
+                  <CopyInviteLink code={league.join_code} />
+                )}
               </div>
               <div className="flex items-center space-x-2">
                 <Crown className="h-4 w-4 lg:h-5 lg:w-5 text-gold" />

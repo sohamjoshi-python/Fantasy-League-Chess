@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { ArrowLeft, Eye, EyeOff, CheckCircle, ChevronRight, ChevronDown } from 'lucide-react'
 import logo from '../assets/fantasy-league-chess-logo-updated.png'
 import { getBrandName } from '../utils/browserDetection';
 import { publicErrorMessage } from '../lib/publicError';
+import { safeJoinNext } from '../lib/leagueJoinLink';
 
 const SignUp: React.FC = () => {
   const [email, setEmail] = useState('')
@@ -23,13 +24,15 @@ const SignUp: React.FC = () => {
 
   const { signUp, user } = useAuth()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const nextPath = safeJoinNext(searchParams.get('next'))
 
   // Redirect authenticated users only when not showing signup success
   useEffect(() => {
     if (user && !success) {
-      navigate('/join-league')
+      navigate(nextPath || '/join-league')
     }
-  }, [user, navigate, success])
+  }, [user, navigate, success, nextPath])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -59,7 +62,7 @@ const SignUp: React.FC = () => {
       await signUp(email, password, displayName.trim())
       setSuccess(true)
       setTimeout(() => {
-        navigate('/join-league')
+        navigate(nextPath || '/join-league')
       }, 2000)
     } catch (error: any) {
       setError(publicErrorMessage(error, 'Failed to create account'))
@@ -109,7 +112,7 @@ const SignUp: React.FC = () => {
               Welcome to {getBrandName()}! Please check your email to verify your account.
             </p>
             <p className="text-sm text-neutral-600">
-              Redirecting to join a league...
+              {nextPath ? 'Taking you to the league invite...' : 'Redirecting to join a league...'}
             </p>
           </div>
         </div>

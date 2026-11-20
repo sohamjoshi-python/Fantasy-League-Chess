@@ -118,7 +118,7 @@ const Help: React.FC<HelpProps> = ({ variant }) => {
                 <ArrowRight className="w-5 h-5 text-royalBlue mt-0.5 mr-3 flex-shrink-0" />
                 <div>
                   <h3 className="font-semibold text-neutral-900">Join an Existing League</h3>
-                  <p className="text-neutral-700">Use the join code provided by the league creator or browse public leagues.</p>
+                  <p className="text-neutral-700">Open the invite link from the league creator, enter their join code, or browse public leagues.</p>
                 </div>
               </div>
               <div className="bg-neutral-50 p-4 rounded-lg border border-royalBlue">

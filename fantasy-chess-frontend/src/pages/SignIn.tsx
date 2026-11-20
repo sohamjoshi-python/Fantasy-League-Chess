@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { ArrowLeft, Eye, EyeOff, CheckCircle, Mail } from 'lucide-react'
 import logo from '../assets/fantasy-league-chess-logo-updated.png'
 import { getBrandName } from '../utils/browserDetection'
 import { supabase } from '../lib/supabase'
 import { publicErrorMessage } from '../lib/publicError'
+import { safeJoinNext } from '../lib/leagueJoinLink'
 
 const SignIn: React.FC = () => {
   const [email, setEmail] = useState('')
@@ -20,6 +21,8 @@ const SignIn: React.FC = () => {
 
   const { signIn } = useAuth()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const nextPath = safeJoinNext(searchParams.get('next'))
 
   // Check for error in URL hash (from expired/invalid reset links)
   useEffect(() => {
@@ -47,7 +50,7 @@ const SignIn: React.FC = () => {
       await signIn(email, password)
       setSuccess(true)
       setTimeout(() => {
-        navigate('/dashboard')
+        navigate(nextPath || '/dashboard')
       }, 1000)
     } catch (error: any) {
       setError(publicErrorMessage(error, 'Failed to sign in'))
@@ -113,7 +116,7 @@ const SignIn: React.FC = () => {
             <CheckCircle className="w-16 h-16 mx-auto mb-4 text-green-500" />
             <h2 className="text-2xl font-bold text-neutral-900 mb-2">Welcome Back!</h2>
             <p className="text-neutral-700 mb-4">
-              Redirecting to your dashboard...
+              {nextPath ? 'Taking you to the league invite...' : 'Redirecting to your dashboard...'}
             </p>
           </div>
         </div>
@@ -352,7 +355,7 @@ const SignIn: React.FC = () => {
             <p className="text-neutral-700">
               Don't have an account?{' '}
               <Link
-                to="/signup"
+                to={nextPath ? `/signup?next=${encodeURIComponent(nextPath)}` : '/signup'}
                 className="text-royalBlue hover:text-blue-700 font-semibold"
               >
                 Create Account

@@ -115,6 +115,7 @@ export default function Marketplace({ leagueId, onTeamUpdate }: MarketplaceProps
   const [ownedPlayers, setOwnedPlayers] = useState<ChessPlayer[]>([]);
   const [transactions, setTransactions] = useState<CoinTransaction[]>([]);
   const [userCoinBalance, setUserCoinBalance] = useState<number>(0);
+  const [coinsReady, setCoinsReady] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sellingPlayer, setSellingPlayer] = useState<{ player: ChessPlayer; price: number } | null>(null);
@@ -210,13 +211,17 @@ export default function Marketplace({ leagueId, onTeamUpdate }: MarketplaceProps
   const availableMarketplacePlayers = useMemo(() => {
     if (!allPlayers.length) return [];
 
+    const searching = debouncedSearchTerm.trim() !== '';
+    const query = debouncedSearchTerm.trim().toLowerCase();
+
     return allPlayers.filter((p: ChessPlayer) => {
       const isNotOwned = !ownedPlayerIds.has(String(p.id).toLowerCase());
-      const matchesSearch = debouncedSearchTerm.trim() === '' ||
-        p.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
-      return isNotOwned && matchesSearch;
+      if (!isNotOwned) return false;
+      if (searching) return p.name.toLowerCase().includes(query);
+      if (!coinsReady) return false;
+      return calculatePlayerPrice(p.elo) <= userCoinBalance;
     });
-  }, [allPlayers, ownedPlayerIds, debouncedSearchTerm]);
+  }, [allPlayers, ownedPlayerIds, debouncedSearchTerm, userCoinBalance, coinsReady]);
 
   const marketplaceListings = useMemo(() => {
     if (showAllPlayers) return availableMarketplacePlayers;
@@ -383,29 +388,33 @@ export default function Marketplace({ leagueId, onTeamUpdate }: MarketplaceProps
   };
 
   const loadUserCoinBalance = async () => {
-    const { data, error } = await supabase
-      .from('league_coin_balances')
-      .select('coin_balance')
-      .eq('user_id', user?.id)
-      .eq('league_id', leagueId)
-      .single();
-    if (error) {
-      if (error.code === 'PGRST116') {
-        const { error: initError } = await supabase.rpc('initialize_league_coin_balance', {
-          p_user_id: user?.id,
-          p_bot_id: null,
-          p_league_id: leagueId
-        });
-        if (initError) {
-          setUserCoinBalance(0);
+    try {
+      const { data, error } = await supabase
+        .from('league_coin_balances')
+        .select('coin_balance')
+        .eq('user_id', user?.id)
+        .eq('league_id', leagueId)
+        .single();
+      if (error) {
+        if (error.code === 'PGRST116') {
+          const { error: initError } = await supabase.rpc('initialize_league_coin_balance', {
+            p_user_id: user?.id,
+            p_bot_id: null,
+            p_league_id: leagueId
+          });
+          if (initError) {
+            setUserCoinBalance(0);
+            return;
+          }
+          setUserCoinBalance(50);
           return;
         }
-        setUserCoinBalance(50);
-        return;
+        throw error;
       }
-      throw error;
+      setUserCoinBalance(data?.coin_balance || 0);
+    } finally {
+      setCoinsReady(true);
     }
-    setUserCoinBalance(data?.coin_balance || 0);
   };
 
   // Buy a player: add to user's team
@@ -1019,6 +1028,11 @@ export default function Marketplace({ leagueId, onTeamUpdate }: MarketplaceProps
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <span className="absolute left-3 top-2.5 text-gray-400">🔍</span>
+              {debouncedSearchTerm.trim() === '' && (
+                <p className="mt-2 text-xs text-gray-500">
+                  Showing players you can afford. Search to find higher prices.
+                </p>
+              )}
             </div>
             <div className="flex items-center space-x-2">
               <span className="text-sm text-gray-600">
@@ -1051,9 +1065,15 @@ export default function Marketplace({ leagueId, onTeamUpdate }: MarketplaceProps
             </div>
           </div>
 
-          {marketplaceListings.length === 0 ? (
+          {!coinsReady && debouncedSearchTerm.trim() === '' ? (
+            <div className="text-center py-8 text-gray-500">Loading players...</div>
+          ) : marketplaceListings.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
-              {searchTerm ? 'No players found matching your search' : 'No players available in the marketplace'}
+              {searchTerm
+                ? 'No players found matching your search'
+                : allPlayers.some((player) => !ownedPlayerIds.has(String(player.id).toLowerCase()))
+                  ? 'No players at or below your coin balance. Search to find others.'
+                  : 'No players available in the marketplace'}
             </div>
           ) : (
             <div className="grid gap-4">
