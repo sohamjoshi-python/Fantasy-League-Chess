@@ -756,7 +756,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
 
 
   const buyPlayer = async (playerId: string, price: number) => {
-    if (!isUserTurn || !canBuy || !user?.id || dataLoading) return;
+    if (!isUserTurn || !canBuy || !user?.id || dataLoading || userCoinBalance === null) return;
 
     // Prevent rapid clicks (debounce)
     const now = Date.now();

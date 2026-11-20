@@ -18,7 +18,7 @@ import {
 } from '../lib/leagueStatus'
 import { notifyMarketplaceStartedIfNeeded } from '../lib/marketplaceTurnEmail'
 import { isLineupChangeAllowed, lineupChangeBlockedMessage } from '../lib/lineupWindow'
-import { Crown, Trophy, Calendar, Edit, Check, X, RefreshCw, Bot as BotIcon, Plus, Trash2, Link2 } from 'lucide-react'
+import { Crown, Trophy, Calendar, Edit, Check, X, RefreshCw, Bot as BotIcon, Plus, Trash2, Link2, Share2 } from 'lucide-react'
 import {
   createBot,
   removeBot,
@@ -35,6 +35,7 @@ import { resolveAvatarUrl } from '../lib/avatars';
 import Marketplace from '../components/Marketplace';
 import TurnBasedMarketplace from '../components/TurnBasedMarketplace';
 import PlayerDetailModal from '../components/PlayerDetailModal';
+import WeeklyRecapShare from '../components/WeeklyRecapShare';
 import { LeaguePageSkeleton, PointBreakdownSkeleton, SkeletonBlock } from '../components/ui/LoadingSpinner';
 import { readView, writeView } from '../lib/viewCache';
 import { leagueJoinUrl } from '../lib/leagueJoinLink';
@@ -483,6 +484,7 @@ const LeaguePage: React.FC = () => {
   const [breakdownError, setBreakdownError] = useState('');
   const [availableWeeks, setAvailableWeeks] = useState<string[]>([]);
   const [selectedWeek, setSelectedWeek] = useState<string | null>(null);
+  const [shareWeek, setShareWeek] = useState<string | null>(null);
   const [weeksReady, setWeeksReady] = useState(false);
   const [payout, setPayout] = useState<any | null>(null);
   const [winnerName, setWinnerName] = useState<string>('');
@@ -1576,61 +1578,34 @@ const LeaguePage: React.FC = () => {
       
       
       if (rpcError) {
-        
-        // Try the direct function as fallback
-        const { error: directRpcError } = await supabase.rpc('delete_league_direct', {
-          league_uuid: league.id
-        });
-        
-        
-        if (directRpcError) {
-          
-          // Try the RLS restore function
-          const { error: rlsRpcError } = await supabase.rpc('delete_league_and_restore_rls', {
-            league_uuid: league.id
-          });
-          
-          
-          if (rlsRpcError) {
-            
-            // Final fallback: try manual deletion
-            
-            const leagueId = league.id;
-            
-            // Try to delete everything manually
-            const deletions = [
-              { table: 'marketplace_turns' as const },
-              { table: 'lineups' as const },
-              { table: 'teams' as const },
-              { table: 'league_members' as const },
-              { table: 'bots' as const },
-              { table: 'league_coin_balances' as const },
-              { table: 'leagues' as const }
-            ];
-            
-            for (const deletion of deletions) {
-              const { error } = await supabase
-                .from(deletion.table)
-                .delete()
-                .eq(deletion.table === 'leagues' ? 'id' : 'league_id', 
-                    deletion.table === 'leagues' ? leagueId : leagueId);
-              
-              
-              if (error) {
-                console.error(`Failed to delete from ${deletion.table}:`, error);
-              }
-            }
-            
-            // Check if league was actually deleted
-            const { data: remainingLeague } = await supabase
-              .from('leagues')
-              .select('id')
-              .eq('id', leagueId);
-            
-            if (remainingLeague && remainingLeague.length > 0) {
-              throw new Error('League still exists after deletion attempts');
-            }
+        const leagueId = league.id;
+        const deletions = [
+          { table: 'marketplace_turns' as const },
+          { table: 'lineups' as const },
+          { table: 'teams' as const },
+          { table: 'bots' as const },
+          { table: 'league_coin_balances' as const },
+          { table: 'leagues' as const }
+        ];
+
+        for (const deletion of deletions) {
+          const { error } = await supabase
+            .from(deletion.table)
+            .delete()
+            .eq(deletion.table === 'leagues' ? 'id' : 'league_id', leagueId);
+
+          if (error) {
+            console.error(`Failed to delete from ${deletion.table}:`, error);
           }
+        }
+
+        const { data: remainingLeague } = await supabase
+          .from('leagues')
+          .select('id')
+          .eq('id', leagueId);
+
+        if (remainingLeague && remainingLeague.length > 0) {
+          throw new Error('League still exists after deletion attempts');
         }
       }
       
@@ -1719,17 +1694,6 @@ const LeaguePage: React.FC = () => {
         setError('Failed to update league members');
         setLoading(false);
         return;
-      }
-      
-      // Then remove from league_members (if table exists and user is not a bot)
-      const { error: leagueMembersError } = await supabase
-        .from('league_members')
-        .delete()
-        .eq('league_id', league.id)
-        .eq('user_id', userIdToRemove);
-      if (leagueMembersError) {
-        // Don't fail if league_members table doesn't exist or user is a bot
-        console.log('Note: Could not remove from league_members (table may not exist or user is bot)');
       }
       
       // Remove user's team
@@ -2343,6 +2307,17 @@ const LeaguePage: React.FC = () => {
                     </select>
                   )}
                   <span className="text-xs text-neutral-500">(Select week)</span>
+                  {selectedWeek && !breakdownLoading &&
+                    [...(playerBreakdown?.early || []), ...(playerBreakdown?.late || [])].some((row) => (row.total_games || 0) > 0) && (
+                    <button
+                      type="button"
+                      onClick={() => setShareWeek(selectedWeek)}
+                      className="!ml-auto inline-flex items-center gap-1.5 rounded-md border border-neutral-300 bg-white px-2.5 py-1 text-xs font-medium text-neutral-700 transition-colors hover:border-royalBlue hover:text-royalBlue"
+                    >
+                      <Share2 className="h-3.5 w-3.5" />
+                      Share
+                    </button>
+                  )}
                 </div>
                 {((!weeksReady || breakdownLoading) && !(playerBreakdown?.early?.length || playerBreakdown?.late?.length)) ? (
                   <PointBreakdownSkeleton />
@@ -2733,6 +2708,14 @@ const LeaguePage: React.FC = () => {
         <PlayerDetailModal
           player={selectedPlayerForModal}
           onClose={() => setSelectedPlayerForModal(null)}
+        />
+      )}
+      {shareWeek && user && league && (
+        <WeeklyRecapShare
+          userId={user.id}
+          league={league}
+          tuesdayDot={shareWeek}
+          onClose={() => setShareWeek(null)}
         />
       )}
     </>

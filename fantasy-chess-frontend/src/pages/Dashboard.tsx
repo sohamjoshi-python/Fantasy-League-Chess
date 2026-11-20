@@ -1,14 +1,16 @@
 import * as React from 'react'
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { League, Team, Lineup, ChessPlayer } from '../types'
-import { Crown, Users, Trophy, Calendar, Plus, ExternalLink } from 'lucide-react'
+import { Crown, Users, Trophy, Calendar, Plus, ExternalLink, Share2, X } from 'lucide-react'
 import { carriedLineupPlayerIds, fetchLineupPlayerBreakdownByRounds, fetchUserLeagueDisplayWeeks, formatTournamentRecord } from '../lib/supabase'
 import PlayerDetailModal from '../components/PlayerDetailModal'
+import WeeklyRecapShare from '../components/WeeklyRecapShare'
 import { DashboardPageSkeleton, PointBreakdownSkeleton, SkeletonBlock } from '../components/ui/LoadingSpinner'
-import { getLocalDateString, getOpenLineupMonday, getWeekStartMonday } from '../lib/calendarDate'
+import { addDaysToYmd, compareCalendarDates, getLocalDateString, getOpenLineupMonday, getWeekStartMonday } from '../lib/calendarDate'
+import { formatRecapDate } from '../lib/weeklyRecap'
 import { keepIfSame } from '../lib/keepIfSame'
 import { formatCalendarDate } from '../lib/leagueStatus'
 import { readView, startLeaguesQuery, writeView } from '../lib/viewCache'
@@ -38,6 +40,16 @@ function getTuesdayDateForWeek(weekStartDate: string) {
   return `${yyyy}.${mm}.${dd}`
 }
 
+const recapDismissKey = (leagueId: string, week: string) => `flc:recap-dismissed:${leagueId}:${week}`
+
+function readRecapDismissed(leagueId: string, week: string): boolean {
+  try {
+    return window.localStorage.getItem(recapDismissKey(leagueId, week)) === '1'
+  } catch {
+    return false
+  }
+}
+
 const Dashboard: React.FC = () => {
   const { user } = useAuth()
   const cachedDashboard = user ? readView<DashboardCache>(`${user.id}:dashboard`) : null
@@ -62,6 +74,10 @@ const Dashboard: React.FC = () => {
   const [activeLeagues, setActiveLeagues] = useState<League[]>(cachedDashboard?.activeLeagues ?? []);
   const [selectedActiveLeagueId, setSelectedActiveLeagueId] = useState<string | null>(cachedDashboard?.selectedActiveLeagueId ?? null);
   const [selectedPlayerForModal, setSelectedPlayerForModal] = useState<ChessPlayer | null>(null);
+  const [shareWeek, setShareWeek] = useState<string | null>(null);
+  const [recapReadyKey, setRecapReadyKey] = useState('');
+  const [dismissedRecapKey, setDismissedRecapKey] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
   const loadGeneration = React.useRef(0);
   const lastLoadedBreakdownKey = React.useRef('');
 
@@ -144,6 +160,49 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     void refreshBreakdown(false)
   }, [currentLeague?.id, user?.id, selectedWeek]);
+
+  const latestWeek = availableWeeks.length > 0 ? availableWeeks[availableWeeks.length - 1] : null
+  const breakdownHasGames = [...playerBreakdown.early, ...playerBreakdown.late].some((row) => (row.total_games || 0) > 0)
+
+  useEffect(() => {
+    if (!currentLeague || !latestWeek || selectedWeek !== latestWeek || breakdownLoading) return
+    if (breakdownHasGames) setRecapReadyKey(`${currentLeague.id}|${latestWeek}`)
+  }, [currentLeague?.id, latestWeek, selectedWeek, breakdownLoading, breakdownHasGames])
+
+  useEffect(() => {
+    if (searchParams.get('share') !== 'week' || !weeksReady || !currentLeague) return
+    if (latestWeek) setShareWeek(latestWeek)
+    const next = new URLSearchParams(searchParams)
+    next.delete('share')
+    setSearchParams(next, { replace: true })
+  }, [searchParams, weeksReady, currentLeague?.id, latestWeek])
+
+  const recapBannerKey = currentLeague && latestWeek ? `${currentLeague.id}|${latestWeek}` : ''
+  const latestTuesdayYmd = latestWeek ? latestWeek.replace(/\./g, '-') : ''
+  const showRecapBanner = Boolean(
+    currentLeague &&
+    latestWeek &&
+    recapReadyKey === recapBannerKey &&
+    dismissedRecapKey !== recapBannerKey &&
+    compareCalendarDates(getLocalDateString(), addDaysToYmd(latestTuesdayYmd, 6)) <= 0 &&
+    !readRecapDismissed(currentLeague.id, latestWeek)
+  )
+
+  const dismissRecapBanner = () => {
+    if (!currentLeague || !latestWeek) return
+    try {
+      window.localStorage.setItem(recapDismissKey(currentLeague.id, latestWeek), '1')
+    } catch {
+      // Private browsing can block storage. The banner still hides for this visit.
+    }
+    setDismissedRecapKey(recapBannerKey)
+  }
+
+  const openRecapFromBanner = () => {
+    if (!latestWeek) return
+    dismissRecapBanner()
+    setShareWeek(latestWeek)
+  }
 
   const loadDashboardData = async (preferredActiveLeagueId?: string | null, generation?: number) => {
     if (!user) return
@@ -446,6 +505,36 @@ const Dashboard: React.FC = () => {
         </div>
       ) : (
         <div className="space-y-6 lg:space-y-8">
+          {showRecapBanner && currentLeague && latestWeek && (
+            <div className="flex items-center gap-3 rounded-lg border-2 border-gold bg-amber-50/60 p-4 shadow-lg">
+              <Trophy className="h-6 w-6 shrink-0 text-gold" />
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-neutral-900">
+                  Titled Tuesday {formatRecapDate(latestTuesdayYmd)} is scored
+                </p>
+                <p className="text-sm text-neutral-600">
+                  See how your lineup did in {currentLeague.name} and share it.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={openRecapFromBanner}
+                className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-[#1e293b] px-3 py-2 text-sm font-semibold text-white shadow-lg transition-colors hover:bg-royalBlue"
+              >
+                <Share2 className="h-4 w-4" />
+                <span className="hidden sm:inline">Share my week</span>
+                <span className="sm:hidden">Share</span>
+              </button>
+              <button
+                type="button"
+                onClick={dismissRecapBanner}
+                aria-label="Dismiss"
+                className="min-h-0 shrink-0 rounded-md p-1 text-neutral-400 hover:text-neutral-700"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          )}
           {activeLeagues.length > 1 && (
             <div className="bg-white rounded-lg shadow-lg p-4 border-2 border-royalBlue">
               <label htmlFor="active-league-select" className="block text-sm font-medium text-neutral-700 mb-2">
@@ -560,6 +649,16 @@ const Dashboard: React.FC = () => {
                 </select>
               )}
               <span className="text-xs text-neutral-500">(Select week)</span>
+              {selectedWeek && breakdownHasGames && !breakdownLoading && (
+                <button
+                  type="button"
+                  onClick={() => setShareWeek(selectedWeek)}
+                  className="!ml-auto inline-flex items-center gap-1.5 rounded-md border border-neutral-300 bg-white px-2.5 py-1 text-xs font-medium text-neutral-700 transition-colors hover:border-royalBlue hover:text-royalBlue"
+                >
+                  <Share2 className="h-3.5 w-3.5" />
+                  Share
+                </button>
+              )}
             </div>
             {((!weeksReady || breakdownLoading) && playerBreakdown.early.length === 0 && playerBreakdown.late.length === 0) ? (
               <PointBreakdownSkeleton />
@@ -759,6 +858,15 @@ const Dashboard: React.FC = () => {
         <PlayerDetailModal
           player={selectedPlayerForModal}
           onClose={() => setSelectedPlayerForModal(null)}
+        />
+      )}
+
+      {shareWeek && user && currentLeague && (
+        <WeeklyRecapShare
+          userId={user.id}
+          league={currentLeague}
+          tuesdayDot={shareWeek}
+          onClose={() => setShareWeek(null)}
         />
       )}
     </div>

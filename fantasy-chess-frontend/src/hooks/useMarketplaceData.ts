@@ -7,7 +7,7 @@ interface MarketplaceData {
   allPlayers: ChessPlayer[];
   availablePlayers: ChessPlayer[];
   userTeam: ChessPlayer[];
-  userCoinBalance: number;
+  userCoinBalance: number | null;
   loading: boolean;
   error: string | null;
 }
@@ -64,7 +64,7 @@ export function useMarketplaceData(leagueId: string, userId: string | undefined)
     allPlayers: [],
     availablePlayers: [],
     userTeam: [],
-    userCoinBalance: 0,
+    userCoinBalance: null,
     loading: false,
     error: null
   });
@@ -138,28 +138,57 @@ export function useMarketplaceData(leagueId: string, userId: string | undefined)
     return players || [];
   }, []);
 
-  const loadUserCoinBalance = useCallback(async (leagueId: string, userId: string): Promise<number> => {
+  /**
+   * A member whose league setup never finished has no team or coin row, which reads as
+   * zero coins and an empty draft. Create the missing rows (50 coins, empty team) once.
+   */
+  const ensureMemberLeagueData = useCallback(async (leagueId: string, userId: string): Promise<boolean> => {
+    const { data: league, error: leagueError } = await supabase
+      .from('leagues')
+      .select('member_ids')
+      .eq('id', leagueId)
+      .maybeSingle();
+    if (leagueError || !(league?.member_ids || []).includes(userId)) return false;
+
+    const { error } = await supabase.rpc('create_league_data_for_user', {
+      user_id_input: userId,
+      league_id_input: leagueId,
+    });
+    if (error) {
+      console.error('Could not create missing league data:', error);
+      return false;
+    }
+    return true;
+  }, []);
+
+  const loadUserCoinBalance = useCallback(async (leagueId: string, userId: string): Promise<number | null> => {
     const cacheKey = `coin-balance-${userId}-${leagueId}`;
     const cached = cache.get(cacheKey);
     if (cached !== null) {
       return cached;
     }
 
-    const { data: balance, error: balanceError } = await supabase
+    const readBalance = () => supabase
       .from('league_coin_balances')
       .select('coin_balance')
       .eq('user_id', userId)
       .eq('league_id', leagueId)
-      .single();
+      .maybeSingle();
 
-    if (balanceError && balanceError.code !== 'PGRST116') {
-      throw balanceError;
+    let { data: balance, error: balanceError } = await readBalance();
+    if (balanceError) throw balanceError;
+
+    if (!balance && await ensureMemberLeagueData(leagueId, userId)) {
+      ({ data: balance, error: balanceError } = await readBalance());
+      if (balanceError) throw balanceError;
     }
 
-    const coinBalance = balance?.coin_balance || 0;
+    if (!balance) return null;
+
+    const coinBalance = Number(balance.coin_balance) || 0;
     cache.set(cacheKey, coinBalance, 1 * 60 * 1000); // Cache for 1 minute
     return coinBalance;
-  }, []);
+  }, [ensureMemberLeagueData]);
 
   const loadOwnedPlayerIds = useCallback(async (targetLeagueId: string): Promise<Set<string>> => {
     const { data: allTeams, error: teamsError } = await supabase
