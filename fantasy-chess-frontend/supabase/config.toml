@@ -321,11 +321,12 @@ s3_secret_key = "env(S3_SECRET_KEY)"
 # Cron expression: 0 1 * * 1 (every Monday at 1:00 AM UTC)
 # auto-start-marketplace is triggered by GitHub Actions every 15 minutes.
 
-# Account deletion. Requires a valid user JWT; the function derives the account to
-# delete from the caller's own token, so a user can only delete themselves.
+# Account deletion. The function checks the caller's own JWT and deletes only that
+# account. The gateway JWT check is off because it rejects the browser's OPTIONS
+# preflight, which has no token and then shows up as a CORS error.
 [functions.delete-account]
 enabled = true
-verify_jwt = true
+verify_jwt = false
 
 # The functions below check the caller themselves (_shared/callerAuth.ts), so the
 # gateway JWT check is off: it would reject the non-JWT sb_secret_ key that

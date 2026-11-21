@@ -236,10 +236,15 @@ const TutorialCallout: React.FC<TutorialCalloutProps> = ({
       if (!scrolledForStep) {
         scrolledForStep = true;
         const narrow = window.innerWidth < NARROW_BREAKPOINT;
-        const miniNav = target.closest('[data-tutorial-mini-nav]');
         const topPadding = HEADER_OFFSET + 16;
         const bottomPadding = narrow ? CALLOUT_BLOCK_ESTIMATE : 48;
-        if (!(miniNav && target.getBoundingClientRect().top < 90)) {
+        const rect = target.getBoundingClientRect();
+        // The real navbar and the tutorial bar stay stuck to the top. A target
+        // tucked under them (common if the page was scrolled before this step)
+        // still has a box, and the arrow then lands on the real Help link.
+        const inClearView =
+          rect.top >= topPadding && rect.bottom <= window.innerHeight - bottomPadding;
+        if (!inClearView) {
           revealTargetInView(target, topPadding, bottomPadding);
         }
       }
