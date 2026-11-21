@@ -12,6 +12,7 @@ import os
 import math
 import time
 from fantasy_chess_scoring import acl_focused_scoring_individual_baseline
+from sync_tt_career_stats import is_main_titled_tuesday_slug
 
 CHESS_COM_API = "https://api.chess.com/pub"
 API_REQUEST_DELAY = 0.5
@@ -94,14 +95,6 @@ def api_get(url):
     response = requests.get(url, headers=API_HEADERS, timeout=30)
     response.raise_for_status()
     return response.json()
-
-
-def is_main_titled_tuesday_slug(slug):
-    slug = slug.lower()
-    if "titled-tuesday" not in slug or "blitz" not in slug:
-        return False
-    excluded = ("masterclass", "qualifier", "grand-prix", "scc", "32-blitz")
-    return not any(token in slug for token in excluded)
 
 
 def _slug_matches_date(slug, fragments):

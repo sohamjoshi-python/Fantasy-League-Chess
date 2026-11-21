@@ -59,7 +59,7 @@ const PlayerCard = React.memo(({
             <p>ELO: {player.elo} • {tier}</p>
             {details?.fide_id && <p>FIDE ID: {details.fide_id}</p>}
             {(details?.average_centipawn_loss !== undefined && details?.average_centipawn_loss !== null) ? (
-              <p>ACL: {details.average_centipawn_loss!.toFixed(1)} ({details.games} games)</p>
+              <p>ACL: {details.average_centipawn_loss!.toFixed(1)} over {details.games} games</p>
             ) : null}
             <p className="text-xs text-gray-500">
               Available in marketplace
@@ -1136,7 +1136,7 @@ export default function Marketplace({ leagueId, onTeamUpdate }: MarketplaceProps
                           <p>ELO: {player.elo} • {getPlayerTier(player.elo)}</p>
                           {details?.fide_id && <p>FIDE ID: {details.fide_id}</p>}
                           {(details?.average_centipawn_loss !== undefined && details?.average_centipawn_loss !== null) ? (
-                            <p>ACL: {details.average_centipawn_loss!.toFixed(1)} ({details.games} games)</p>
+                            <p>ACL: {details.average_centipawn_loss!.toFixed(1)} over {details.games} games</p>
                           ) : null}
                           <p className="text-xs text-gray-500">
                             Owned in this league
@@ -1247,7 +1247,7 @@ export default function Marketplace({ leagueId, onTeamUpdate }: MarketplaceProps
                   <>
                     {details?.fide_id && <p className="text-sm text-gray-600">FIDE ID: {details.fide_id}</p>}
                     {(details?.average_centipawn_loss !== undefined && details?.average_centipawn_loss !== null) ? (
-                      <p>ACL: {details.average_centipawn_loss!.toFixed(1)}% ({details.games} games)</p>
+                      <p>ACL: {details.average_centipawn_loss!.toFixed(1)}% over {details.games} games</p>
                     ) : null}
                     {details?.country && <p className="text-sm text-gray-600">Country: {details.country}</p>}
                     <p className="text-sm text-gray-600 mt-2">
@@ -1289,7 +1289,7 @@ export default function Marketplace({ leagueId, onTeamUpdate }: MarketplaceProps
                   <>
                     {details?.fide_id && <p className="text-sm text-gray-600">FIDE ID: {details.fide_id}</p>}
                     {(details?.average_centipawn_loss !== undefined && details?.average_centipawn_loss !== null) ? (
-                      <p>ACL: {details.average_centipawn_loss!.toFixed(1)}% ({details.games} games)</p>
+                      <p>ACL: {details.average_centipawn_loss!.toFixed(1)}% over {details.games} games</p>
                     ) : null}
                     {details?.country && <p className="text-sm text-gray-600">Country: {details.country}</p>}
                     <p className="text-sm text-gray-600 mt-2 mb-4">
@@ -1342,7 +1342,7 @@ export default function Marketplace({ leagueId, onTeamUpdate }: MarketplaceProps
                   <>
                     {details?.fide_id && <p className="text-sm text-gray-600">FIDE ID: {details.fide_id}</p>}
                     {(details?.average_centipawn_loss !== undefined && details?.average_centipawn_loss !== null) ? (
-                      <p>ACL: {details.average_centipawn_loss!.toFixed(1)}% ({details.games} games)</p>
+                      <p>ACL: {details.average_centipawn_loss!.toFixed(1)}% over {details.games} games</p>
                     ) : null}
                     {details?.country && <p className="text-sm text-gray-600">Country: {details.country}</p>}
                     <p className="text-sm text-gray-600 mt-2 mb-4">

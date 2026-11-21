@@ -136,15 +136,28 @@ def main():
         return
     
     try:
-        # Fetch all players from the database
+        # Supabase returns at most 1000 rows per request, so page through the table.
         print("Fetching players from database...")
-        response = retry_operation(lambda: supabase.table("chess_players").select("*").execute())
+        players = []
+        page_size = 1000
+        page = 0
+        while True:
+            start = page * page_size
+            response = retry_operation(lambda: supabase.table("chess_players")
+                                       .select("id,name,elo")
+                                       .order("id")
+                                       .range(start, start + page_size - 1)
+                                       .execute())
+            rows = response.data or []
+            players.extend(rows)
+            if len(rows) < page_size:
+                break
+            page += 1
         
-        if not response.data:
+        if not players:
             print("No players found in database")
             return
         
-        players = response.data
         print(f"Found {len(players)} players to update")
         
         updated_count = 0

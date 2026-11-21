@@ -161,3 +161,15 @@ jobs:
             -H "Content-Type: application/json" \
             -d "$WEEK_JSON" \
             "${SB_URL%/}/functions/v1/process-weekly-results"
+
+      # Career totals and per-event places from Chess.com for everyone who played this week.
+      # Runs on Wednesday too, so a late session that was still in progress on Tuesday is picked up.
+      - name: Refresh Titled Tuesday finishes
+        continue-on-error: true
+        env:
+          SB_URL: ${{ secrets.SB_URL }}
+          SB_SECRET_KEY: ${{ secrets.SB_SECRET_KEY }}
+          SB_KEY: ${{ secrets.SB_KEY }}
+          CHESSCOM_CONTACT_EMAIL: ${{ secrets.CHESSCOM_CONTACT_EMAIL }}
+          TUESDAY: ${{ steps.params.outputs.tuesday }}
+        run: python sync_tt_career_stats.py --date "$TUESDAY"

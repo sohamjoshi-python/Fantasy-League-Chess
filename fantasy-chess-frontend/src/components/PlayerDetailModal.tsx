@@ -2,6 +2,7 @@ import React from 'react'
 import { X, ExternalLink, TrendingUp, Trophy, Target } from 'lucide-react'
 import { ChessPlayer } from '../types'
 import { useNavigate } from 'react-router-dom'
+import { ordinal } from '../lib/weeklyRecap'
 
 interface PlayerDetailModalProps {
   player: ChessPlayer
@@ -10,6 +11,7 @@ interface PlayerDetailModalProps {
 
 const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({ player, onClose }) => {
   const navigate = useNavigate()
+  const hasCareer = player.tt_career_games !== null && player.tt_career_games !== undefined
 
   const handleViewHistory = () => {
     navigate(`/player/${player.id}`)
@@ -59,11 +61,30 @@ const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({ player, onClose }
             <div className="bg-amber-50 p-4 rounded-lg text-center">
               <TrendingUp className="w-8 h-8 mx-auto mb-2 text-amber-600" />
               <div className="text-2xl font-bold text-amber-600">
-                {player.games || '0'}
+                {hasCareer ? (player.tt_career_games ?? 0).toLocaleString() : player.games || '0'}
               </div>
-              <div className="text-sm text-gray-600">Games Played</div>
+              <div className="text-sm text-gray-600">{hasCareer ? 'Titled Tuesday Games' : 'Games Tracked'}</div>
             </div>
           </div>
+
+          {hasCareer && (
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div className="border border-gray-200 p-3 rounded-lg">
+                <div className="text-lg font-bold text-gray-900">{player.tt_career_events ?? 0}</div>
+                <div className="text-xs text-gray-600">Events</div>
+              </div>
+              <div className="border border-gray-200 p-3 rounded-lg">
+                <div className="text-lg font-bold text-gray-900">
+                  {player.tt_best_finish ? ordinal(player.tt_best_finish) : '-'}
+                </div>
+                <div className="text-xs text-gray-600">Best Finish</div>
+              </div>
+              <div className="border border-gray-200 p-3 rounded-lg">
+                <div className="text-lg font-bold text-amber-600">{player.tt_event_wins ?? 0}</div>
+                <div className="text-xs text-gray-600">Event Wins</div>
+              </div>
+            </div>
+          )}
 
           {/* About */}
           <div className="bg-gray-50 p-4 rounded-lg">

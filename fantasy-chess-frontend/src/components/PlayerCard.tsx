@@ -61,7 +61,7 @@ const PlayerCard = memo<PlayerCardProps>(({
             <p>ELO: {player.elo} • {getPlayerTier(player.elo)}</p>
             {details?.fide_id && <p>FIDE ID: {details.fide_id}</p>}
             {(details?.average_centipawn_loss !== undefined && details?.average_centipawn_loss !== null) ? (
-              <p>ACL: {details.average_centipawn_loss.toFixed(1)} ({details.games} games)</p>
+              <p>ACL: {details.average_centipawn_loss.toFixed(1)} over {details.games} games</p>
             ) : null}
           </div>
         </div>

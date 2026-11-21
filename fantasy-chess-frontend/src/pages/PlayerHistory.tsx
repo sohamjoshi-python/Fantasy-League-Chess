@@ -1,10 +1,55 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, ExternalLink, Trophy, TrendingUp, Target, Calendar, Award } from 'lucide-react'
+import { ArrowLeft, ExternalLink, Trophy, TrendingUp, Target, Calendar, Award, Medal } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { ChessPlayer } from '../types'
 import { formatCalendarDate } from '../lib/leagueStatus'
+import { ordinal } from '../lib/weeklyRecap'
 import { PlayerHistorySkeleton } from '../components/ui/LoadingSpinner'
+import { FinishPlacesChart, PointsByWeekChart } from '../components/PlayerTrendCharts'
+
+interface TitledTuesdayFinish {
+  slug: string
+  session: string | null
+  event_date: string | null
+  starts_at: string | null
+  total_rounds: number | null
+  url: string | null
+  placement: number | null
+  total_players: number | null
+  wins: number
+  draws: number
+  losses: number
+}
+
+const FINISHES_PREVIEW = 25
+
+function finishSortKey(finish: TitledTuesdayFinish) {
+  return finish.starts_at || finish.event_date || ''
+}
+
+function finishScore(finish: TitledTuesdayFinish) {
+  const score = finish.wins + finish.draws / 2
+  const text = Number.isInteger(score) ? String(score) : score.toFixed(1)
+  return `${text}/${finish.total_rounds || finish.wins + finish.draws + finish.losses}`
+}
+
+function placementClass(placement: number | null) {
+  if (placement === 1) return 'bg-amber-100 text-amber-800 border-amber-300'
+  if (placement === 2) return 'bg-gray-100 text-gray-700 border-gray-300'
+  if (placement === 3) return 'bg-orange-100 text-orange-800 border-orange-300'
+  if (placement !== null && placement <= 10) return 'bg-blue-50 text-royalBlue border-blue-200'
+  return 'bg-white text-gray-700 border-gray-200'
+}
+
+function monthYear(isoDate: string) {
+  const [year, month] = isoDate.split('-').map(Number)
+  return new Date(Date.UTC(year, month - 1, 1)).toLocaleDateString('en-US', {
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  })
+}
 
 interface GameResult {
   id: string
@@ -117,8 +162,10 @@ const PlayerHistory: React.FC = () => {
   const [player, setPlayer] = useState<ChessPlayer | null>(null)
   const [weeklyPerformances, setWeeklyPerformances] = useState<WeeklyPerformance[]>([])
   const [recentGames, setRecentGames] = useState<GameResult[]>([])
+  const [finishes, setFinishes] = useState<TitledTuesdayFinish[]>([])
+  const [showAllFinishes, setShowAllFinishes] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'overview' | 'games'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'finishes' | 'games'>('overview')
 
   useEffect(() => {
     if (playerName) {
@@ -186,12 +233,43 @@ const PlayerHistory: React.FC = () => {
 
       // Titled Tuesday results live in games, keyed by player name.
       // get_player_weekly_performance reads game_results, which this ingest does not fill.
-      const { data: gamesData, error: gamesError } = await supabase
-        .from('games')
-        .select('*')
-        .or(`white.eq."${playerData.name}",black.eq."${playerData.name}"`)
-        .order('date', { ascending: false })
-        .limit(1000)
+      const [{ data: gamesData, error: gamesError }, { data: finishData, error: finishError }] = await Promise.all([
+        supabase
+          .from('games')
+          .select('*')
+          .or(`white.eq."${playerData.name}",black.eq."${playerData.name}"`)
+          .order('date', { ascending: false })
+          .limit(1000),
+        supabase
+          .from('titled_tuesday_results')
+          .select('event_slug, placement, total_players, wins, draws, losses, titled_tuesday_events(session, event_date, starts_at, total_rounds, url)')
+          .eq('player_id', playerData.id)
+          .limit(2000),
+      ])
+
+      if (finishError) {
+        console.error('Error loading Titled Tuesday finishes:', finishError)
+        setFinishes([])
+      } else {
+        const rows = (finishData || []).map((row: any) => {
+          const event = Array.isArray(row.titled_tuesday_events) ? row.titled_tuesday_events[0] : row.titled_tuesday_events
+          return {
+            slug: row.event_slug,
+            session: event?.session ?? null,
+            event_date: event?.event_date ?? null,
+            starts_at: event?.starts_at ?? null,
+            total_rounds: event?.total_rounds ?? null,
+            url: event?.url ?? null,
+            placement: row.placement,
+            total_players: row.total_players,
+            wins: row.wins || 0,
+            draws: row.draws || 0,
+            losses: row.losses || 0,
+          } as TitledTuesdayFinish
+        })
+        rows.sort((a, b) => finishSortKey(b).localeCompare(finishSortKey(a)))
+        setFinishes(rows)
+      }
 
       if (gamesError) {
         console.error('Error loading games:', gamesError)
@@ -259,6 +337,22 @@ const PlayerHistory: React.FC = () => {
     { totalGames: 0, totalWins: 0, totalDraws: 0, totalLosses: 0, totalPoints: 0 }
   )
 
+  const firstTrackedWeek = weeklyPerformances.length
+    ? weeklyPerformances[weeklyPerformances.length - 1].week_start_date
+    : null
+  const trackedLabel = firstTrackedWeek ? `Since ${monthYear(firstTrackedWeek)}` : 'Tracked games'
+
+  const finishesByWeek = new Map<string, TitledTuesdayFinish[]>()
+  for (const finish of finishes) {
+    if (!finish.event_date) continue
+    const week = weekStartMonday(finish.event_date)
+    finishesByWeek.set(week, [...(finishesByWeek.get(week) || []), finish])
+  }
+
+  const hasCareer = player.tt_career_games !== null && player.tt_career_games !== undefined
+  const topTenFinishes = finishes.filter((finish) => finish.placement !== null && finish.placement <= 10).length
+  const visibleFinishes = showAllFinishes ? finishes : finishes.slice(0, FINISHES_PREVIEW)
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-6xl mx-auto px-4">
@@ -302,7 +396,46 @@ const PlayerHistory: React.FC = () => {
           </div>
         </div>
 
+        {/* Career totals from Chess.com */}
+        {hasCareer && (
+          <div className="bg-white rounded-lg shadow p-6 mb-6">
+            <div className="flex flex-wrap items-baseline justify-between gap-2 mb-4">
+              <h3 className="text-xl font-bold text-gray-900">Titled Tuesday Career</h3>
+              <span className="text-xs text-gray-500">All-time, from Chess.com</span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+              <div>
+                <div className="text-2xl font-bold text-gray-900">{player.tt_career_events ?? 0}</div>
+                <div className="text-sm text-gray-600">Events</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-gray-900">{(player.tt_career_games ?? 0).toLocaleString()}</div>
+                <div className="text-sm text-gray-600">Games Played</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-gray-900">
+                  {player.tt_career_wins ?? 0}-{player.tt_career_draws ?? 0}-{player.tt_career_losses ?? 0}
+                </div>
+                <div className="text-sm text-gray-600">W-D-L</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-gray-900">
+                  {player.tt_best_finish ? ordinal(player.tt_best_finish) : '-'}
+                </div>
+                <div className="text-sm text-gray-600">Best Finish</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-amber-600">{player.tt_event_wins ?? 0}</div>
+                <div className="text-sm text-gray-600">Event Wins</div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Overall Stats */}
+        <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500 mb-2">
+          Fantasy stats · {trackedLabel}
+        </h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <div className="bg-white p-6 rounded-lg shadow">
             <Trophy className="w-8 h-8 text-royalBlue mb-2" />
@@ -312,7 +445,7 @@ const PlayerHistory: React.FC = () => {
           <div className="bg-white p-6 rounded-lg shadow">
             <Target className="w-8 h-8 text-green-600 mb-2" />
             <div className="text-3xl font-bold text-gray-900">{totalStats.totalGames}</div>
-            <div className="text-sm text-gray-600">Games Played</div>
+            <div className="text-sm text-gray-600">Games Tracked</div>
           </div>
           <div className="bg-white p-6 rounded-lg shadow">
             <Award className="w-8 h-8 text-amber-600 mb-2" />
@@ -334,7 +467,9 @@ const PlayerHistory: React.FC = () => {
 
         {/* Record */}
         <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <h3 className="text-xl font-bold text-gray-900 mb-4">Overall Record</h3>
+          <h3 className="text-xl font-bold text-gray-900 mb-4">
+            Record <span className="text-base font-normal text-gray-500">({trackedLabel.toLowerCase()})</span>
+          </h3>
           <div className="flex gap-8">
             <div>
               <div className="text-3xl font-bold text-green-600">{totalStats.totalWins}</div>
@@ -354,10 +489,10 @@ const PlayerHistory: React.FC = () => {
         {/* Tabs */}
         <div className="bg-white rounded-lg shadow mb-6">
           <div className="border-b border-gray-200">
-            <nav className="flex">
+            <nav className="flex overflow-x-auto">
               <button
                 onClick={() => setActiveTab('overview')}
-                className={`px-6 py-4 font-semibold ${
+                className={`px-6 py-4 font-semibold whitespace-nowrap ${
                   activeTab === 'overview'
                     ? 'border-b-2 border-royalBlue text-royalBlue'
                     : 'text-gray-600 hover:text-gray-800'
@@ -367,8 +502,19 @@ const PlayerHistory: React.FC = () => {
                 Weekly Performance
               </button>
               <button
+                onClick={() => setActiveTab('finishes')}
+                className={`px-6 py-4 font-semibold whitespace-nowrap ${
+                  activeTab === 'finishes'
+                    ? 'border-b-2 border-royalBlue text-royalBlue'
+                    : 'text-gray-600 hover:text-gray-800'
+                }`}
+              >
+                <Medal className="w-5 h-5 inline mr-2" />
+                Finishes
+              </button>
+              <button
                 onClick={() => setActiveTab('games')}
-                className={`px-6 py-4 font-semibold ${
+                className={`px-6 py-4 font-semibold whitespace-nowrap ${
                   activeTab === 'games'
                     ? 'border-b-2 border-royalBlue text-royalBlue'
                     : 'text-gray-600 hover:text-gray-800'
@@ -383,6 +529,12 @@ const PlayerHistory: React.FC = () => {
           <div className="p-6">
             {activeTab === 'overview' && (
               <div className="space-y-4">
+                {weeklyPerformances.length > 0 && (
+                  <div className="border border-gray-200 rounded-lg p-4">
+                    <h4 className="font-semibold text-gray-900 mb-3">Fantasy points by week</h4>
+                    <PointsByWeekChart weeks={weeklyPerformances} />
+                  </div>
+                )}
                 {weeklyPerformances.length === 0 ? (
                   <p className="text-gray-600 text-center py-8">No performance data available yet.</p>
                 ) : (
@@ -397,6 +549,23 @@ const PlayerHistory: React.FC = () => {
                             Week of {formatCalendarDate(week.week_start_date)}
                           </h4>
                           <p className="text-sm text-gray-600">{week.games_played} games played</p>
+                          {(finishesByWeek.get(week.week_start_date) || []).length > 0 && (
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              {(finishesByWeek.get(week.week_start_date) || [])
+                                .slice()
+                                .sort((a, b) => finishSortKey(a).localeCompare(finishSortKey(b)))
+                                .map((finish) => (
+                                  <span
+                                    key={finish.slug}
+                                    className={`text-xs font-semibold px-2 py-1 rounded-full border ${placementClass(finish.placement)}`}
+                                  >
+                                    {finish.session ? `${finish.session[0].toUpperCase()}${finish.session.slice(1)}: ` : ''}
+                                    {finish.placement ? ordinal(finish.placement) : '-'}
+                                    {finish.total_players ? ` of ${finish.total_players}` : ''}
+                                  </span>
+                                ))}
+                            </div>
+                          )}
                         </div>
                         <div className="text-right">
                           <div className="text-2xl font-bold text-royalBlue">
@@ -433,6 +602,70 @@ const PlayerHistory: React.FC = () => {
                       </div>
                     </div>
                   ))
+                )}
+              </div>
+            )}
+
+            {activeTab === 'finishes' && (
+              <div>
+                {finishes.length === 0 ? (
+                  <p className="text-gray-600 text-center py-8">No Titled Tuesday finishes recorded yet.</p>
+                ) : (
+                  <>
+                    <div className="border border-gray-200 rounded-lg p-4 mb-6">
+                      <h4 className="font-semibold text-gray-900 mb-1">Finishing place over time</h4>
+                      <FinishPlacesChart finishes={finishes} />
+                    </div>
+                    <p className="text-sm text-gray-600 mb-4">
+                      {finishes.length} events
+                      {player.tt_event_wins ? ` · ${player.tt_event_wins} won` : ''}
+                      {` · ${topTenFinishes} top-10 finishes`}
+                    </p>
+                    <div className="divide-y divide-gray-100 border border-gray-200 rounded-lg">
+                      {visibleFinishes.map((finish) => (
+                        <div key={finish.slug} className="flex items-center gap-3 sm:gap-4 px-3 sm:px-4 py-3">
+                          <span
+                            className={`min-w-[3.5rem] text-center text-sm font-bold px-2 py-1 rounded-lg border ${placementClass(finish.placement)}`}
+                          >
+                            {finish.placement ? ordinal(finish.placement) : '-'}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-semibold text-gray-900">
+                              {finish.event_date ? formatCalendarDate(finish.event_date) : 'Date unknown'}
+                              {finish.session && (
+                                <span className="ml-2 text-xs font-medium uppercase tracking-wide text-gray-500">
+                                  {finish.session}
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-sm text-gray-600">
+                              {finish.total_players ? `of ${finish.total_players} players · ` : ''}
+                              {finishScore(finish)} · {finish.wins}-{finish.draws}-{finish.losses}
+                            </div>
+                          </div>
+                          {finish.url && (
+                            <a
+                              href={finish.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-gray-400 hover:text-royalBlue"
+                              aria-label="View event on Chess.com"
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                            </a>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    {finishes.length > FINISHES_PREVIEW && (
+                      <button
+                        onClick={() => setShowAllFinishes((value) => !value)}
+                        className="mt-4 w-full text-sm font-semibold text-royalBlue hover:text-blue-700"
+                      >
+                        {showAllFinishes ? 'Show fewer' : `Show all ${finishes.length} events`}
+                      </button>
+                    )}
+                  </>
                 )}
               </div>
             )}

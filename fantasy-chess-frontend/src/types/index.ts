@@ -22,7 +22,15 @@ export interface ChessPlayer {
   country?: string
   accuracy?: number // Average Centipawn Loss from database
   average_centipawn_loss?: number // Legacy field
-  games?: number
+  games?: number // Games behind the ACL average, counted since tracking began
+  tt_career_events?: number | null // Career Titled Tuesday totals from Chess.com
+  tt_career_games?: number | null
+  tt_career_wins?: number | null
+  tt_career_draws?: number | null
+  tt_career_losses?: number | null
+  tt_best_finish?: number | null
+  tt_event_wins?: number | null
+  tt_career_synced_at?: string | null
   created_at: string
   updated_at?: string
   league_owners?: { [leagueId: string]: string } // Map of leagueId to userId
