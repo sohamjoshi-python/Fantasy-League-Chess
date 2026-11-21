@@ -16,13 +16,13 @@ import {
   getMarketplaceTurnTimeoutLabel,
   getMarketplaceTurnTimeoutMs,
   isMarketplaceAutoStartDue,
-  isPlayerAlreadyOwnedError,
   isTeamBuildingComplete,
   loadFiveMinuteDraftLeagueIds,
   preserveMarketplaceTurn,
   SNAKE_DRAFT_ROUNDS,
 } from '../lib/leagueStatus';
 import { calculatePlayerPrice } from '../types/coin-system';
+import { publicErrorMessage } from '../lib/publicError';
 import { notifyMarketplaceStartedIfNeeded, notifyMarketplaceTurnIfNeeded } from '../lib/marketplaceTurnEmail';
 import { useMarketplaceData } from '../hooks/useMarketplaceData';
 import { useDebounce } from '../hooks/useDebounce';
@@ -755,7 +755,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
   };
 
 
-  const buyPlayer = async (playerId: string, price: number) => {
+  const buyPlayer = async (playerId: string) => {
     if (!isUserTurn || !canBuy || !user?.id || dataLoading || userCoinBalance === null) return;
 
     // Prevent rapid clicks (debounce)
@@ -768,116 +768,37 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
     try {
       setError(null);
 
-      // Fetch the current team row
-      const { data: team, error: teamError } = await supabase
-        .from('teams')
-        .select('id, player_ids')
-        .eq('league_id', league.id)
-        .eq('user_id', user.id)
-        .single();
+      // The server checks the turn, price, balance and roster, then advances the draft.
+      const { data: buyData, error: buyError } = await supabase.rpc('buy_league_player', {
+        p_league_id: league.id,
+        p_player_id: playerId,
+      });
 
-      if (teamError) {
-        console.error('❌ Team fetch error:', teamError);
-        throw teamError;
-      }
-
-      if ((team.player_ids || []).includes(playerId)) {
-        setError('You already own this player');
-        return;
-      }
-
-      const { data: claim, error: claimError } = await supabase
-        .from('league_player_ownership')
-        .select('player_id')
-        .eq('league_id', league.id)
-        .eq('player_id', playerId)
-        .maybeSingle();
-
-      if (!claimError && claim) {
-        setError('This player was just taken by another manager.');
+      if (buyError) {
+        setError(publicErrorMessage(buyError, 'Failed to buy player'));
         refreshData();
         return;
       }
 
-      // Add the new player to the array
-      const newPlayerIds = [...(team.player_ids || []), playerId];
-
-      // Update the team row
-      const { error: updateError } = await supabase
-        .from('teams')
-        .update({ player_ids: newPlayerIds })
-        .eq('id', team.id);
-
-      if (updateError) {
-        if (isPlayerAlreadyOwnedError(updateError)) {
-          setError('This player was just taken by another manager.');
-          refreshData();
-          return;
-        }
-        console.error('❌ Team update error:', updateError);
-        throw updateError;
-      }
-
-      // Deduct coins from user's balance
-      const { error: gemError } = await supabase
-        .from('league_coin_balances')
-        .update({ 
-          coin_balance: userCoinBalance - price,
-          updated_at: new Date().toISOString()
-        })
-        .eq('user_id', user.id)
-        .eq('league_id', league.id);
-
-      if (gemError) {
-        console.error('❌ gem deduction error:', gemError);
-        throw gemError;
-      }
+      const result = (buyData || {}) as {
+        marketplace_order?: string[];
+        current_marketplace_turn?: number;
+        marketplace_completed?: boolean;
+      };
 
       // Close the confirmation modal immediately
       setShowBuyConfirmation(false);
       setSelectedPlayer(null);
-      
-      // Check if user has 0 coins after purchase
-      const newgemBalance = userCoinBalance - price;
-      
-      if (newgemBalance <= 0) {
-        // Remove user from draft entirely
-        console.log('💰 User has 0 coins, removing from draft...');
-        await removeUserFromDraft(user.id);
-        
-        // Update turn state after user removal
-        await loadCurrentTurn();
-        onUpdate();
-        return;
-      }
-      
-      // Advance to next turn immediately, or complete if this was the last turn.
-      const newTurnIndex = (league.current_marketplace_turn || 0) + 1;
-      const marketplaceOrderLength = league.marketplace_order?.length || 0;
-      const marketplaceComplete = marketplaceOrderLength > 0 && newTurnIndex >= marketplaceOrderLength;
-      const { error: turnError } = await supabase
-        .from('leagues')
-        .update({ 
-          current_marketplace_turn: newTurnIndex,
-          marketplace_completed: marketplaceComplete,
-          draft_completed: marketplaceComplete ? true : league.draft_completed
-        })
-        .eq('id', league.id);
 
-      if (turnError) {
-        console.error('❌ Turn advancement error:', turnError);
-        throw turnError;
-      }
-
-      console.log('✅ Turn advanced to next player');
-
-      const nextUserId = league.marketplace_order?.[newTurnIndex];
+      const newOrder = result.marketplace_order || [];
+      const newTurnIndex = result.current_marketplace_turn ?? 0;
+      const nextUserId = result.marketplace_completed ? undefined : newOrder[newTurnIndex];
       
       if (nextUserId) {
         setCurrentTurn({
           current_user_id: nextUserId,
           turn_number: newTurnIndex,
-          total_turns: league.marketplace_order?.length || 0,
+          total_turns: newOrder.length,
           is_completed: false,
           user_team_size: 0
         });
@@ -1063,88 +984,6 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
       setError('Failed to advance turn');
     } finally {
       setLoading(false);
-    }
-  };
-
-  // Function to remove user from the active marketplace draft without leaving the league.
-  const removeUserFromDraft = async (userId: string) => {
-    try {
-      const currentOrder = league.marketplace_order || [];
-      const activeParticipantIds = await orderParticipantsWithBotsLast(
-        await getFundedParticipants(userId)
-      );
-      
-      // Regenerate marketplace order without the user, but keep permanent member_ids unchanged.
-      const newMarketplaceOrder = generateSnakeDraftOrder(activeParticipantIds, SNAKE_DRAFT_ROUNDS);
-      const preservedTurn = preserveMarketplaceTurn(
-        currentOrder,
-        league.current_marketplace_turn ?? 0,
-        newMarketplaceOrder
-      );
-      
-      // Update only marketplace state. member_ids is permanent league membership.
-      const { error: updateError } = await supabase
-        .from('leagues')
-        .update({
-          marketplace_order: newMarketplaceOrder,
-          current_marketplace_turn: preservedTurn
-        })
-        .eq('id', league.id);
-      
-      if (updateError) {
-        console.error('Error removing user from draft:', updateError);
-        throw updateError;
-      }
-
-      console.log('✅ User removed from active draft');
-      
-      // Check if marketplace should end after user removal
-      const { data: updatedLeague } = await supabase
-        .from('leagues')
-        .select('marketplace_completed, marketplace_order')
-        .eq('id', league.id)
-        .single();
-      
-      const remainingMembers = Array.from(
-        new Set((updatedLeague?.marketplace_order || []) as string[])
-      );
-      
-      if (remainingMembers.length <= 1) {
-        // Check if the remaining member is a bot
-        const remainingMember = remainingMembers[0];
-        if (remainingMember) {
-          const { data: botData } = await supabase
-            .from('bots')
-            .select('id')
-            .eq('id', remainingMember)
-            .maybeSingle();
-          
-          if (botData) {
-            // Only bot remains - let bot finish its turn first
-            console.log('🤖 Only bot remains, letting bot finish turn before ending marketplace...');
-            await finishBotTurnAndCloseMarketplace(remainingMember);
-          } else {
-            // Only human player remains - don't auto-close, let them decide when to end
-            console.log('👤 Only human player remains - marketplace stays open for them to decide when to end');
-          }
-        } else {
-          // No members left, end marketplace
-          console.log('🏁 Marketplace ending - no participants');
-          await supabase
-            .from('leagues')
-            .update({ marketplace_completed: true, draft_completed: true })
-            .eq('id', league.id);
-        }
-      }
-      
-      // Single smooth update
-      invalidateCache(league.id);
-      if (user?.id) invalidateCache(user.id);
-      refreshData();
-      onUpdate();
-    } catch (err) {
-      console.error('Error removing user from draft:', err);
-      setError('Failed to remove user from draft');
     }
   };
 
@@ -1928,7 +1767,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
                 Cancel
               </button>
               <button
-                onClick={() => buyPlayer(selectedPlayer.id, calculatePlayerPrice(selectedPlayer.elo))}
+                onClick={() => buyPlayer(selectedPlayer.id)}
                 className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
               >
                 Confirm Purchase

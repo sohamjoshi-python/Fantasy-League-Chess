@@ -13,7 +13,7 @@ import { getTradeNotifications, markNotificationSeen } from '../lib/supabase';
 import { TradeNotificationWithDetails } from '../types';
 import PlayerDetailModal from './PlayerDetailModal';
 import { addDaysToYmd, getOpenLineupMonday, getWeekStartMonday, leagueSeasonHasEndedLocal } from '../lib/calendarDate';
-import { isPlayerAlreadyOwnedError } from '../lib/leagueStatus';
+import { publicErrorMessage } from '../lib/publicError';
 
 interface MarketplaceProps {
   leagueId: string;
@@ -118,7 +118,6 @@ export default function Marketplace({ leagueId, onTeamUpdate }: MarketplaceProps
   const [coinsReady, setCoinsReady] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [sellingPlayer, setSellingPlayer] = useState<{ player: ChessPlayer; price: number } | null>(null);
   const [buyingPlayer, setBuyingPlayer] = useState<{ player: ChessPlayer; price: number } | null>(null);
   const [sellingToMarketplace, setSellingToMarketplace] = useState<{ player: ChessPlayer; price: number } | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -149,7 +148,6 @@ export default function Marketplace({ leagueId, onTeamUpdate }: MarketplaceProps
     if (!leagueEnded) return false;
     setError('This league has ended. Player buying, selling, and trading are closed.');
     setBuyingPlayer(null);
-    setSellingPlayer(null);
     setSellingToMarketplace(null);
     setShowTradeModal(false);
     setTradePlayer(null);
@@ -417,92 +415,21 @@ export default function Marketplace({ leagueId, onTeamUpdate }: MarketplaceProps
     }
   };
 
-  // Buy a player: add to user's team
-  const buyPlayer = async (playerId: string, price: number) => {
+  // Buy a player: price, balance and roster are checked and updated by the server.
+  const buyPlayer = async (playerId: string) => {
     if (blockEndedLeagueAction()) return;
 
     try {
-      // Get current user's team
-      const { data: userTeam, error: teamError } = await supabase
-        .from('teams')
-        .select('player_ids')
-        .eq('user_id', user?.id)
-        .eq('league_id', leagueId)
-        .single();
+      const { error: buyError } = await supabase.rpc('buy_league_player', {
+        p_league_id: leagueId,
+        p_player_id: playerId,
+      });
 
-      if (teamError) {
-        console.error('Failed to get user team:', teamError);
-        throw teamError;
-      }
-
-      const currentPlayerIds = userTeam?.player_ids || [];
-
-      if (currentPlayerIds.includes(playerId)) {
-        setError('You already own this player');
-        return;
-      }
-
-      const { data: claim, error: claimError } = await supabase
-        .from('league_player_ownership')
-        .select('player_id')
-        .eq('league_id', leagueId)
-        .eq('player_id', playerId)
-        .maybeSingle();
-
-      if (!claimError && claim) {
-        setError('This player was just taken by another manager.');
+      if (buyError) {
+        setError(publicErrorMessage(buyError, 'Failed to purchase player'));
         await getOwnedPlayerIds();
         await loadData();
         return;
-      }
-
-      const newPlayerIds = [...currentPlayerIds, playerId];
-      const { error: updateTeamError } = await supabase
-        .from('teams')
-        .update({ player_ids: newPlayerIds })
-        .eq('user_id', user?.id)
-        .eq('league_id', leagueId);
-
-      if (updateTeamError) {
-        if (isPlayerAlreadyOwnedError(updateTeamError)) {
-          setError('This player was just taken by another manager.');
-          await getOwnedPlayerIds();
-          await loadData();
-          return;
-        }
-        console.error('Failed to update team:', updateTeamError);
-        throw updateTeamError;
-      }
-
-      // Deduct coins from user's balance
-      const { error: coinError } = await supabase
-        .from('league_coin_balances')
-        .update({ 
-          coin_balance: userCoinBalance - price,
-          updated_at: new Date().toISOString()
-        })
-        .eq('user_id', user?.id)
-        .eq('league_id', leagueId);
-
-      if (coinError) {
-        console.error('Failed to deduct coins:', coinError);
-        throw coinError;
-      }
-
-      // Add transaction record
-      const { error: transactionError } = await supabase
-        .from('coin_transactions')
-        .insert({
-          user_id: user?.id,
-          league_id: leagueId,
-          transaction_type: 'player_purchase',
-          amount: -price,
-          description: `Purchased ${allPlayers.find(p => p.id === playerId)?.name || 'player'}`
-        });
-
-      if (transactionError) {
-        console.error('Failed to create transaction record:', transactionError);
-        // Don't throw error for transaction record failure
       }
 
       // Reload marketplace + parent league state so "My Team" updates immediately.
@@ -520,100 +447,14 @@ export default function Marketplace({ leagueId, onTeamUpdate }: MarketplaceProps
   const confirmBuyPlayer = async () => {
     if (!buyingPlayer) return;
     try {
-      await buyPlayer(buyingPlayer.player.id, buyingPlayer.price);
+      await buyPlayer(buyingPlayer.player.id);
       setBuyingPlayer(null);
     } catch (err) {
       console.error('Confirm buy player error:', err);
     }
   };
 
-  // Sell a player: remove from user's team
-  const sellPlayer = async () => {
-    if (!sellingPlayer) return;
-    if (blockEndedLeagueAction()) return;
-
-    try {
-      // Get current user's team
-      const { data: userTeam, error: teamError } = await supabase
-        .from('teams')
-        .select('player_ids')
-        .eq('user_id', user?.id)
-        .eq('league_id', leagueId)
-        .single();
-
-      if (teamError) {
-        console.error('Failed to get user team:', teamError);
-        throw teamError;
-      }
-
-      const currentPlayerIds = userTeam?.player_ids || [];
-
-      // Check if player is owned by user
-      if (!currentPlayerIds.includes(sellingPlayer.player.id)) {
-        setError('Player is not owned by you');
-        return;
-      }
-
-      // Remove player from team
-      const newPlayerIds = currentPlayerIds.filter((id: string) => id !== sellingPlayer.player.id);
-      const { error: updateTeamError } = await supabase
-        .from('teams')
-        .update({ player_ids: newPlayerIds })
-        .eq('user_id', user?.id)
-        .eq('league_id', leagueId);
-
-      if (updateTeamError) {
-        console.error('Failed to update team:', updateTeamError);
-        throw updateTeamError;
-      }
-
-      await removePlayerFromEditableLineup(sellingPlayer.player.id);
-
-      const refund = Math.floor(sellingPlayer.price * 0.8);
-
-      // Add coins to user's balance
-      const { error: coinError } = await supabase
-        .from('league_coin_balances')
-        .update({ 
-          coin_balance: userCoinBalance + refund,
-          updated_at: new Date().toISOString()
-        })
-        .eq('user_id', user?.id)
-        .eq('league_id', leagueId);
-
-      if (coinError) {
-        console.error('Failed to add coins:', coinError);
-        throw coinError;
-      }
-
-      // Add transaction record
-      const { error: transactionError } = await supabase
-        .from('coin_transactions')
-        .insert({
-          user_id: user?.id,
-          league_id: leagueId,
-          transaction_type: 'sale',
-          amount: refund,
-          description: `Sold ${sellingPlayer.player.name} for ${refund} coins`,
-          created_at: new Date().toISOString()
-        });
-
-      if (transactionError) {
-        console.error('Failed to create transaction record:', transactionError);
-        // Don't throw error for transaction record failure
-      }
-
-      setSellingPlayer(null);
-      await loadData();
-      await onTeamUpdate?.();
-      setError(null);
-    } catch (err) {
-      console.error('Sell player error:', err);
-      setError('Failed to sell player');
-    }
-  };
-
-  // Confirm sell to marketplace
+  // Confirm sell to marketplace (80% of the player's price, set by the server)
   const confirmSellToMarketplace = async () => {
     if (!sellingToMarketplace) return;
     if (blockEndedLeagueAction()) return;
@@ -621,72 +462,17 @@ export default function Marketplace({ leagueId, onTeamUpdate }: MarketplaceProps
     setLoading(true);
     setError(null);
     try {
-      // Remove player from user's team (ownership is tracked via teams table)
-      const { data: userTeam, error: teamError } = await supabase
-        .from('teams')
-        .select('player_ids')
-        .eq('user_id', user?.id)
-        .eq('league_id', leagueId)
-        .single();
+      const { error: sellError } = await supabase.rpc('sell_league_player', {
+        p_league_id: leagueId,
+        p_player_id: sellingToMarketplace.player.id,
+      });
 
-      if (teamError) {
-        console.error('Failed to get user team:', teamError);
-        throw teamError;
-      }
-
-      const currentPlayerIds = userTeam?.player_ids || [];
-
-      // Check if player is owned by user
-      if (!currentPlayerIds.includes(sellingToMarketplace.player.id)) {
-        setError('Player is not owned by you');
+      if (sellError) {
+        setError(publicErrorMessage(sellError, 'Failed to sell player to marketplace'));
         return;
       }
 
-      // Remove player from team
-      const newPlayerIds = currentPlayerIds.filter((id: string) => id !== sellingToMarketplace.player.id);
-      const { error: updateTeamError } = await supabase
-        .from('teams')
-        .update({ player_ids: newPlayerIds })
-        .eq('user_id', user?.id)
-        .eq('league_id', leagueId);
-
-      if (updateTeamError) {
-        console.error('Failed to update team:', updateTeamError);
-        throw updateTeamError;
-      }
-
       await removePlayerFromEditableLineup(sellingToMarketplace.player.id);
-
-      // Add the full sale price as refund (price is already the 80% value)
-      const refund = sellingToMarketplace.price;
-
-      const { error: coinError } = await supabase.rpc('add_league_coins', {
-        p_user_id: user?.id,
-        p_league_id: leagueId,
-        p_amount: refund
-      });
-
-      if (coinError) {
-        console.error('add_league_coins error:', coinError);
-        throw coinError;
-      }
-
-      // Record the transaction
-      const { error: transactionError } = await supabase
-        .from('coin_transactions')
-        .insert({
-          user_id: user?.id,
-          league_id: leagueId,
-          transaction_type: 'player_sale',
-          amount: refund,
-          description: `Sold ${sellingToMarketplace.player.name} to marketplace`
-        });
-
-      if (transactionError) {
-        console.error('Failed to record transaction:', transactionError);
-        // Don't throw error here as the main operation succeeded
-      }
-
       await loadData();
       await onTeamUpdate?.();
       setSellingToMarketplace(null);
@@ -1168,13 +954,6 @@ export default function Marketplace({ leagueId, onTeamUpdate }: MarketplaceProps
                         >
                           💸 Sell for {Math.floor(price * 0.8)} 🪙
                         </button>
-                        {/* List for Sale (custom price) */}
-                        <button
-                          onClick={() => setSellingPlayer({ player, price: Math.floor(price * 0.8) })}
-                          className="px-3 py-2 sm:px-4 sm:py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm sm:text-base whitespace-nowrap"
-                        >
-                          📋 List for Sale
-                        </button>
                       </div>
                     </div>
                   </div>
@@ -1269,58 +1048,6 @@ export default function Marketplace({ leagueId, onTeamUpdate }: MarketplaceProps
                 className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
               >
                 Confirm Purchase
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Sell Player Modal */}
-      {sellingPlayer && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4">Sell Player</h3>
-            <div className="mb-4">
-              <p className="text-sm text-gray-600">Player: {sellingPlayer.player.name}</p>
-              <p className="text-sm text-gray-600 mb-2">ELO: {sellingPlayer.player.elo}</p>
-              {(() => {
-                const details = getPlayerDetails(sellingPlayer.player);
-                return (
-                  <>
-                    {details?.fide_id && <p className="text-sm text-gray-600">FIDE ID: {details.fide_id}</p>}
-                    {(details?.average_centipawn_loss !== undefined && details?.average_centipawn_loss !== null) ? (
-                      <p>ACL: {details.average_centipawn_loss!.toFixed(1)}% over {details.games} games</p>
-                    ) : null}
-                    {details?.country && <p className="text-sm text-gray-600">Country: {details.country}</p>}
-                    <p className="text-sm text-gray-600 mt-2 mb-4">
-                      Chess.com Profile: <a href={`https://www.chess.com/member/${sellingPlayer.player.name.toLowerCase().replace(/\s+/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">View Profile</a>
-                    </p>
-                  </>
-                );
-              })()}
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Selling Price (coins)
-              </label>
-              <input
-                type="number"
-                value={sellingPlayer.price}
-                onChange={(e) => setSellingPlayer({ ...sellingPlayer, price: parseInt(e.target.value) || 0 })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                min="1"
-              />
-            </div>
-            <div className="flex space-x-3">
-              <button
-                onClick={() => setSellingPlayer(null)}
-                className="flex-1 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={sellPlayer}
-                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
-              >
-                List for Sale
               </button>
             </div>
           </div>

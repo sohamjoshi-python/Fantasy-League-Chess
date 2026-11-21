@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getSecretKey } from "../_shared/supabaseKeys.ts";
 import { logServerError } from "../_shared/publicError.ts";
+import { denied, identifyCaller } from "../_shared/callerAuth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -32,7 +33,11 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_URL")!,
       getSecretKey()
     );
-    const { user_id, avatar_id } = await req.json();
+    const body = await req.json();
+    const caller = await identifyCaller(req, supabase);
+    if (caller.kind === "anonymous") return denied(corsHeaders);
+    const user_id = caller.kind === "user" ? caller.id : body.user_id;
+    const avatar_id = body.avatar_id;
     const { data: userAvatar } = await supabase
       .from("user_avatars")
       .select("owned")

@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { getSecretKey } from '../_shared/supabaseKeys.ts'
 import { GENERIC_ERROR, logServerError } from '../_shared/publicError.ts'
+import { denied, identifyCaller } from '../_shared/callerAuth.ts'
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -151,6 +152,22 @@ serve(async (req) => {
       throw tradeError || new Error('Trade not found')
     }
 
+    const caller = await identifyCaller(req, supabase)
+    if (caller.kind === 'anonymous') return denied(corsHeaders)
+    if (caller.kind === 'user' && caller.id !== trade.seller_id) return denied(corsHeaders, 403)
+
+    const { count: alreadyNotified } = await supabase
+      .from('notifications')
+      .select('id', { count: 'exact', head: true })
+      .eq('type', 'trade_listed')
+      .contains('data', { tradeId: trade.id })
+    if ((alreadyNotified ?? 0) > 0) {
+      return new Response(
+        JSON.stringify({ success: true, emailsSent: 0, message: 'League was already notified about this trade.' }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      )
+    }
+
     if (trade.status !== 'pending') {
       return new Response(
         JSON.stringify({ success: true, emailsSent: 0, message: 'Trade is no longer pending.' }),
@@ -181,7 +198,7 @@ serve(async (req) => {
     const tradeUrl = `${siteUrl}/league/${trade.league_id}`
     const expiresAt = new Date(trade.expires_at)
     const timeLeft = formatTradeTimeLeft(expiresAt)
-    const sellerName = seller.username || seller.email || 'A league member'
+    const sellerName = seller.username || 'A league member'
     const playerName = player.name || 'A player'
     const subject = `${playerName} is available in ${league.name}`
     let emailsSent = 0

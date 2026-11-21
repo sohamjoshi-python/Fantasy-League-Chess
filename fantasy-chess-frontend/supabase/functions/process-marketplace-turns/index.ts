@@ -240,7 +240,8 @@ serve(async (req) => {
         })
         if (!sendResponse.ok) {
           const details = await sendResponse.text()
-          failures.push(`${recipient.email}: ${details}`)
+          logServerError("process-marketplace-turns", details)
+          failures.push("Could not send draft start email")
           await supabase
             .from("leagues")
             .update({ marketplace_started_email_sent_at: null })

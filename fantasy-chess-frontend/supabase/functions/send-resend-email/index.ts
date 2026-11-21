@@ -1,13 +1,36 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { getSecretKey } from '../_shared/supabaseKeys.ts';
 import { GENERIC_ERROR, logServerError } from '../_shared/publicError.ts';
 import { insertSiteNotification, recipientIsActive, type SiteDelivery } from '../_shared/siteNotification.ts';
+import { denied, identifyCaller } from '../_shared/callerAuth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+const FEEDBACK_INBOX = 'soham@fantasyleaguechess.com';
+const WELCOME_LIMIT_PER_30_DAYS = 3;
+const FEEDBACK_LIMIT_PER_USER_PER_HOUR = 5;
+const ANONYMOUS_FEEDBACK_LIMIT_PER_DAY = 20;
+
+async function recentSends(
+  supabase: SupabaseClient,
+  kind: string,
+  callerId: string | null,
+  sinceMs: number,
+): Promise<number> {
+  let query = supabase
+    .from('email_send_log')
+    .select('id', { count: 'exact', head: true })
+    .eq('kind', kind)
+    .gte('created_at', new Date(Date.now() - sinceMs).toISOString());
+  query = callerId ? query.eq('caller_id', callerId) : query.is('caller_id', null);
+  const { count, error } = await query;
+  if (error) throw error;
+  return count ?? 0;
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -15,27 +38,58 @@ serve(async (req) => {
   }
 
   try {
+    const body = await req.json();
     const {
-      to,
-      subject,
-      htmlContent,
-      textContent,
       templateId,
-      userId,
       leagueId,
       metadata,
       emailType,
-      userEmail,
-      delivery,
-      notification,
-    } = await req.json();
-    const recipientEmail = to || userEmail;
-    const siteDelivery: SiteDelivery =
-      delivery === 'activity' || delivery === 'notification' ? delivery : 'email';
-    
+    } = body;
+    let { to, subject, htmlContent, textContent, userId, userEmail, delivery, notification } = body;
+
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
     const SUPABASE_SERVICE_KEY = getSecretKey();
     const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+
+    // Only our own servers may email arbitrary people. Browsers may send a welcome
+    // email to their own verified address, or feedback to the team inbox.
+    const caller = await identifyCaller(req, supabase);
+    if (caller.kind !== 'service') {
+      const callerId = caller.kind === 'user' ? caller.id : null;
+      let kind: string;
+      if (emailType === 'welcome') {
+        if (caller.kind !== 'user' || !caller.email) return denied(corsHeaders);
+        if (await recentSends(supabase, 'welcome', callerId, 30 * 24 * 3600 * 1000) >= WELCOME_LIMIT_PER_30_DAYS) {
+          return denied(corsHeaders, 429);
+        }
+        kind = 'welcome';
+        to = caller.email;
+      } else if (metadata?.source === 'feedback_form') {
+        const used = callerId
+          ? await recentSends(supabase, 'feedback', callerId, 3600 * 1000)
+          : await recentSends(supabase, 'feedback', null, 24 * 3600 * 1000);
+        if (used >= (callerId ? FEEDBACK_LIMIT_PER_USER_PER_HOUR : ANONYMOUS_FEEDBACK_LIMIT_PER_DAY)) {
+          return denied(corsHeaders, 429);
+        }
+        kind = 'feedback';
+        to = FEEDBACK_INBOX;
+        subject = String(subject || 'Feedback').slice(0, 200);
+        htmlContent = typeof htmlContent === 'string' ? htmlContent.slice(0, 100_000) : undefined;
+        textContent = typeof textContent === 'string' ? textContent.slice(0, 50_000) : undefined;
+      } else {
+        return denied(corsHeaders, caller.kind === 'user' ? 403 : 401);
+      }
+      userId = callerId ?? undefined;
+      userEmail = undefined;
+      delivery = 'email';
+      notification = undefined;
+      await supabase.from('email_send_log').insert({ kind, caller_id: callerId });
+    }
+
+    const recipientEmail = to || userEmail;
+    const siteDelivery: SiteDelivery =
+      delivery === 'activity' || delivery === 'notification' ? delivery : 'email';
 
     if (!recipientEmail && siteDelivery === 'email') {
       return new Response(
@@ -44,7 +98,6 @@ serve(async (req) => {
       );
     }
 
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
     const emailId = crypto.randomUUID();
     const welcomeSubject = 'Welcome to Fantasy League Chess - Your Fantasy Chess Adventure Begins!';
 

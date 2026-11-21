@@ -10,22 +10,6 @@ import { formatCalendarDate, isLeagueJoinClosed } from '../lib/leagueStatus'
 import { publicErrorMessage } from '../lib/publicError'
 import { leagueJoinUrl } from '../lib/leagueJoinLink'
 
-// Helper function to send league joined email
-const sendLeagueJoinedEmail = async (userEmail: string, leagueName: string) => {
-  try {
-    await supabase.functions.invoke('send-email', {
-      body: {
-        to: userEmail,
-        subject: `Welcome to ${leagueName}!`,
-        text: `You have successfully joined ${leagueName}. Get ready to draft players and compete!`
-      }
-    })
-  } catch (error) {
-    console.error('Error sending league joined email:', error)
-    // Don't throw error - email failure shouldn't prevent joining
-  }
-}
-
 function getSupabaseErrorMessage(error: unknown, fallback = 'Failed to create league'): string {
   return publicErrorMessage(error, fallback)
 }
@@ -154,11 +138,6 @@ const JoinLeague: React.FC = () => {
         .from('users')
         .update({ coins: userData.coins - buyIn })
         .eq('id', user.id)
-
-      if (user.email) {
-        void sendLeagueJoinedEmail(user.email, leagueName)
-      }
-
       navigate(`/league/${league.id}`)
     } catch (error) {
       setError(getSupabaseErrorMessage(error))
@@ -260,11 +239,6 @@ const JoinLeague: React.FC = () => {
     if (!result?.success) {
       throw new Error(result?.error || 'Failed to join league')
     }
-
-    if (user.email) {
-      await sendLeagueJoinedEmail(user.email, league.name)
-    }
-
     navigate(`/league/${league.id}`)
   }
 

@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 import { getSecretKey } from "../_shared/supabaseKeys.ts"
 import { GENERIC_ERROR, logServerError } from "../_shared/publicError.ts"
+import { denied, identifyCaller } from "../_shared/callerAuth.ts"
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -17,6 +18,9 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!
     const supabaseServiceKey = getSecretKey()
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
+    if ((await identifyCaller(req, supabase)).kind !== "service") {
+      return denied(corsHeaders)
+    }
 
     const { data, error } = await supabase.rpc("auto_start_due_marketplaces")
 

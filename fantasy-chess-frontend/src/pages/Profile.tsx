@@ -92,7 +92,7 @@ const Profile: React.FC<ProfileProps> = ({ showOnlyShop = false, onCloseShop }) 
       setMessage('Profile updated!')
       if (user?.id) {
         const next = {
-          ...(profile || { id: user.id, coins: 0, email: user.email || '' }),
+          ...(profile || { id: user.id, coins: 0 }),
           id: user.id,
           username,
         }
@@ -144,7 +144,7 @@ const Profile: React.FC<ProfileProps> = ({ showOnlyShop = false, onCloseShop }) 
             <label className="block text-sm font-medium text-neutral-700 mb-2">Email</label>
             <input
               type="text"
-              value={profile?.email || ''}
+              value={user?.email || ''}
               disabled
               className="w-full px-3 py-2 border border-neutral-300 rounded-md bg-neutral-100 text-neutral-500 text-sm lg:text-base"
             />

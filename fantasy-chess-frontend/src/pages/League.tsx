@@ -1669,17 +1669,18 @@ const LeaguePage: React.FC = () => {
         draft_order: updatedDraftOrder,
       };
 
-      if (league.marketplace_started && league.marketplace_order?.length) {
+      if (league.marketplace_started && league.marketplace_order?.length && !isTeamBuildingComplete(league)) {
+        const oldTurn = league.current_marketplace_turn ?? 0;
         const newMarketplaceOrder = league.marketplace_order.filter(
           (id: string) => id !== userIdToRemove
         );
-        let newTurn = league.current_marketplace_turn ?? 0;
-        if (newTurn >= newMarketplaceOrder.length) {
-          newTurn = Math.max(0, newMarketplaceOrder.length - 1);
-        }
+        // Picks already taken stay taken, so the current picker keeps the turn.
+        const newTurn = league.marketplace_order
+          .slice(0, oldTurn)
+          .filter((id: string) => id !== userIdToRemove).length;
         leagueUpdate.marketplace_order = newMarketplaceOrder;
         leagueUpdate.current_marketplace_turn = newTurn;
-        if (newMarketplaceOrder.length === 0) {
+        if (newTurn >= newMarketplaceOrder.length) {
           leagueUpdate.marketplace_completed = true;
           leagueUpdate.draft_completed = true;
         }

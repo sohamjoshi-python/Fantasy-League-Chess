@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { getSecretKey } from '../_shared/supabaseKeys.ts'
 import { GENERIC_ERROR, logServerError } from '../_shared/publicError.ts'
+import { denied, identifyCaller } from '../_shared/callerAuth.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -20,6 +21,24 @@ serve(async (req) => {
     const supabaseServiceKey = getSecretKey()
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
+    if ((await identifyCaller(req, supabase)).kind !== 'service') {
+      return denied(corsHeaders)
+    }
+
+    const body = await req.json().catch(() => ({}))
+    const { data: lastRun } = await supabase
+      .from('weekly_coin_distributions')
+      .select('created_at')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    const sixDaysMs = 6 * 24 * 60 * 60 * 1000
+    if (!body?.force && lastRun?.created_at && Date.now() - new Date(lastRun.created_at).getTime() < sixDaysMs) {
+      return new Response(
+        JSON.stringify({ success: true, skipped: true, message: 'Coins were already distributed this week', lastRun: lastRun.created_at }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
 
     console.log('Starting weekly coin distribution to active leagues...')
 

@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { getSecretKey } from '../_shared/supabaseKeys.ts'
 import { GENERIC_ERROR, logServerError } from '../_shared/publicError.ts'
+import { denied, identifyCaller } from '../_shared/callerAuth.ts'
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -114,6 +115,24 @@ serve(async (req) => {
       throw tradeError || new Error('Trade not found')
     }
 
+    const caller = await identifyCaller(req, supabase)
+    if (caller.kind === 'anonymous') return denied(corsHeaders)
+    if (caller.kind === 'user' && caller.id !== trade.buyer_id && caller.id !== trade.seller_id) {
+      return denied(corsHeaders, 403)
+    }
+
+    const { count: alreadyNotified } = await supabase
+      .from('notifications')
+      .select('id', { count: 'exact', head: true })
+      .eq('type', 'trade_completed')
+      .contains('data', { tradeId: trade.id })
+    if ((alreadyNotified ?? 0) > 0) {
+      return new Response(
+        JSON.stringify({ success: true, emailsSent: 0, message: 'League was already notified about this trade.' }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      )
+    }
+
     if (trade.status !== 'accepted' || !trade.buyer_id) {
       return new Response(
         JSON.stringify({ success: true, emailsSent: 0, message: 'Trade is not accepted yet.' }),
@@ -134,8 +153,8 @@ serve(async (req) => {
     const userById = new Map((users || []).map((user: any) => [user.id, user]))
     const seller = userById.get(trade.seller_id)
     const buyer = userById.get(trade.buyer_id)
-    const sellerName = seller?.username || seller?.email || 'another manager'
-    const buyerName = buyer?.username || buyer?.email || 'another manager'
+    const sellerName = seller?.username || 'another manager'
+    const buyerName = buyer?.username || 'another manager'
     const memberIds = Array.from(new Set([...(league.member_ids || []), trade.seller_id, trade.buyer_id]))
     const { data: members, error: membersError } = await supabase
       .from('users')

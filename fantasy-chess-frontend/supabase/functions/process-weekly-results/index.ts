@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { getSecretKey } from '../_shared/supabaseKeys.ts'
 import { GENERIC_ERROR, logServerError } from '../_shared/publicError.ts'
+import { denied, identifyCaller } from '../_shared/callerAuth.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -232,6 +233,9 @@ serve(async (req) => {
     const supabaseServiceKey = getSecretKey()
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
+    if ((await identifyCaller(req, supabase)).kind !== 'service') {
+      return denied(corsHeaders)
+    }
 
     let requestBody: unknown = null
     let tuesdayDate = getEasternTuesdayDate()

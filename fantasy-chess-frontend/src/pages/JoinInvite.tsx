@@ -89,16 +89,6 @@ const JoinInvite: React.FC = () => {
       const result = data as { success?: boolean; error?: string }
       if (!result?.success) throw new Error(result?.error || 'Failed to join league')
 
-      if (user.email) {
-        void supabase.functions.invoke('send-email', {
-          body: {
-            to: user.email,
-            subject: `Welcome to ${league.name}!`,
-            text: `You have successfully joined ${league.name}. Get ready to draft players and compete!`,
-          },
-        })
-      }
-
       sessionStorage.removeItem(PENDING_JOIN_KEY)
       navigate(`/league/${league.id}`)
     } catch (joinFailure) {

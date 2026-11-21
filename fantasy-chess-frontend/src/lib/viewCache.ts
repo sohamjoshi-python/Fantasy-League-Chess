@@ -84,7 +84,7 @@ export function prefetchUser(userId: string, force = false): Promise<User | null
   const flight = Promise.resolve(
     supabase
       .from('users')
-      .select('*')
+      .select('id, username, coins, star_points, selected_avatar_url, created_at, sent_welcome_email')
       .eq('id', userId)
       .maybeSingle()
   ).then(({ data }) => {
