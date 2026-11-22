@@ -422,7 +422,7 @@ const Help: React.FC<HelpProps> = ({ variant }) => {
                 <ArrowRight className="w-5 h-5 text-royalBlue mt-0.5 mr-3 flex-shrink-0" />
                 <div>
                   <h3 className="font-semibold text-neutral-900">Prize Pool</h3>
-                  <p className="text-neutral-700">The winner receives gems equal to the total buy-ins from all league members.</p>
+                  <p className="text-neutral-700">Every buy-in goes into one pot. Each manager gets half their buy-in back, and the other half is split 50% to 1st, 30% to 2nd, and 20% to 3rd.</p>
                 </div>
               </div>
               <div className="flex items-start">
@@ -441,7 +441,7 @@ const Help: React.FC<HelpProps> = ({ variant }) => {
               </div>
               <div className="bg-neutral-50 p-4 rounded-lg border border-royalBlue">
                 <p className="text-sm text-neutral-700">
-                  <strong>Example:</strong> In a 10-player league with 100 gem buy-ins, the winner gets 1000 gems plus 50 bonus gems for 1st place!
+                  <strong>Example:</strong> In a 10-player league with 100 gem buy-ins, the pot is 1000. Each manager gets 50 back. Of the remaining 500, 1st gets 250, 2nd gets 150, and 3rd gets 100. 1st also gets the 50 gem rank bonus.
                 </p>
               </div>
             </div>

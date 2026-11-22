@@ -31,6 +31,7 @@ import {
 } from '../lib/supabase';
 import Confetti from 'react-confetti';
 import { resolveAvatarUrl } from '../lib/avatars';
+import { leaguePlacePayout } from '../lib/leaguePrize';
 
 import Marketplace from '../components/Marketplace';
 import TurnBasedMarketplace from '../components/TurnBasedMarketplace';
@@ -487,6 +488,7 @@ const LeaguePage: React.FC = () => {
   const [shareWeek, setShareWeek] = useState<string | null>(null);
   const [weeksReady, setWeeksReady] = useState(false);
   const [payout, setPayout] = useState<any | null>(null);
+  const [payoutRows, setPayoutRows] = useState<Array<{ user_id: string; amount: number; rank?: number }>>([]);
   const [winnerName, setWinnerName] = useState<string>('');
   const [showConfetti, setShowConfetti] = useState(false);
 
@@ -922,15 +924,10 @@ const LeaguePage: React.FC = () => {
       })
 
       const [payoutResult, userDetailsResult, lineupsResult, botFetch] = await Promise.all([
-        leagueData.payout_processed
-          ? Promise.resolve({ data: null, error: null })
-          : supabase
-              .from('payouts')
-              .select('user_id, amount')
-              .eq('league_id', leagueId)
-              .order('processed_at', { ascending: false })
-              .limit(1)
-              .maybeSingle(),
+        supabase
+          .from('payouts')
+          .select('user_id, amount, rank')
+          .eq('league_id', leagueId),
         allUserIds.length > 0
           ? supabase
               .from('users')
@@ -954,7 +951,8 @@ const LeaguePage: React.FC = () => {
       if (payoutResult.error) {
         console.warn('Could not load payout row for standings coin display:', payoutResult.error)
       }
-      const leaguePayout = payoutResult.data
+      const payoutList = Array.isArray(payoutResult.data) ? payoutResult.data : []
+      const payoutByUser = new Map(payoutList.map((row) => [row.user_id, Number(row.amount)]))
 
       if (userDetailsResult.data) {
         userDetailsResult.data.forEach((u) => {
@@ -981,10 +979,7 @@ const LeaguePage: React.FC = () => {
         })
       }
 
-      const memberCount = leagueData.member_ids?.length || 0
       const buyIn = Number(leagueData.buy_in || 0)
-      const prizeAmount = Number(leaguePayout?.amount ?? buyIn * memberCount)
-      const payoutWinnerId = leaguePayout?.user_id
 
       // Create standings data for all members (excluding bots)
       const standingsData = Array.from(allUserIds)
@@ -1002,9 +997,7 @@ const LeaguePage: React.FC = () => {
             user_id: userId,
             display_name: userMap[userId]?.username || 'Unknown User',
             total_points: userPoints.get(userId) || 0,
-            coin_delta: payoutWinnerId === userId
-              ? prizeAmount - buyIn
-              : -buyIn,
+            coin_delta: 0,
             rank: 0,
             avatar_url: resolveAvatarUrl(userMap[userId]?.avatar_url),
           }
@@ -1024,22 +1017,35 @@ const LeaguePage: React.FC = () => {
           user_id: resolvedBot.id,
           display_name: `${resolvedBot.name} ðŸ¤–`, // Use bot.name from the bots table
           total_points: botPoints,
-          coin_delta: payoutWinnerId === resolvedBot.id
-            ? prizeAmount - buyIn
-            : -buyIn,
+          coin_delta: 0,
           rank: 0,
           avatar_url: resolveAvatarUrl(),
         })
       }
 
-      // Sort by points and assign ranks
-      standingsData.sort((a, b) => b.total_points - a.total_points)
+      // Sort by points and assign ranks. Gem change is the credited prize minus the buy-in.
+      standingsData.sort((a, b) => {
+        if (b.total_points !== a.total_points) return b.total_points - a.total_points
+        return a.user_id < b.user_id ? -1 : 1
+      })
+      const humanCount = standingsData.filter((standing) => !resolvedBot || standing.user_id !== resolvedBot.id).length
+      let humanPlace = 0
       standingsData.forEach((standing, index) => {
         standing.rank = index + 1
-        const isWinner = payoutWinnerId
-          ? standing.user_id === payoutWinnerId
-          : index === 0
-        standing.coin_delta = isWinner ? prizeAmount - buyIn : -buyIn
+        const isBot = Boolean(resolvedBot && standing.user_id === resolvedBot.id)
+        if (isBot) {
+          standing.coin_delta = 0
+          return
+        }
+        humanPlace += 1
+        const credited = payoutByUser.get(standing.user_id)
+        if (credited != null) {
+          standing.coin_delta = credited - buyIn
+        } else if (payoutList.length === 0) {
+          standing.coin_delta = leaguePlacePayout(buyIn, humanCount, humanPlace) - buyIn
+        } else {
+          standing.coin_delta = -buyIn
+        }
       })
 
       setStandings(keepIfSame(standingsData))
@@ -1497,29 +1503,24 @@ const LeaguePage: React.FC = () => {
         league &&
         leagueSeasonHasEndedLocal(league?.end_date || '')
       ) {
-        if (league.payout_processed) {
-          setPayout(null);
-          setWinnerName(standings[0]?.display_name || '');
-          return;
-        }
-
         const { data: payoutData, error: payoutError } = await supabase
           .from('payouts')
-          .select('user_id, amount, processed_at')
+          .select('user_id, amount, rank, processed_at')
           .eq('league_id', league?.id)
-          .order('processed_at', { ascending: false })
-          .limit(1)
-          .maybeSingle(); // Use maybeSingle instead of single
 
         if (payoutError) {
           console.warn('Could not load payout details:', payoutError);
           setPayout(null);
+          setPayoutRows([]);
           setWinnerName(standings[0]?.display_name || '');
           return;
         }
 
-        setPayout(payoutData);
-        if (payoutData) {
+        const rows = payoutData || []
+        const firstPlace = [...rows].sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99))[0] || null
+        setPayoutRows(rows)
+        setPayout(firstPlace);
+        if (firstPlace) {
           if (!league.payout_processed) {
             setLeague(currentLeague =>
               currentLeague?.id === league.id
@@ -1530,21 +1531,24 @@ const LeaguePage: React.FC = () => {
 
           // Try to get display name from userMap or fallback to user_id
           let displayName = '';
-          if (userMap[payoutData.user_id]) {
-            displayName = userMap[payoutData.user_id];
+          if (userMap[firstPlace.user_id]) {
+            displayName = userMap[firstPlace.user_id];
           } else {
             // Fetch from users table
             const { data: user } = await supabase
               .from('users')
               .select('username')
-              .eq('id', payoutData.user_id)
+              .eq('id', firstPlace.user_id)
               .maybeSingle(); // Use maybeSingle instead of single
-            displayName = user?.username || payoutData.user_id;
+            displayName = user?.username || firstPlace.user_id;
           }
           setWinnerName(displayName);
+        } else {
+          setWinnerName(standings[0]?.display_name || '');
         }
       } else {
         setPayout(null);
+        setPayoutRows([]);
         setWinnerName('');
       }
     }
@@ -1761,7 +1765,16 @@ const LeaguePage: React.FC = () => {
   const teamBuildingComplete = isTeamBuildingComplete(league)
   const seasonStarted = leagueSeasonHasStartedLocal(league.start_date)
   const seasonEnded = leagueSeasonHasEndedLocal(league.end_date)
-  const computedPrizeAmount = Number(league.buy_in || 0) * (league.member_ids?.length || 0)
+  const payingMembers = Math.max((league.member_ids?.length || 0) - (bot ? 1 : 0), 0)
+  const firstPlaceCredit = payout
+    ? Number(payout.amount)
+    : leaguePlacePayout(Number(league.buy_in || 0), payingMembers, 1)
+  const legacyWinnerTakeAll = Boolean(
+    payout &&
+    payoutRows.length <= 1 &&
+    Number(payout.amount) === Number(league.buy_in || 0) * (league.member_ids?.length || 0) &&
+    (league.member_ids?.length || 0) > 1
+  )
 
   return (
     <>
@@ -1814,20 +1827,22 @@ const LeaguePage: React.FC = () => {
                 <h3 className="font-bold text-lg text-green-800">
                   Winner: {winnerName || standings[0]?.display_name || 'Pending final standings'}
                 </h3>
-                {payout ? (
-                  <>
-                    <p className="text-green-700">Prize: {payout.amount} gems</p>
-                    <p className="text-green-700">Payout processed: {new Date(payout.processed_at).toLocaleString()}</p>
-                  </>
-                ) : league?.payout_processed ? (
-                  <>
-                    <p className="text-green-700">Prize: {computedPrizeAmount} gems</p>
-                    <p className="text-green-700">Payout processed.</p>
-                  </>
+                {legacyWinnerTakeAll ? (
+                  <p className="text-green-700">Prize: {payout.amount} gems</p>
                 ) : (
-                  <p className="text-green-700">
-                    Final standings are locked. Prize payout is pending processing.
-                  </p>
+                  <>
+                    <p className="text-green-700">1st place: {firstPlaceCredit} gems</p>
+                    <p className="text-green-700 text-sm">
+                      Every manager gets half the buy-in back. The other half is split 50% / 30% / 20% for 1st, 2nd, and 3rd.
+                    </p>
+                  </>
+                )}
+                {payout?.processed_at ? (
+                  <p className="text-green-700">Payout processed: {new Date(payout.processed_at).toLocaleString()}</p>
+                ) : league?.payout_processed ? (
+                  <p className="text-green-700">Payout processed.</p>
+                ) : (
+                  <p className="text-green-700">Final standings are locked. Prize payout is pending processing.</p>
                 )}
               </div>
             )}

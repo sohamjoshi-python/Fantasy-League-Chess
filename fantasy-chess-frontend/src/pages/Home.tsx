@@ -105,7 +105,7 @@ const Home: React.FC = () => {
             </div>
             <div className="bg-white rounded-xl p-6 shadow-lg border-2 border-royalBlue">
               <h3 className="text-xl font-semibold mb-3 text-neutral-900">Gems (your account)</h3>
-              <p className="mb-4 text-neutral-700">End-of-league bonus gems based on final rank:</p>
+              <p className="mb-4 text-neutral-700">Buy-ins make the prize pot. Each manager gets half their buy-in back, and the other half is split 50% / 30% / 20% for 1st, 2nd, and 3rd. There is also a rank bonus:</p>
               <ul className="space-y-1 text-neutral-700">
                 <li>• <strong>1st Place:</strong> 50 bonus gems</li>
                 <li>• <strong>2nd Place:</strong> 40 bonus gems</li>

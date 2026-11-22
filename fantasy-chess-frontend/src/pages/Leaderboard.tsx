@@ -63,10 +63,10 @@ function rowsForViewer<T extends { user_id: string }>(rows: T[], userId?: string
   return [...top, ...ownBelowTop];
 }
 
-const SHARED_LEADERBOARD_CACHE = 'leaderboard:v2';
+const SHARED_LEADERBOARD_CACHE = 'leaderboard:v3';
 
 function recentWinnersCacheKey(userId?: string | null) {
-  return userId ? `${userId}:recent-winners` : null;
+  return userId ? `${userId}:recent-winners:v2` : null;
 }
 
 function weeklyPerformersCacheKey(userId: string | null | undefined, weekDate: string) {
@@ -297,7 +297,7 @@ const Leaderboard: React.FC = () => {
                       <div className="text-right">
                         <div className="text-2xl font-bold text-gold">{item.row.wins} wins</div>
                         <div className="text-sm text-neutral-600">
-                          {formatGems(item.row.total_prize_money || 0)}
+                          {formatGems(item.row.total_prize_money || 0)} in prizes
                         </div>
                       </div>
                     </div>
