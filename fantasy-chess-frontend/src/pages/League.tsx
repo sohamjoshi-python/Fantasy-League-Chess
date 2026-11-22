@@ -310,6 +310,14 @@ type StandingDisplayRow = {
   avatar_url?: string
   total_points: number
   coin_delta?: number
+  prize_gems?: number | null
+}
+
+function prizePlaceLabel(place: number): string {
+  if (place === 1) return '1st'
+  if (place === 2) return '2nd'
+  if (place === 3) return '3rd'
+  return '4th+'
 }
 
 const FinalPodiumCard: React.FC<{
@@ -372,16 +380,13 @@ const FinalPodiumCard: React.FC<{
           {Number(standing.total_points).toFixed(2)}
           <span className="ml-1 text-sm font-semibold text-neutral-500">pts</span>
         </div>
-        <div className="mt-2 flex justify-center text-[11px] font-bold">
-          <span className={`rounded-full px-2 py-1 ${
-            (standing.coin_delta || 0) >= 0
-              ? 'bg-green-100 text-green-700'
-              : 'bg-red-100 text-red-700'
-          }`}>
-            {(standing.coin_delta || 0) >= 0 ? '+' : ''}
-            {Number(standing.coin_delta || 0).toFixed(0)} gems
-          </span>
-        </div>
+        {typeof standing.prize_gems === 'number' && (
+          <div className="mt-2 flex justify-center text-[11px] font-bold">
+            <span className="rounded-full bg-amber-50 px-2 py-1 text-amber-900 ring-1 ring-gold/50">
+              {Number(standing.prize_gems).toFixed(0)} gems
+            </span>
+          </div>
+        )}
       </div>
     </button>
   )
@@ -998,6 +1003,7 @@ const LeaguePage: React.FC = () => {
             display_name: userMap[userId]?.username || 'Unknown User',
             total_points: userPoints.get(userId) || 0,
             coin_delta: 0,
+            prize_gems: null,
             rank: 0,
             avatar_url: resolveAvatarUrl(userMap[userId]?.avatar_url),
           }
@@ -1018,6 +1024,7 @@ const LeaguePage: React.FC = () => {
           display_name: `${resolvedBot.name} ðŸ¤–`, // Use bot.name from the bots table
           total_points: botPoints,
           coin_delta: 0,
+          prize_gems: null,
           rank: 0,
           avatar_url: resolveAvatarUrl(),
         })
@@ -1035,17 +1042,18 @@ const LeaguePage: React.FC = () => {
         const isBot = Boolean(resolvedBot && standing.user_id === resolvedBot.id)
         if (isBot) {
           standing.coin_delta = 0
+          standing.prize_gems = null
           return
         }
         humanPlace += 1
         const credited = payoutByUser.get(standing.user_id)
-        if (credited != null) {
-          standing.coin_delta = credited - buyIn
-        } else if (payoutList.length === 0) {
-          standing.coin_delta = leaguePlacePayout(buyIn, humanCount, humanPlace) - buyIn
-        } else {
-          standing.coin_delta = -buyIn
-        }
+        const prizeGems = credited != null
+          ? credited
+          : payoutList.length === 0
+            ? leaguePlacePayout(buyIn, humanCount, humanPlace)
+            : 0
+        standing.prize_gems = prizeGems
+        standing.coin_delta = prizeGems - buyIn
       })
 
       setStandings(keepIfSame(standingsData))
@@ -1766,15 +1774,47 @@ const LeaguePage: React.FC = () => {
   const seasonStarted = leagueSeasonHasStartedLocal(league.start_date)
   const seasonEnded = leagueSeasonHasEndedLocal(league.end_date)
   const payingMembers = Math.max((league.member_ids?.length || 0) - (bot ? 1 : 0), 0)
-  const firstPlaceCredit = payout
-    ? Number(payout.amount)
-    : leaguePlacePayout(Number(league.buy_in || 0), payingMembers, 1)
+  const buyInAmount = Number(league.buy_in || 0)
   const legacyWinnerTakeAll = Boolean(
     payout &&
     payoutRows.length <= 1 &&
-    Number(payout.amount) === Number(league.buy_in || 0) * (league.member_ids?.length || 0) &&
+    Number(payout.amount) === buyInAmount * (league.member_ids?.length || 0) &&
     (league.member_ids?.length || 0) > 1
   )
+  const prizeSchedule: { label: string; amount: number }[] = []
+  if (legacyWinnerTakeAll && payout) {
+    prizeSchedule.push({ label: '1st', amount: Number(payout.amount) })
+  } else if (payoutRows.length > 0) {
+    const amountByRank = new Map<number, number>()
+    payoutRows.forEach((row) => {
+      const rank = Number(row.rank || 1)
+      if (!amountByRank.has(rank)) amountByRank.set(rank, Number(row.amount))
+    })
+    const ranks = Array.from(amountByRank.keys()).sort((a, b) => a - b)
+    ranks.forEach((rank) => {
+      if (prizeSchedule.some((item) => item.label === '4th+')) return
+      if (rank > 3) {
+        prizeSchedule.push({ label: '4th+', amount: amountByRank.get(rank) || 0 })
+        return
+      }
+      prizeSchedule.push({ label: prizePlaceLabel(rank), amount: amountByRank.get(rank) || 0 })
+    })
+  } else if (buyInAmount > 0 && payingMembers > 0) {
+    const shown = Math.min(payingMembers, 3)
+    for (let place = 1; place <= shown; place += 1) {
+      prizeSchedule.push({
+        label: prizePlaceLabel(place),
+        amount: leaguePlacePayout(buyInAmount, payingMembers, place),
+      })
+    }
+    if (payingMembers > 3) {
+      prizeSchedule.push({
+        label: '4th+',
+        amount: leaguePlacePayout(buyInAmount, payingMembers, 4),
+      })
+    }
+  }
+  const showPrizeSchedule = prizeSchedule.some((item) => item.amount > 0)
 
   return (
     <>
@@ -1821,22 +1861,28 @@ const LeaguePage: React.FC = () => {
             {league?.description && (
               <p className="text-neutral-600 mb-4 text-sm lg:text-base">{league?.description}</p>
             )}
+            {showPrizeSchedule && (
+              <div className="mb-4 rounded-xl border border-gold/40 bg-amber-50/70 px-3 py-2.5">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">Each place earns</p>
+                <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1">
+                  {prizeSchedule.map((item) => (
+                    <div key={item.label} className="flex items-baseline gap-1.5">
+                      <span className="text-xs font-bold text-gold">{item.label}</span>
+                      <span className="text-sm font-semibold text-neutral-900">{item.amount} gems</span>
+                    </div>
+                  ))}
+                </div>
+                {!teamBuildingComplete && (
+                  <p className="mt-1 text-[11px] text-neutral-500">Based on who has joined so far.</p>
+                )}
+              </div>
+            )}
             {/* Winner and payout display */}
             {seasonEnded && (
               <div className="bg-green-100 rounded-lg p-4 my-4 border border-green-200">
                 <h3 className="font-bold text-lg text-green-800">
                   Winner: {winnerName || standings[0]?.display_name || 'Pending final standings'}
                 </h3>
-                {legacyWinnerTakeAll ? (
-                  <p className="text-green-700">Prize: {payout.amount} gems</p>
-                ) : (
-                  <>
-                    <p className="text-green-700">1st place: {firstPlaceCredit} gems</p>
-                    <p className="text-green-700 text-sm">
-                      Every manager gets half the buy-in back. The other half is split 50% / 30% / 20% for 1st, 2nd, and 3rd.
-                    </p>
-                  </>
-                )}
                 {payout?.processed_at ? (
                   <p className="text-green-700">Payout processed: {new Date(payout.processed_at).toLocaleString()}</p>
                 ) : league?.payout_processed ? (
@@ -2079,14 +2125,11 @@ const LeaguePage: React.FC = () => {
                             </div>
                             <div className="flex flex-col items-end flex-shrink-0 ml-2">
                               <p className="font-semibold text-sm lg:text-base text-neutral-900">{Number(standing.total_points).toFixed(2)} points</p>
-                              <span className={`mt-1 rounded-full px-2 py-0.5 text-[11px] font-bold ${
-                                (standing.coin_delta || 0) >= 0
-                                  ? 'bg-green-100 text-green-700'
-                                  : 'bg-red-100 text-red-700'
-                              }`}>
-                                {(standing.coin_delta || 0) >= 0 ? '+' : ''}
-                                {Number(standing.coin_delta || 0).toFixed(0)} gems
-                              </span>
+                              {typeof standing.prize_gems === 'number' && (
+                                <span className="mt-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-900 ring-1 ring-gold/50">
+                                  {Number(standing.prize_gems).toFixed(0)} gems
+                                </span>
+                              )}
                               {isOwner && !seasonStarted && standing.user_id !== user?.id && (
                                 <button
                                   onClick={(e) => {
@@ -2136,14 +2179,9 @@ const LeaguePage: React.FC = () => {
                       </div>
                       <div className="flex flex-col items-end flex-shrink-0 ml-1 sm:ml-2">
                         <p className="font-semibold text-xs sm:text-sm lg:text-base text-neutral-900 whitespace-nowrap">{Number(standing.total_points).toFixed(2)} pts</p>
-                        {seasonEnded && (
-                          <span className={`mt-1 rounded-full px-1.5 py-0.5 text-[10px] sm:text-[11px] font-bold ${
-                            (standing.coin_delta || 0) >= 0
-                              ? 'bg-green-100 text-green-700'
-                              : 'bg-red-100 text-red-700'
-                          }`}>
-                            {(standing.coin_delta || 0) >= 0 ? '+' : ''}
-                            {Number(standing.coin_delta || 0).toFixed(0)} gems
+                        {seasonEnded && typeof standing.prize_gems === 'number' && (
+                          <span className="mt-1 rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] sm:text-[11px] font-bold text-amber-900 ring-1 ring-gold/50">
+                            {Number(standing.prize_gems).toFixed(0)} gems
                           </span>
                         )}
                         {isOwner && !seasonStarted && standing.user_id !== user?.id && (
