@@ -66,7 +66,7 @@ function rowsForViewer<T extends { user_id: string }>(rows: T[], userId?: string
 const SHARED_LEADERBOARD_CACHE = 'leaderboard:v3';
 
 function recentWinnersCacheKey(userId?: string | null) {
-  return userId ? `${userId}:recent-winners:v2` : null;
+  return userId ? `${userId}:recent-winners:v3` : null;
 }
 
 function weeklyPerformersCacheKey(userId: string | null | undefined, weekDate: string) {

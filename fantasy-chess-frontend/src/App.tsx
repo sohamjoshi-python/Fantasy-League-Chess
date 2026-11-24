@@ -1,10 +1,10 @@
-import { lazy, Suspense } from 'react'
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { lazy, Suspense, useEffect, useRef } from 'react'
+import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate } from 'react-router-dom'
+import { trackPageView } from './lib/googleAnalytics'
 import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from '@vercel/speed-insights/react'
 import Navbar from './components/Navbar'
 import NewUserRedirect from './components/NewUserRedirect'
-import { useNavigate } from 'react-router-dom';
 import Footer from './components/Footer';
 import ProtectedRoute from './components/ProtectedRoute';
 import { LoadingSpinner } from './components/ui/LoadingSpinner';
@@ -38,9 +38,25 @@ function AvatarShopPage() {
   );
 }
 
+function GoogleAnalyticsPageViews() {
+  const location = useLocation()
+  const skipFirstView = useRef(true)
+
+  useEffect(() => {
+    if (skipFirstView.current) {
+      skipFirstView.current = false
+      return
+    }
+    trackPageView(`${location.pathname}${location.search}`)
+  }, [location.pathname, location.search])
+
+  return null
+}
+
 function App() {
   return (
     <Router>
+      <GoogleAnalyticsPageViews />
       <NewUserRedirect />
       <div className="min-h-screen flex flex-col w-full">
         <Navbar />

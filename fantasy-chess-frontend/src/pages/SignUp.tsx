@@ -6,6 +6,7 @@ import logo from '../assets/fantasy-league-chess-logo-updated.png'
 import { getBrandName } from '../utils/browserDetection';
 import { publicErrorMessage } from '../lib/publicError';
 import { safeJoinNext } from '../lib/leagueJoinLink';
+import { trackSignUp } from '../lib/googleAnalytics';
 
 const SignUp: React.FC = () => {
   const [email, setEmail] = useState('')
@@ -60,6 +61,7 @@ const SignUp: React.FC = () => {
 
     try {
       await signUp(email, password, displayName.trim())
+      trackSignUp()
       setSuccess(true)
       setTimeout(() => {
         navigate(nextPath || '/join-league')
