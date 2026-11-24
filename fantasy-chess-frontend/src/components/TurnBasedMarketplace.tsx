@@ -106,7 +106,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
     refresh: refreshData,
     refreshAvailablePlayers,
     invalidateCache
-  } = useMarketplaceData(league.id, user?.id);
+  } = useMarketplaceData(league.id, user?.id, Boolean(league.marketplace_started));
 
   // Local state for UI interactions
   const [loading, setLoading] = useState(false);
@@ -1421,9 +1421,9 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
                 </button>
               )}
             </div>
-            {(error || dataError) && (
+            {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-                {error || dataError}
+                {error}
               </div>
         )}
           </div>

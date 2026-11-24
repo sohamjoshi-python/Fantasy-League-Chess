@@ -11,18 +11,12 @@ import {
   savePushSubscription,
 } from '../lib/webPush'
 
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<void>
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
-}
-
 const INSTALL_DISMISS_KEY = 'flc-pwa-install-dismissed'
 const REMINDER_DISMISS_KEY = 'flc-pwa-reminder-dismissed'
 
 export default function PwaSetup() {
   const { user } = useAuth()
   const location = useLocation()
-  const [installEvent, setInstallEvent] = useState<BeforeInstallPromptEvent | null>(null)
   const [standalone, setStandalone] = useState(false)
   const [installDismissed, setInstallDismissed] = useState(
     () => localStorage.getItem(INSTALL_DISMISS_KEY) === '1',
@@ -37,20 +31,9 @@ export default function PwaSetup() {
   useEffect(() => {
     setStandalone(isStandaloneDisplay())
 
-    const onPrompt = (event: Event) => {
-      event.preventDefault()
-      setInstallEvent(event as BeforeInstallPromptEvent)
-    }
-    const onInstalled = () => {
-      setInstallEvent(null)
-      setStandalone(true)
-    }
-    window.addEventListener('beforeinstallprompt', onPrompt)
+    const onInstalled = () => setStandalone(true)
     window.addEventListener('appinstalled', onInstalled)
-    return () => {
-      window.removeEventListener('beforeinstallprompt', onPrompt)
-      window.removeEventListener('appinstalled', onInstalled)
-    }
+    return () => window.removeEventListener('appinstalled', onInstalled)
   }, [])
 
   useEffect(() => {
@@ -71,7 +54,7 @@ export default function PwaSetup() {
   if (location.pathname === '/tutorial') return null
 
   const ios = typeof navigator !== 'undefined' && isIos()
-  const showInstall = !standalone && !installDismissed && (Boolean(installEvent) || ios)
+  const showInstall = !standalone && !installDismissed && ios
   const showReminder = Boolean(user) && canUseWebPush() && !reminderDismissed && (!ios || standalone)
   if (!showInstall && !showReminder) return null
 
@@ -83,14 +66,6 @@ export default function PwaSetup() {
   const dismissReminder = () => {
     localStorage.setItem(REMINDER_DISMISS_KEY, '1')
     setReminderDismissed(true)
-  }
-
-  const install = async () => {
-    if (!installEvent) return
-    await installEvent.prompt()
-    const choice = await installEvent.userChoice
-    if (choice.outcome === 'accepted') setStandalone(true)
-    setInstallEvent(null)
   }
 
   const enableReminder = async () => {
@@ -138,19 +113,9 @@ export default function PwaSetup() {
                 ✕
               </button>
             </div>
-            {installEvent ? (
-              <button
-                type="button"
-                onClick={install}
-                className="mt-3 w-full min-h-12 rounded-lg bg-royalBlue px-4 py-3 font-semibold text-white"
-              >
-                Add to home screen
-              </button>
-            ) : (
-              <p className="mt-3 text-sm text-neutral-700">
-                On iPhone, tap the Share button, then <span className="font-semibold">Add to Home Screen</span>.
-              </p>
-            )}
+            <p className="mt-3 text-sm text-neutral-700">
+              On iPhone, tap the Share button, then <span className="font-semibold">Add to Home Screen</span>.
+            </p>
           </div>
         )}
 

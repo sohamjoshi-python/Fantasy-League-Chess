@@ -59,7 +59,7 @@ class DataCache {
 
 const cache = new DataCache();
 
-const PLAYER_COLUMNS = 'id, name, elo, fide_id, country, accuracy, average_centipawn_loss, games, title, username, tt_career_events, tt_career_games, tt_career_wins, tt_career_draws, tt_career_losses, tt_best_finish, tt_event_wins, created_at'
+const PLAYER_COLUMNS = 'id, name, elo, fide_id, country, accuracy, games, created_at, tt_career_events, tt_career_games, tt_career_wins, tt_career_draws, tt_career_losses, tt_best_finish, tt_event_wins'
 
 async function fetchPlayerPage(page: number, pageSize = 1000): Promise<ChessPlayer[]> {
   const { data, error } = await supabase
@@ -72,7 +72,7 @@ async function fetchPlayerPage(page: number, pageSize = 1000): Promise<ChessPlay
   return (data || []) as ChessPlayer[]
 }
 
-export function useMarketplaceData(leagueId: string, userId: string | undefined) {
+export function useMarketplaceData(leagueId: string, userId: string | undefined, enabled = true) {
   const [data, setData] = useState<MarketplaceData>({
     allPlayers: [],
     availablePlayers: [],
@@ -219,7 +219,7 @@ export function useMarketplaceData(leagueId: string, userId: string | undefined)
   }, [leagueId, loadOwnedPlayerIds]);
 
   const loadData = useCallback(async () => {
-    if (!leagueId || !userId) return;
+    if (!enabled || !leagueId || !userId) return;
 
     // Cancel previous request
     if (abortControllerRef.current) {
@@ -277,7 +277,7 @@ export function useMarketplaceData(leagueId: string, userId: string | undefined)
         error: publicErrorMessage(error, 'Failed to load marketplace data')
       }));
     }
-  }, [leagueId, userId, loadAllPlayers, loadUserTeam, loadUserCoinBalance, loadOwnedPlayerIds]);
+  }, [enabled, leagueId, userId, loadAllPlayers, loadUserTeam, loadUserCoinBalance, loadOwnedPlayerIds]);
 
   // Refresh function to invalidate cache and reload
   const refresh = useCallback(() => {
@@ -292,6 +292,10 @@ export function useMarketplaceData(leagueId: string, userId: string | undefined)
   }, []);
 
   useEffect(() => {
+    if (!enabled) {
+      setData((prev) => ({ ...prev, loading: false, error: null }));
+      return;
+    }
     loadData();
 
     return () => {

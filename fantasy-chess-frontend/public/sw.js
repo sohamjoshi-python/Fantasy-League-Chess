@@ -1,4 +1,4 @@
-const CACHE = 'flc-shell-v1'
+const CACHE = 'flc-shell-v2'
 const SHELL = ['/', '/manifest.json', '/icons/icon-192.png', '/icons/icon-512.png']
 
 self.addEventListener('install', (event) => {
@@ -16,37 +16,34 @@ self.addEventListener('activate', (event) => {
   )
 })
 
+function offlineResponse() {
+  return new Response('You are offline. Reconnect and reload Fantasy League Chess.', {
+    status: 503,
+    headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+  })
+}
+
+async function fromCache(request) {
+  const cached = (await caches.match(request)) || (await caches.match('/'))
+  return cached || offlineResponse()
+}
+
 self.addEventListener('fetch', (event) => {
   const request = event.request
   if (request.method !== 'GET') return
 
   const url = new URL(request.url)
   if (url.origin !== self.location.origin) return
-  if (url.pathname.startsWith('/auth') || url.pathname.startsWith('/rest') || url.pathname.startsWith('/functions')) return
-
-  if (request.mode === 'navigate') {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          const copy = response.clone()
-          caches.open(CACHE).then((cache) => cache.put('/', copy)).catch(() => undefined)
-          return response
-        })
-        .catch(async () => (await caches.match('/')) || (await caches.match(request))),
-    )
-    return
-  }
+  if (request.mode !== 'navigate') return
 
   event.respondWith(
     fetch(request)
       .then((response) => {
-        if (response.ok && (url.pathname.startsWith('/assets/') || url.pathname.startsWith('/icons/'))) {
-          const copy = response.clone()
-          caches.open(CACHE).then((cache) => cache.put(request, copy)).catch(() => undefined)
-        }
+        const copy = response.clone()
+        caches.open(CACHE).then((cache) => cache.put('/', copy)).catch(() => undefined)
         return response
       })
-      .catch(() => caches.match(request)),
+      .catch(() => fromCache(request)),
   )
 })
 
