@@ -38,6 +38,9 @@ analyze_titled_tuesday.py
 
 # Local one-off email scripts
 fantasy-chess-frontend/scripts/send-password-reset-fix-email.js
+fantasy-chess-frontend/scripts/send-comeback-question-email.js
+fantasy-chess-frontend/scripts/send-comeback-question-email.sent.json
+fantasy-chess-frontend/scripts/vapid.local.json
 
 # Supabase CLI local state
 **/.temp/

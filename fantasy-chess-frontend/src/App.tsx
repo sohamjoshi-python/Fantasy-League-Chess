@@ -6,6 +6,7 @@ import { SpeedInsights } from '@vercel/speed-insights/react'
 import Navbar from './components/Navbar'
 import NewUserRedirect from './components/NewUserRedirect'
 import Footer from './components/Footer';
+import PwaSetup from './components/PwaSetup';
 import ProtectedRoute from './components/ProtectedRoute';
 import { LoadingSpinner } from './components/ui/LoadingSpinner';
 
@@ -87,6 +88,7 @@ function App() {
           </Suspense>
         </main>
         <Footer />
+        <PwaSetup />
       </div>
       <Analytics />
       <SpeedInsights />

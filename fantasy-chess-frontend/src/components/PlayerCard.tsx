@@ -73,7 +73,7 @@ const PlayerCard = memo<PlayerCardProps>(({
             <button
               onClick={handleBuyClick}
               disabled={!userCoinBalance || userCoinBalance < price}
-              className={`mt-2 w-full sm:w-auto px-4 py-2 rounded-md font-medium transition-colors duration-200 ease-in-out ${
+              className={`mt-2 w-full min-h-12 px-4 py-3 rounded-md text-base font-semibold transition-colors duration-200 ease-in-out sm:w-auto ${
                 userCoinBalance && userCoinBalance >= price
                   ? 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-md'
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'

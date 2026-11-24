@@ -635,7 +635,7 @@ const Dashboard: React.FC = () => {
           )}
           {/* Point Breakdown Table */}
           <div className="bg-white rounded-lg shadow-lg p-6 border-2 border-royalBlue">
-            <div className="mb-2 flex items-center space-x-2">
+            <div className="mb-2 flex flex-wrap items-center gap-2">
               <h3 className="text-xl font-bold text-neutral-900">Point Breakdown</h3>
               {availableWeeks.length > 0 && (
                 <select
@@ -670,7 +670,7 @@ const Dashboard: React.FC = () => {
                 {playerBreakdown.early.length > 0 && (
                   <div>
                     <h4 className="text-lg font-semibold mb-3 text-neutral-900">Early Round</h4>
-                    <table className="min-w-full text-sm text-neutral-900">
+                    <table className="score-table min-w-full text-sm text-neutral-900">
                       <thead>
                         <tr>
                           <th className="text-left px-2 py-1 border-b border-royalBlue">Player</th>
@@ -702,7 +702,7 @@ const Dashboard: React.FC = () => {
                 {playerBreakdown.late.length > 0 && (
                   <div>
                     <h4 className="text-lg font-semibold mb-3 text-neutral-900">Late Round</h4>
-                    <table className="min-w-full text-sm text-neutral-900">
+                    <table className="score-table min-w-full text-sm text-neutral-900">
                       <thead>
                         <tr>
                           <th className="text-left px-2 py-1 border-b border-royalBlue">Player</th>

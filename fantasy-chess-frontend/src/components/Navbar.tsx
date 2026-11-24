@@ -101,7 +101,7 @@ const Navbar: React.FC = () => {
   }
 
   return (
-    <nav className="bg-white shadow-lg sticky top-0 z-50 border-b-2 border-royalBlue">
+    <nav className="bg-white shadow-lg sticky top-0 z-50 border-b-2 border-royalBlue pt-[env(safe-area-inset-top)]">
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex justify-between h-16">
           {/* Logo Section */}

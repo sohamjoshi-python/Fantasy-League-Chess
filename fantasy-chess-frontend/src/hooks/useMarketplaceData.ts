@@ -59,6 +59,19 @@ class DataCache {
 
 const cache = new DataCache();
 
+const PLAYER_COLUMNS = 'id, name, elo, fide_id, country, accuracy, average_centipawn_loss, games, title, username, tt_career_events, tt_career_games, tt_career_wins, tt_career_draws, tt_career_losses, tt_best_finish, tt_event_wins, created_at'
+
+async function fetchPlayerPage(page: number, pageSize = 1000): Promise<ChessPlayer[]> {
+  const { data, error } = await supabase
+    .from('chess_players')
+    .select(PLAYER_COLUMNS)
+    .order('elo', { ascending: false })
+    .range(page * pageSize, (page + 1) * pageSize - 1)
+
+  if (error) throw error
+  return (data || []) as ChessPlayer[]
+}
+
 export function useMarketplaceData(leagueId: string, userId: string | undefined) {
   const [data, setData] = useState<MarketplaceData>({
     allPlayers: [],
@@ -71,40 +84,26 @@ export function useMarketplaceData(leagueId: string, userId: string | undefined)
 
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  const loadAllPlayers = useCallback(async (): Promise<ChessPlayer[]> => {
+  const loadAllPlayers = useCallback(async (onChunk?: (players: ChessPlayer[]) => void): Promise<ChessPlayer[]> => {
     const cacheKey = 'all-players';
     const cached = cache.get(cacheKey);
     if (cached) {
+      onChunk?.(cached);
       return cached;
     }
 
     let allPlayers: ChessPlayer[] = [];
-    let page = 0;
     const pageSize = 1000;
 
-    while (true) {
-      const { data: players, error: playersError } = await supabase
-        .from('chess_players')
-        .select('*')
-        .order('elo', { ascending: false })
-        .range(page * pageSize, (page + 1) * pageSize - 1);
+    for (let page = 0; page <= 10; page += 1) {
+      const players = await fetchPlayerPage(page, pageSize);
+      if (players.length === 0) break;
 
-      if (playersError) throw playersError;
-
-      if (!players || players.length === 0) break;
-      
       allPlayers = allPlayers.concat(players);
+      onChunk?.(allPlayers);
       if (players.length < pageSize) break;
-      page++;
-
-      // Safety check
-      if (page > 10) {
-        console.warn('Reached maximum page limit, stopping pagination');
-        break;
-      }
     }
 
-    // Cache for 10 minutes since this data changes rarely
     cache.set(cacheKey, allPlayers, 10 * 60 * 1000);
     return allPlayers;
   }, []);
@@ -130,7 +129,7 @@ export function useMarketplaceData(leagueId: string, userId: string | undefined)
     // Get player details
     const { data: players, error: playersError } = await supabase
       .from('chess_players')
-      .select('*')
+      .select(PLAYER_COLUMNS)
       .in('id', userPlayerIds);
 
     if (playersError) throw playersError;
@@ -235,21 +234,36 @@ export function useMarketplaceData(leagueId: string, userId: string | undefined)
         error: null
       }));
 
-      const [allPlayers, userTeam, userCoinBalance, ownedPlayerIds] = await Promise.all([
-        loadAllPlayers(),
+      let ownedPlayerIds = new Set<string>();
+      let userTeam: ChessPlayer[] = [];
+      let userCoinBalance: number | null = null;
+      let rosterReady = false;
+
+      const publish = (allPlayers: ChessPlayer[]) => {
+        if (!rosterReady || abortControllerRef.current?.signal.aborted) return;
+        setData({
+          allPlayers,
+          availablePlayers: allPlayers.filter(player => !ownedPlayerIds.has(player.id)),
+          userTeam,
+          userCoinBalance,
+          loading: false,
+          error: null
+        });
+      };
+
+      const playersPromise = loadAllPlayers(publish);
+      const [team, balance, owned] = await Promise.all([
         loadUserTeam(leagueId, userId),
         loadUserCoinBalance(leagueId, userId),
         loadOwnedPlayerIds(leagueId)
       ]);
+      userTeam = team;
+      userCoinBalance = balance;
+      ownedPlayerIds = owned;
+      rosterReady = true;
 
-      setData({
-        allPlayers,
-        availablePlayers: allPlayers.filter(player => !ownedPlayerIds.has(player.id)),
-        userTeam,
-        userCoinBalance,
-        loading: false,
-        error: null
-      });
+      const allPlayers = await playersPromise;
+      publish(allPlayers);
 
     } catch (error: any) {
       if (error.name === 'AbortError') {

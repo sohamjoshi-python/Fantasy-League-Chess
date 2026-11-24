@@ -11,6 +11,17 @@ const corsHeaders = {
 };
 
 const FEEDBACK_INBOX = 'soham@fantasyleaguechess.com';
+const DEFAULT_FROM = 'Fantasy League Chess <noreply@fantasyleaguechess.com>';
+
+function mailboxOnOurDomain(value: unknown): { display: string; email: string } | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.length > 200) return null;
+  const wrapped = trimmed.match(/^(.*)<([^<>]+)>\s*$/);
+  const email = (wrapped ? wrapped[2] : trimmed).trim().toLowerCase();
+  if (!/^[a-z0-9._%+-]+@fantasyleaguechess\.com$/.test(email)) return null;
+  return { display: trimmed, email };
+}
 const WELCOME_LIMIT_PER_30_DAYS = 3;
 const FEEDBACK_LIMIT_PER_USER_PER_HOUR = 5;
 const ANONYMOUS_FEEDBACK_LIMIT_PER_DAY = 20;
@@ -55,6 +66,10 @@ serve(async (req) => {
     // Only our own servers may email arbitrary people. Browsers may send a welcome
     // email to their own verified address, or feedback to the team inbox.
     const caller = await identifyCaller(req, supabase);
+    const customFrom = caller.kind === 'service' ? mailboxOnOurDomain(body.from) : null;
+    const customReply = caller.kind === 'service' ? mailboxOnOurDomain(body.replyTo) : null;
+    const fromAddress = customFrom?.display ?? DEFAULT_FROM;
+    const replyTo = customReply?.email ?? null;
     if (caller.kind !== 'service') {
       const callerId = caller.kind === 'user' ? caller.id : null;
       let kind: string;
@@ -178,11 +193,12 @@ serve(async (req) => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            from: 'Fantasy League Chess <noreply@fantasyleaguechess.com>',
+            from: fromAddress,
             to: [recipientEmail],
             subject: finalSubject,
             html: finalHtmlContent,
             text: finalTextContent,
+            ...(replyTo ? { reply_to: replyTo } : {}),
           }),
         });
 

@@ -43,7 +43,7 @@ const PlayerCard = React.memo(({
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2 mb-2">
             <h3 
-              className="font-semibold text-base sm:text-lg cursor-pointer hover:text-royalBlue transition-colors truncate"
+              className="font-semibold text-base sm:text-lg cursor-pointer hover:text-royalBlue transition-colors break-words"
               onClick={onPlayerClick}
               title={player.name}
             >
@@ -71,7 +71,7 @@ const PlayerCard = React.memo(({
           <button
             onClick={onBuyClick}
             disabled={userCoinBalance < price}
-            className={`px-3 py-2 sm:px-4 sm:py-2 rounded-md font-medium transition-colors text-sm sm:text-base whitespace-nowrap ${
+            className={`w-full min-h-12 px-4 py-3 rounded-md font-semibold transition-colors text-base sm:w-auto ${
               userCoinBalance >= price
                 ? 'bg-blue-600 text-white hover:bg-blue-700'
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
@@ -748,10 +748,10 @@ export default function Marketplace({ leagueId, onTeamUpdate }: MarketplaceProps
       )}
 
       {/* Tabs */}
-      <div className="flex space-x-1 mb-6 bg-gray-100 p-1 rounded-lg overflow-x-auto">
+      <div className="grid grid-cols-2 gap-1 mb-6 bg-gray-100 p-1 rounded-lg sm:flex">
         <button
           onClick={() => setActiveTab('marketplace')}
-          className={`flex-shrink-0 py-2 px-2 sm:px-4 rounded-md font-medium transition-colors text-xs sm:text-sm ${
+          className={`w-full min-h-11 flex-shrink-0 py-2 px-2 sm:w-auto sm:px-4 rounded-md font-medium transition-colors text-sm ${
             activeTab === 'marketplace'
               ? 'bg-white text-blue-600 shadow-sm'
               : 'text-gray-600 hover:text-gray-800'
@@ -763,7 +763,7 @@ export default function Marketplace({ leagueId, onTeamUpdate }: MarketplaceProps
         </button>
         <button
           onClick={() => setActiveTab('owned')}
-          className={`flex-shrink-0 py-2 px-2 sm:px-4 rounded-md font-medium transition-colors text-xs sm:text-sm ${
+          className={`w-full min-h-11 flex-shrink-0 py-2 px-2 sm:w-auto sm:px-4 rounded-md font-medium transition-colors text-sm ${
             activeTab === 'owned'
               ? 'bg-white text-blue-600 shadow-sm'
               : 'text-gray-600 hover:text-gray-800'
@@ -775,7 +775,7 @@ export default function Marketplace({ leagueId, onTeamUpdate }: MarketplaceProps
         </button>
         <button
           onClick={() => setActiveTab('trading')}
-          className={`flex-shrink-0 py-2 px-2 sm:px-4 rounded-md font-medium transition-colors text-xs sm:text-sm ${
+          className={`w-full min-h-11 flex-shrink-0 py-2 px-2 sm:w-auto sm:px-4 rounded-md font-medium transition-colors text-sm ${
             activeTab === 'trading'
               ? 'bg-white text-blue-600 shadow-sm'
               : 'text-gray-600 hover:text-gray-800'
@@ -790,7 +790,7 @@ export default function Marketplace({ leagueId, onTeamUpdate }: MarketplaceProps
         </button>
         <button
           onClick={() => setActiveTab('transactions')}
-          className={`flex-shrink-0 py-2 px-2 sm:px-4 rounded-md font-medium transition-colors text-xs sm:text-sm ${
+          className={`w-full min-h-11 flex-shrink-0 py-2 px-2 sm:w-auto sm:px-4 rounded-md font-medium transition-colors text-sm ${
             activeTab === 'transactions'
               ? 'bg-white text-blue-600 shadow-sm'
               : 'text-gray-600 hover:text-gray-800'
@@ -901,7 +901,7 @@ export default function Marketplace({ leagueId, onTeamUpdate }: MarketplaceProps
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-wrap items-center gap-2 mb-2">
                           <h3 
-                            className="font-semibold text-base sm:text-lg cursor-pointer hover:text-royalBlue transition-colors truncate"
+                            className="font-semibold text-base sm:text-lg cursor-pointer hover:text-royalBlue transition-colors break-words"
                             onClick={() => setSelectedPlayerForModal(player)}
                             title={player.name}
                           >

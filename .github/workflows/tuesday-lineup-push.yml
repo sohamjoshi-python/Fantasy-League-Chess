@@ -1,0 +1,27 @@
+name: Tuesday Lineup Push
+
+on:
+  schedule:
+    # Monday 8:00 PM US Eastern. Daylight time is 00:00 UTC Tuesday.
+    # Standard time is 01:00 UTC Tuesday. The function sends on only one of them.
+    - cron: "0 0 * * 2"
+    - cron: "0 1 * * 2"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  send-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Monday lineup reminders
+        env:
+          SB_URL: ${{ secrets.SB_URL }}
+          SB_SECRET_KEY: ${{ secrets.SB_SECRET_KEY }}
+        run: |
+          curl --fail-with-body -sS -X POST "$SB_URL/functions/v1/send-tuesday-push" \
+            -H "Authorization: Bearer $SB_SECRET_KEY" \
+            -H "apikey: $SB_SECRET_KEY" \
+            -H "Content-Type: application/json" \
+            -d '{}'

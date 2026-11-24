@@ -124,6 +124,27 @@ a {
   touch-action: manipulation;
 }
 
+/* Score tables stay inside the phone width. Long player names wrap; the numbers do not. */
+.score-table {
+  width: 100%;
+  max-width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+
+.score-table th:first-child,
+.score-table td:first-child {
+  width: 52%;
+  overflow-wrap: anywhere;
+}
+
+.score-table th:nth-child(2),
+.score-table td:nth-child(2),
+.score-table th:nth-child(3),
+.score-table td:nth-child(3) {
+  white-space: nowrap;
+}
+
 /* Ensure proper button sizing on mobile */
 @media (max-width: 640px) {
   button {

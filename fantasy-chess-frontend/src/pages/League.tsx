@@ -2281,7 +2281,7 @@ const LeaguePage: React.FC = () => {
                         }
                         setIsEditingLineup(true);
                       }}
-                      className="flex items-center space-x-1 text-royalBlue hover:text-purple text-sm lg:text-base transition-colors"
+                      className="flex min-h-11 items-center space-x-1 text-royalBlue hover:text-purple text-base transition-colors"
                     >
                       <Edit className="h-4 w-4" />
                       <span>Edit</span>
@@ -2323,12 +2323,12 @@ const LeaguePage: React.FC = () => {
                           </button>
                         ))}
                       </div>
-                      <div className="flex space-x-3">
+                      <div className="flex flex-col gap-3 sm:flex-row">
                         <button
                           type="button"
                           onClick={saveLineup}
                           disabled={selectedLineupPlayers.length < 1 || selectedLineupPlayers.length > 5}
-                          className="flex items-center space-x-1 bg-[#1e293b] hover:bg-royalBlue disabled:bg-neutral-400 text-white px-3 lg:px-4 py-2 rounded-lg text-sm lg:text-base shadow-lg transition-colors"
+                          className="flex w-full min-h-12 items-center justify-center space-x-1 bg-[#1e293b] hover:bg-royalBlue disabled:bg-neutral-400 text-white px-3 lg:px-4 py-3 rounded-lg text-base shadow-lg transition-colors sm:w-auto"
                         >
                           <Check className="h-4 w-4" />
                           <span>Save Lineup</span>
@@ -2339,7 +2339,7 @@ const LeaguePage: React.FC = () => {
                             setIsEditingLineup(false)
                             setSelectedLineupPlayers(currentLineup?.player_ids || [])
                           }}
-                          className="flex items-center space-x-1 bg-neutral-600 hover:bg-neutral-700 text-white px-3 lg:px-4 py-2 rounded-lg text-sm lg:text-base shadow-lg transition-colors"
+                          className="flex w-full min-h-12 items-center justify-center space-x-1 bg-neutral-600 hover:bg-neutral-700 text-white px-3 lg:px-4 py-3 rounded-lg text-base shadow-lg transition-colors sm:w-auto"
                         >
                           <X className="h-4 w-4" />
                           <span>Cancel</span>
@@ -2369,7 +2369,7 @@ const LeaguePage: React.FC = () => {
 
               {/* Point Breakdown Table */}
               <div className="mt-6">
-                <div className="mb-2 flex items-center space-x-2">
+                <div className="mb-2 flex flex-wrap items-center gap-2">
                   <h4 className="font-semibold text-neutral-900">Point Breakdown</h4>
                   {availableWeeks.length > 0 && (
                     <select
@@ -2405,7 +2405,7 @@ const LeaguePage: React.FC = () => {
                     {playerBreakdown?.early?.length > 0 && (
                       <div>
                         <h4 className="text-lg font-semibold mb-3 text-neutral-900">Early Round</h4>
-                        <table className="min-w-full text-sm">
+                        <table className="score-table min-w-full text-sm">
                           <thead>
                             <tr>
                               <th className="text-left px-2 py-1 text-neutral-900">Player</th>
@@ -2439,7 +2439,7 @@ const LeaguePage: React.FC = () => {
                     {playerBreakdown?.late?.length > 0 && (
                       <div>
                         <h4 className="text-lg font-semibold mb-3 text-neutral-900">Late Round</h4>
-                        <table className="min-w-full text-sm">
+                        <table className="score-table min-w-full text-sm">
                           <thead>
                             <tr>
                               <th className="text-left px-2 py-1 text-neutral-900">Player</th>
@@ -2614,7 +2614,7 @@ const LeaguePage: React.FC = () => {
                         {selectedUserBreakdown.early.length > 0 && (
                           <div>
                             <h4 className="font-semibold mb-2 text-neutral-900">Early Round</h4>
-                            <table className="min-w-full text-sm text-neutral-900">
+                            <table className="score-table min-w-full text-sm text-neutral-900">
                               <thead>
                                 <tr>
                                   <th className="text-left px-2 py-1 border-b border-royalBlue">Player</th>
@@ -2647,7 +2647,7 @@ const LeaguePage: React.FC = () => {
                         {selectedUserBreakdown.late.length > 0 && (
                           <div>
                             <h4 className="font-semibold mb-2 text-neutral-900">Late Round</h4>
-                            <table className="min-w-full text-sm text-neutral-900">
+                            <table className="score-table min-w-full text-sm text-neutral-900">
                               <thead>
                                 <tr>
                                   <th className="text-left px-2 py-1 border-b border-royalBlue">Player</th>

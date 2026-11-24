@@ -27,7 +27,6 @@ import { notifyMarketplaceStartedIfNeeded, notifyMarketplaceTurnIfNeeded } from 
 import { useMarketplaceData } from '../hooks/useMarketplaceData';
 import { useDebounce } from '../hooks/useDebounce';
 import { LoadingSpinner } from './ui/LoadingSpinner';
-import { StaggeredTransition } from './ui/SmoothTransition';
 import PlayerCard from './PlayerCard';
 import PlayerDetailModal from './PlayerDetailModal';
 
@@ -1486,10 +1485,10 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
 
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-6 border-2 border-blue-200">
-      <div className="flex items-center justify-between mb-4">
+    <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6 border-2 border-blue-200 min-w-0">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
         <h3 className="text-xl font-bold text-gray-900">Turn-Based Marketplace</h3>
-        <div className="text-lg font-semibold text-amber-700 bg-amber-100 px-4 py-2 rounded">
+        <div className="text-lg font-semibold text-amber-700 bg-amber-100 px-4 py-3 rounded min-h-12">
           Coins: {userCoinBalance !== null ? userCoinBalance : '...'} 🪙
         </div>
       </div>
@@ -1668,8 +1667,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
                   : 'No players at or below your coin balance. Search to find others.'}
             </p>
           ) : (
-            <StaggeredTransition staggerDelay={50} direction="slideUp">
-              {filteredPlayers.map(player => (
+            filteredPlayers.map(player => (
                 <PlayerCard
                   key={player.id}
                   player={player}
@@ -1683,8 +1681,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
                         }}
                   onPlayerClick={(player) => setSelectedPlayerForModal(player)}
                 />
-              ))}
-            </StaggeredTransition>
+              ))
           )}
         </div>
       </div>
