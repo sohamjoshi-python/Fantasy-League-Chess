@@ -4,9 +4,13 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Trophy, Users, Coins, Store, HelpCircle, Star, Swords, Shield, Calendar } from 'lucide-react'
 import logo from '../assets/fantasy-league-chess-logo-updated.png'
 import { useResponsiveBrandName } from '../utils/browserDetection';
+import { useAuth } from '../contexts/AuthContext';
+
+const signupPath = '/signup?next=/join-league'
 
 const Home: React.FC = () => {
   const { brandName, brandNameFull } = useResponsiveBrandName();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   // Check for auth errors in URL hash (expired reset links, etc.)
@@ -37,12 +41,20 @@ const Home: React.FC = () => {
           <p className="text-lg text-neutral-700 mb-10 max-w-xl">
             The ultimate fantasy sports experience for chess fans. Draft titled players, set your lineup, trade in the marketplace, and compete for glory every Titled Tuesday.</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/join-league" className="px-8 py-3 rounded-lg bg-[#1e293b] hover:bg-royalBlue text-white font-semibold text-lg shadow-lg transition-all duration-200">Join a League</Link>
-            <Link to="/help" className="px-8 py-3 rounded-lg bg-white border-2 border-royalBlue text-royalBlue font-semibold text-lg shadow-lg hover:bg-royalBlue hover:text-white transition-all duration-200 flex items-center">
+            <Link to={user ? '/join-league' : signupPath} className="px-8 py-3 rounded-lg bg-[#1e293b] hover:bg-royalBlue text-white font-semibold text-lg shadow-lg transition-all duration-200">
+              {user ? 'Join a League' : 'Create a free account'}
+            </Link>
+            <Link to="/help" className="px-8 py-3 rounded-lg bg-white border-2 border-royalBlue text-royalBlue font-semibold text-lg shadow-lg hover:bg-royalBlue hover:text-white transition-all duration-200 flex items-center justify-center">
               <HelpCircle className="w-5 h-5 mr-2" />
               How to Play
             </Link>
           </div>
+          {!user && (
+            <p className="mt-4 text-sm text-neutral-600">
+              Free accounts start with 1,000 gems.{' '}
+              <Link to="/signin" className="text-royalBlue font-medium hover:underline">Sign in</Link>
+            </p>
+          )}
         </div>
       </section>
 
@@ -58,12 +70,12 @@ const Home: React.FC = () => {
 
 
       {/* How It Works Section */}
-      <section className="w-full py-12 bg-white flex justify-center px-4">
+      <section className="w-full py-12 bg-white flex flex-col items-center px-4">
         <div className="max-w-5xl w-full grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="bg-white rounded-xl shadow-lg p-6 flex flex-col items-center border-2 border-royalBlue hover:shadow-xl transition-shadow">
             <Users className="w-10 h-10 mb-3 text-royalBlue" />
             <h3 className="font-semibold text-lg mb-2 text-neutral-900">Join a League</h3>
-            <p className="text-neutral-700 text-center text-sm">Create or join a league. Each league is a month-long competition with a buy-in and prizes.</p>
+            <p className="text-neutral-700 text-center text-sm">Create or join a league. Each league is a month-long competition.</p>
           </div>
           <div className="bg-white rounded-xl shadow-lg p-6 flex flex-col items-center border-2 border-royalBlue hover:shadow-xl transition-shadow">
             <div className="w-14 h-14 mb-3 bg-white rounded-full p-0 border border-royalBlue">
@@ -83,6 +95,13 @@ const Home: React.FC = () => {
             <p className="text-neutral-700 text-center text-sm">Buy and sell players in the marketplace throughout the season to improve your team.</p>
           </div>
         </div>
+        {!user && (
+          <div className="max-w-5xl w-full flex justify-center mt-8">
+            <Link to={signupPath} className="px-8 py-3 rounded-lg bg-[#1e293b] hover:bg-royalBlue text-white font-semibold text-lg shadow-lg transition-all duration-200">
+              Create a free account
+            </Link>
+          </div>
+        )}
       </section>
 
       {/* Coin System Section */}
@@ -171,7 +190,7 @@ const Home: React.FC = () => {
         <div className="max-w-2xl w-full bg-white rounded-2xl shadow-lg p-6 sm:p-8 flex flex-col items-center border-2 border-royalBlue">
           <h2 className="text-2xl font-bold mb-2 text-neutral-900">Scoring System</h2>
           <ul className="text-neutral-700 text-base mb-4 space-y-1">
-            <li><span className="font-semibold">Upsets:</span> Beating a higher-rated opponent is the largest source of points</li>
+            <li><span className="font-semibold">Results:</span> Doing better than expected is the largest source of points</li>
             <li><span className="font-semibold">Accuracy:</span> A smaller bonus or penalty vs that player's own usual ACL</li>
             <li><span className="font-semibold">Wins:</span> A small bonus for winning or drawing</li>
             <li><span className="font-semibold">Cap:</span> Each game is capped between −12 and +12 points</li>

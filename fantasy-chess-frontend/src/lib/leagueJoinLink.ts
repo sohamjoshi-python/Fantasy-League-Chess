@@ -23,6 +23,7 @@ export function safeJoinNext(value: string | null): string | null {
   try {
     const url = new URL(value, window.location.origin)
     if (url.origin !== window.location.origin) return null
+    if (url.pathname === '/join-league') return '/join-league'
     const match = url.pathname.match(/^\/join\/([A-Za-z0-9]{6})$/)
     if (!match || !isJoinCode(match[1])) return null
     return leagueJoinPath(match[1])

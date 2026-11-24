@@ -41,8 +41,7 @@ const EmailConfirmationSuccess: React.FC = () => {
 
           {/* Description */}
           <p className="text-gray-600 mb-8 text-lg leading-relaxed">
-            Your account is now active and ready to go! Let's get you started with a quick 5-minute tutorial 
-            that will teach you everything you need to know about Fantasy Chess.
+            Your account is ready. Join a league whenever you want. A short tour is there if you would rather see the draft first.
           </p>
 
           {/* Tutorial Benefits */}
@@ -72,19 +71,19 @@ const EmailConfirmationSuccess: React.FC = () => {
           <div className="space-y-4">
             {/* Primary CTA */}
             <button
-              onClick={handleStartTutorial}
+              onClick={handleSkipTutorial}
               className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-4 px-8 rounded-xl text-xl font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 flex items-center justify-center space-x-3"
             >
-              <Play className="w-6 h-6" />
-              <span>Start Tutorial (5 minutes)</span>
+              <Trophy className="w-6 h-6" />
+              <span>Join a league</span>
             </button>
 
-            {/* Secondary CTA */}
             <button
-              onClick={handleSkipTutorial}
-              className="w-full bg-gray-100 text-gray-700 py-3 px-6 rounded-lg text-lg font-medium hover:bg-gray-200 transition-colors"
+              onClick={handleStartTutorial}
+              className="w-full bg-gray-100 text-gray-700 py-3 px-6 rounded-lg text-lg font-medium hover:bg-gray-200 transition-colors flex items-center justify-center space-x-2"
             >
-              Skip Tutorial & Join League
+              <Play className="w-5 h-5" />
+              <span>Take the optional 5-minute tour</span>
             </button>
           </div>
 

@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { ArrowRight, Trophy, Users, Target, BarChart3, HelpCircle, Play, Coins, Store, MessageCircle } from 'lucide-react'
 import logo from '../assets/fantasy-league-chess-logo-updated.png'
 import { getBrandName, getBrandNameFull } from '../utils/browserDetection';
@@ -11,9 +11,78 @@ interface HelpProps {
   variant?: HelpVariant
 }
 
+const signupPath = '/signup?next=/join-league'
+
+function HowToPlayCore({ variant, loading }: { variant: HelpVariant; loading: boolean }) {
+  return (
+    <div className="min-h-screen bg-white py-10">
+      <div className="max-w-3xl mx-auto px-4">
+        <div className="text-center mb-8">
+          <div className="w-20 h-20 mx-auto mb-2 bg-white rounded-full p-0 shadow-lg border-2 border-royalBlue">
+            <img src={logo} alt="Fantasy League Chess Logo" className="w-full h-full object-contain" />
+          </div>
+          <h1 className="text-3xl font-extrabold text-neutral-900 mb-2 font-serif">How to Play</h1>
+          <p className="text-lg text-neutral-700">Five steps. That is the whole game.</p>
+        </div>
+
+        <ol className="bg-white rounded-xl shadow-lg p-6 border-2 border-royalBlue space-y-4">
+          <li className="flex gap-3">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-royalBlue text-sm font-bold text-white">1</span>
+            <p className="text-neutral-800"><span className="font-semibold text-neutral-900">Join a league.</span> A free account starts with 1,000 gems, which cover buy-ins and prizes.</p>
+          </li>
+          <li className="flex gap-3">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-royalBlue text-sm font-bold text-white">2</span>
+            <p className="text-neutral-800"><span className="font-semibold text-neutral-900">Draft 10 real chess players.</span> Everyone gets 50 coins for the draft.</p>
+          </li>
+          <li className="flex gap-3">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-royalBlue text-sm font-bold text-white">3</span>
+            <p className="text-neutral-800"><span className="font-semibold text-neutral-900">Start 5 of them each week.</span> Lineups lock on Monday.</p>
+          </li>
+          <li className="flex gap-3">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-royalBlue text-sm font-bold text-white">4</span>
+            <p className="text-neutral-800"><span className="font-semibold text-neutral-900">Score from real Titled Tuesday games.</span> Doing better than expected is worth the most.</p>
+          </li>
+          <li className="flex gap-3">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-royalBlue text-sm font-bold text-white">5</span>
+            <p className="text-neutral-800"><span className="font-semibold text-neutral-900">Most points wins.</span> Everyone gets half their buy-in back. The other half is split 50% / 30% / 20% for 1st, 2nd, and 3rd.</p>
+          </li>
+        </ol>
+
+        <p className="mt-4 text-sm text-neutral-600 text-center">
+          Gems stay on your account. Coins stay inside the league: 50 at the draft, then 50 every week to trade.
+        </p>
+
+        <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
+          {loading && variant === 'guest' ? null : variant === 'guest' ? (
+            <Link to={signupPath} className="px-6 py-3 rounded-lg bg-[#1e293b] hover:bg-royalBlue text-white font-semibold text-center shadow-lg">
+              Create a free account
+            </Link>
+          ) : (
+            <Link to="/join-league" className="px-6 py-3 rounded-lg bg-[#1e293b] hover:bg-royalBlue text-white font-semibold text-center shadow-lg">
+              Join a league
+            </Link>
+          )}
+          {variant === 'onboarding' && (
+            <Link to="/dashboard" className="px-6 py-3 rounded-lg bg-white border-2 border-neutral-300 text-neutral-800 font-semibold text-center hover:bg-neutral-50">
+              Dashboard
+            </Link>
+          )}
+          <Link to="/help/rules" className="px-6 py-3 rounded-lg bg-white border-2 border-royalBlue text-royalBlue font-semibold text-center hover:bg-royalBlue hover:text-white">
+            Full rules
+          </Link>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 const Help: React.FC<HelpProps> = ({ variant }) => {
   const { user, loading } = useAuth();
+  const location = useLocation();
   const resolvedVariant: HelpVariant = variant ?? (user ? 'signedIn' : 'guest')
+  if (location.pathname !== '/help/rules') {
+    return <HowToPlayCore variant={resolvedVariant} loading={loading} />
+  }
   
   return (
     <div className="min-h-screen bg-white py-10">
@@ -23,8 +92,8 @@ const Help: React.FC<HelpProps> = ({ variant }) => {
           <div className="w-20 h-20 mx-auto mb-2 bg-white rounded-full p-0 shadow-lg border-2 border-royalBlue">
             <img src={logo} alt="Fantasy League Chess Logo" className="w-full h-full object-contain" />
           </div>
-          <h1 className="text-3xl font-extrabold text-neutral-900 mb-4 font-serif drop-shadow">How to Play {getBrandName()}</h1>
-          <p className="text-lg text-neutral-700">Your complete guide to mastering {getBrandName()}</p>
+          <h1 className="text-3xl font-extrabold text-neutral-900 mb-4 font-serif drop-shadow">Full rules</h1>
+          <p className="text-lg text-neutral-700">Draft clocks, scoring, prizes, and the details behind <Link to="/help" className="text-royalBlue font-medium hover:underline">how to play</Link>.</p>
         </div>
 
         {/* Quick Overview */}
@@ -310,7 +379,7 @@ const Help: React.FC<HelpProps> = ({ variant }) => {
                   <p className="text-neutral-700">Each tournament game scores fantasy points from four pieces:</p>
                   <ul className="list-disc list-inside text-neutral-700 mt-2 space-y-1">
                     <li><strong>Game result:</strong> a small bonus for winning or drawing</li>
-                    <li><strong>Surprise:</strong> extra points for beating (or drawing) a higher-rated opponent</li>
+                    <li><strong>Surprise:</strong> extra points when the result is better than the rating expected</li>
                     <li><strong>Accuracy:</strong> a modest bonus or penalty vs that player's own usual ACL</li>
                     <li><strong>Consistency:</strong> +3 if the game is at least 5 ACL better than their usual play</li>
                   </ul>
@@ -544,7 +613,7 @@ const Help: React.FC<HelpProps> = ({ variant }) => {
             ) : (
               <>
                 <Link
-                  to="/signup"
+                  to={signupPath}
                   className="bg-white text-neutral-900 px-6 py-3 rounded-lg font-semibold hover:bg-neutral-100 transition-colors text-center border border-white shadow-lg"
                 >
                   Create Account & Start Playing

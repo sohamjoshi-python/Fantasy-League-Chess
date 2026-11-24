@@ -179,14 +179,14 @@ const Navbar: React.FC = () => {
               <div className="flex items-center space-x-2">
                 <Link
                   to="/signin"
-                  className="flex items-center space-x-1 bg-[#1e293b] hover:bg-royalBlue text-white px-4 py-2 rounded-md text-sm font-bold shadow-lg transition-colors"
+                  className="flex items-center space-x-1 bg-white border-2 border-royalBlue text-royalBlue hover:bg-royalBlue hover:text-white px-4 py-2 rounded-md text-sm font-bold shadow-lg transition-colors"
                 >
                   <LogIn className="h-4 w-4" />
                   <span>Sign In</span>
                 </Link>
                 <Link
-                  to="/signup"
-                  className="flex items-center space-x-1 bg-white border-2 border-royalBlue text-royalBlue hover:bg-royalBlue hover:text-white px-4 py-2 rounded-md text-sm font-bold shadow-lg transition-colors"
+                  to="/signup?next=/join-league"
+                  className="flex items-center space-x-1 bg-[#1e293b] hover:bg-royalBlue text-white px-4 py-2 rounded-md text-sm font-bold shadow-lg transition-colors"
                 >
                   <UserPlus className="h-4 w-4" />
                   <span>Sign Up</span>
@@ -197,7 +197,7 @@ const Navbar: React.FC = () => {
 
           {/* Mobile Menu Button & Notification Bell */}
           <div className="lg:hidden flex items-center space-x-2">
-            {user && (
+            {user ? (
               <button
                 onClick={() => setShowInbox(true)}
                 className="relative text-neutral-700 hover:text-royalBlue p-2 rounded-md transition-colors"
@@ -209,6 +209,13 @@ const Navbar: React.FC = () => {
                   </span>
                 )}
               </button>
+            ) : (
+              <Link
+                to="/signup?next=/join-league"
+                className="bg-[#1e293b] hover:bg-royalBlue text-white px-3 py-2 rounded-md text-sm font-bold shadow-lg transition-colors"
+              >
+                Sign Up
+              </Link>
             )}
             <button
               onClick={() => setShowMobileMenu(!showMobileMenu)}
@@ -308,20 +315,20 @@ const Navbar: React.FC = () => {
             ) : (
               <>
                 <Link
-                  to="/signin"
+                  to="/signup?next=/join-league"
                   className="flex items-center justify-center space-x-2 mx-4 bg-[#1e293b] hover:bg-royalBlue text-white px-4 py-3 rounded-md font-bold shadow-lg transition-colors"
-                  onClick={() => setShowMobileMenu(false)}
-                >
-                  <LogIn className="h-5 w-5" />
-                  <span>Sign In</span>
-                </Link>
-                <Link
-                  to="/signup"
-                  className="flex items-center justify-center space-x-2 mx-4 bg-white border-2 border-royalBlue text-royalBlue hover:bg-royalBlue hover:text-white px-4 py-3 rounded-md font-bold shadow-lg transition-colors"
                   onClick={() => setShowMobileMenu(false)}
                 >
                   <UserPlus className="h-5 w-5" />
                   <span>Sign Up</span>
+                </Link>
+                <Link
+                  to="/signin"
+                  className="flex items-center justify-center space-x-2 mx-4 bg-white border-2 border-royalBlue text-royalBlue hover:bg-royalBlue hover:text-white px-4 py-3 rounded-md font-bold shadow-lg transition-colors"
+                  onClick={() => setShowMobileMenu(false)}
+                >
+                  <LogIn className="h-5 w-5" />
+                  <span>Sign In</span>
                 </Link>
               </>
             )}

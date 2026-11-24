@@ -70,6 +70,7 @@ function App() {
             <Route path="/league/:leagueId" element={<ProtectedRoute><LeaguePage /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="/help" element={<Help />} />
+            <Route path="/help/rules" element={<Help />} />
             <Route path="/tutorial" element={<ProtectedRoute><Tutorial /></ProtectedRoute>} />
             <Route path="/email-confirmed" element={<EmailConfirmationSuccess />} />
             <Route path="/onboarding" element={<Onboarding />} />

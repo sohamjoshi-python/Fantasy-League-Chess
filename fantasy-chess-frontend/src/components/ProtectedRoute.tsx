@@ -1,7 +1,7 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { LogIn, Lock } from 'lucide-react';
+import { LogIn } from 'lucide-react';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -9,6 +9,10 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { user, loading } = useAuth();
+  const location = useLocation();
+  const next = location.pathname === '/join-league' ? '/join-league' : '';
+  const signupTo = next ? `/signup?next=${encodeURIComponent(next)}` : '/signup';
+  const signinTo = next ? `/signin?next=${encodeURIComponent(next)}` : '/signin';
 
   // Show loading spinner while checking authentication
   if (loading) {
@@ -25,38 +29,31 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
         <div className="max-w-md w-full mx-4">
           <div className="bg-white rounded-xl shadow-xl p-8 text-center border-2 border-royalBlue/20">
-            {/* Lock Icon */}
-            <div className="flex justify-center mb-6">
-              <div className="w-16 h-16 bg-royalBlue/10 rounded-full flex items-center justify-center">
-                <Lock className="w-8 h-8 text-royalBlue" />
-              </div>
-            </div>
-
             {/* Title */}
             <h2 className="text-2xl font-bold text-gray-900 mb-3">
-              Authentication Required
+              Create a free account
             </h2>
 
             {/* Description */}
             <p className="text-gray-600 mb-6">
-              Please log in to your account to access this page. If you don't have an account yet, you can create one for free!
+              New accounts start with 1,000 gems. Sign in if you already have one.
             </p>
 
             {/* Action Buttons */}
             <div className="space-y-3">
               <Link
-                to="/signin"
-                className="w-full bg-royalBlue hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors duration-200 flex items-center justify-center group"
+                to={signupTo}
+                className="w-full bg-royalBlue hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors duration-200 flex items-center justify-center"
+              >
+                Create Account
+              </Link>
+
+              <Link
+                to={signinTo}
+                className="w-full border-2 border-royalBlue hover:bg-royalBlue text-royalBlue hover:text-white font-medium py-3 px-6 rounded-lg transition-colors duration-200 flex items-center justify-center group"
               >
                 <LogIn className="w-5 h-5 mr-2 group-hover:translate-x-1 transition-transform duration-200" />
                 Sign In
-              </Link>
-              
-              <Link
-                to="/signup"
-                className="w-full border-2 border-royalBlue hover:bg-royalBlue text-royalBlue hover:text-white font-medium py-3 px-6 rounded-lg transition-colors duration-200 flex items-center justify-center"
-              >
-                Create Account
               </Link>
               
               <Link

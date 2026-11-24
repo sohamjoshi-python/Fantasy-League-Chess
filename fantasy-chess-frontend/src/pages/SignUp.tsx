@@ -359,7 +359,7 @@ const SignUp: React.FC = () => {
               <p className="text-neutral-700">
                 Already have an account?{' '}
                 <button
-                  onClick={() => navigate('/signin')}
+                  onClick={() => navigate(nextPath ? `/signin?next=${encodeURIComponent(nextPath)}` : '/signin')}
                   className="text-royalBlue hover:text-blue-700 font-semibold"
                 >
                   Sign In

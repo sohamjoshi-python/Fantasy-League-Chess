@@ -156,7 +156,7 @@ const ComprehensiveTutorial: React.FC = () => {
     {
       id: 'how-it-works',
       title: 'Scoring',
-      description: 'Leagues last a month. Bots fill empty seats. Points come from real Tuesday games — upsets score big.',
+      description: 'Leagues last a month. Bots fill empty seats. Points come from real Tuesday games — doing better than expected scores the most.',
       action: 'Click Next',
       target: 'next-step-button',
       page: 'leaderboard'

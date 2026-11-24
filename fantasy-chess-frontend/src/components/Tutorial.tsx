@@ -136,7 +136,7 @@ const Tutorial: React.FC = () => {
     {
       id: 'scoring-system',
       title: 'How Scoring Works',
-      description: 'Players earn points from real tournament games. Upsets against higher-rated opponents score the most. Accuracy is a smaller bonus or penalty versus that player\'s own usual ACL. Each game is capped between −12 and +12.',
+      description: 'Players earn points from real tournament games. Doing better than expected scores the most. Accuracy is a smaller bonus or penalty versus that player\'s own usual ACL. Each game is capped between −12 and +12.',
       action: 'Click "Next" to see final results',
       target: 'next-button'
     },

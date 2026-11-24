@@ -39,7 +39,7 @@ const HINT: Record<StepId, string> = {
   'marketplace-complete': 'Nobody scores until they are in the lineup.',
   'lineup-selection': 'Tap who plays, then save.',
   leaderboard: 'Your league is on this page. Everyone else is under Leaderboard.',
-  'how-it-works': 'A month of real Tuesday games. Upsets score big.',
+  'how-it-works': 'A month of real Tuesday games. Doing better than expected scores big.',
   'currency-and-trading': 'Gems are yours. Coins stay in the league.',
   profile: "That's the whole loop.",
 };
