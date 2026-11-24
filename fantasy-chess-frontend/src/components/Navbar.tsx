@@ -3,7 +3,7 @@ import * as ReactDOM from 'react-dom'
 import { useState, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { LogIn, UserPlus, HelpCircle, Bell, Menu, X } from 'lucide-react'
+import { ArrowLeft, LogIn, UserPlus, HelpCircle, Bell, Menu, X } from 'lucide-react'
 import { getUnreadNotificationCount, supabase } from '../lib/supabase'
 import { prefetchUser, readView } from '../lib/viewCache'
 import type { User as ProfileUser } from '../types'
@@ -14,8 +14,19 @@ import { publicErrorMessage } from '../lib/publicError';
 
 const Navbar: React.FC = () => {
   const { user, signOut } = useAuth();
+  const navigate = useNavigate();
   const location = useLocation();
   const isTutorial = location.pathname === '/tutorial';
+  const appHome = user ? '/dashboard' : '/';
+  const showBack = location.pathname !== '/' && location.pathname !== '/dashboard';
+
+  const goBack = () => {
+    if (location.key !== 'default') {
+      navigate(-1);
+      return;
+    }
+    navigate(appHome);
+  };
   const [showDropdown, setShowDropdown] = useState(false);
   const [showInbox, setShowInbox] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
@@ -105,8 +116,18 @@ const Navbar: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex justify-between h-16">
           {/* Logo Section */}
-          <div className="flex items-center">
-            <Link to="/" className="flex items-center space-x-2">
+          <div className="flex items-center min-w-0">
+            {showBack && (
+              <button
+                type="button"
+                onClick={goBack}
+                className="mr-1 flex min-h-11 min-w-11 items-center justify-center rounded-md text-neutral-700 hover:bg-neutral-100 hover:text-royalBlue"
+                aria-label="Back"
+              >
+                <ArrowLeft className="h-6 w-6" />
+              </button>
+            )}
+            <Link to={appHome} className="flex items-center space-x-2 min-w-0">
               <div className="h-12 w-12 sm:h-14 sm:w-14 bg-white rounded-full p-0 shadow-md border border-royalBlue">
                 <img src={logo} alt="Fantasy League Chess Logo" className="h-full w-full object-contain" />
               </div>

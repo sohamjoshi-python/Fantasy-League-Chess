@@ -7,10 +7,10 @@ import Navbar from './components/Navbar'
 import NewUserRedirect from './components/NewUserRedirect'
 import Footer from './components/Footer';
 import PwaSetup from './components/PwaSetup';
+import AuthRedirect from './components/AuthRedirect';
 import ProtectedRoute from './components/ProtectedRoute';
 import { LoadingSpinner } from './components/ui/LoadingSpinner';
 
-const Home = lazy(() => import('./pages/Home'))
 const Dashboard = lazy(() => import('./pages/Dashboard'))
 const JoinLeague = lazy(() => import('./pages/JoinLeague'))
 const JoinInvite = lazy(() => import('./pages/JoinInvite'))
@@ -64,7 +64,7 @@ function App() {
         <main className="flex-1 w-full px-0 py-0">
           <Suspense fallback={<div className="flex items-center justify-center py-24"><LoadingSpinner size="lg" /></div>}>
           <Routes>
-            <Route path="/" element={<Home />} />
+            <Route path="/" element={<AuthRedirect />} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/join-league" element={<ProtectedRoute><JoinLeague /></ProtectedRoute>} />
             <Route path="/join/:code" element={<JoinInvite />} />
