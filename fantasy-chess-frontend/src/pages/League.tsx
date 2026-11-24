@@ -1003,7 +1003,7 @@ const LeaguePage: React.FC = () => {
             display_name: userMap[userId]?.username || 'Unknown User',
             total_points: userPoints.get(userId) || 0,
             coin_delta: 0,
-            prize_gems: null,
+            prize_gems: null as number | null,
             rank: 0,
             avatar_url: resolveAvatarUrl(userMap[userId]?.avatar_url),
           }
@@ -1024,7 +1024,7 @@ const LeaguePage: React.FC = () => {
           display_name: `${resolvedBot.name} ðŸ¤–`, // Use bot.name from the bots table
           total_points: botPoints,
           coin_delta: 0,
-          prize_gems: null,
+          prize_gems: null as number | null,
           rank: 0,
           avatar_url: resolveAvatarUrl(),
         })
