@@ -34,6 +34,24 @@ export function formatCalendarDate(ymd: string): string {
   return new Date(`${ymd}T12:00:00`).toLocaleDateString()
 }
 
+/** True once the snake draft or the older draft has opened or finished. */
+export function draftHasStarted(
+  league: Pick<
+    League,
+    | 'draft_started'
+    | 'draft_completed'
+    | 'marketplace_started'
+    | 'marketplace_completed'
+  >
+): boolean {
+  return (
+    !!league.draft_started ||
+    !!league.draft_completed ||
+    !!league.marketplace_started ||
+    !!league.marketplace_completed
+  )
+}
+
 /** True when new members must not be added (draft / marketplace / season started). */
 export function isLeagueJoinClosed(
   league: Pick<
@@ -45,13 +63,7 @@ export function isLeagueJoinClosed(
     | 'start_date'
   >
 ): boolean {
-  return (
-    !!league.draft_started ||
-    !!league.draft_completed ||
-    !!league.marketplace_started ||
-    !!league.marketplace_completed ||
-    leagueSeasonHasStartedLocal(league.start_date)
-  )
+  return draftHasStarted(league) || leagueSeasonHasStartedLocal(league.start_date)
 }
 
 /** True when the turn-based marketplace should auto-start. A scheduled time replaces the week-before default. */

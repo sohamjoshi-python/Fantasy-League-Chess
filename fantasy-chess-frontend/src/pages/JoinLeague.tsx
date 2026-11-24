@@ -6,7 +6,7 @@ import { supabase } from '../lib/supabase'
 import { League } from '../types'
 import { Users, Trophy, Calendar, Search, Copy } from 'lucide-react'
 import { getLeagueEndDateFromStart, getMinLeagueStartDateString } from '../lib/calendarDate'
-import { formatCalendarDate, isLeagueJoinClosed } from '../lib/leagueStatus'
+import { draftHasStarted, formatCalendarDate, isLeagueJoinClosed } from '../lib/leagueStatus'
 import { publicErrorMessage } from '../lib/publicError'
 import { leagueJoinUrl } from '../lib/leagueJoinLink'
 
@@ -17,7 +17,7 @@ function getSupabaseErrorMessage(error: unknown, fallback = 'Failed to create le
 const JoinLeague: React.FC = () => {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const [activeTab, setActiveTab] = useState<'create' | 'public' | 'code'>('create')
+  const [activeTab, setActiveTab] = useState<'create' | 'public' | 'code'>('public')
   const [publicLeagues, setPublicLeagues] = useState<League[]>([])
   const [publicLeaguesLoading, setPublicLeaguesLoading] = useState(false)
   const [joinCode, setJoinCode] = useState('')
@@ -48,7 +48,7 @@ const JoinLeague: React.FC = () => {
         return
       }
       if (leagues) {
-        setPublicLeagues((leagues as League[]).filter((l) => !isLeagueJoinClosed(l)))
+        setPublicLeagues((leagues as League[]).filter((l) => !draftHasStarted(l) && !isLeagueJoinClosed(l)))
       }
     } catch (error) {
       console.error('Error loading public leagues:', error)
@@ -173,6 +173,11 @@ const JoinLeague: React.FC = () => {
         return
       }
 
+      if (draftHasStarted(league)) {
+        setError('This league\'s draft has already started.')
+        return
+      }
+
       if (isLeagueJoinClosed(league)) {
         setError('You cannot join a league that is in progress or has already started.');
         return;
@@ -249,6 +254,11 @@ const JoinLeague: React.FC = () => {
       setLoading(true)
       setError('')
 
+      if (draftHasStarted(league)) {
+        setError('This league\'s draft has already started.')
+        return
+      }
+
       if (isLeagueJoinClosed(league)) {
         setError('You cannot join a league that is in progress or has already started.');
         return;
@@ -320,16 +330,6 @@ const JoinLeague: React.FC = () => {
       {/* Tab Navigation */}
       <div className="flex space-x-1 mb-6 bg-neutral-100 p-1 rounded-lg">
         <button
-          onClick={() => setActiveTab('create')}
-          className={`flex-1 py-2 px-3 lg:px-4 rounded-md font-medium transition-colors text-sm lg:text-base ${
-            activeTab === 'create'
-              ? 'bg-white text-royalBlue shadow-sm border border-royalBlue'
-              : 'text-neutral-600 hover:text-neutral-900'
-          }`}
-        >
-          Create League
-        </button>
-        <button
           onClick={() => setActiveTab('public')}
           className={`flex-1 py-2 px-3 lg:px-4 rounded-md font-medium transition-colors text-sm lg:text-base ${
             activeTab === 'public'
@@ -348,6 +348,16 @@ const JoinLeague: React.FC = () => {
           }`}
         >
           Join with Code
+        </button>
+        <button
+          onClick={() => setActiveTab('create')}
+          className={`flex-1 py-2 px-3 lg:px-4 rounded-md font-medium transition-colors text-sm lg:text-base ${
+            activeTab === 'create'
+              ? 'bg-white text-royalBlue shadow-sm border border-royalBlue'
+              : 'text-neutral-600 hover:text-neutral-900'
+          }`}
+        >
+          Create League
         </button>
       </div>
 
@@ -483,7 +493,7 @@ const JoinLeague: React.FC = () => {
         <div className="space-y-4 lg:space-y-6">
           <div>
             <h2 className="text-xl lg:text-2xl font-bold text-neutral-900">Public Leagues</h2>
-            <p className="text-sm text-neutral-600 mt-1">Showing leagues that start tomorrow or later</p>
+            <p className="text-sm text-neutral-600 mt-1">Only leagues whose draft has not started.</p>
           </div>
           {publicLeaguesLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6" aria-busy="true" aria-label="Loading public leagues">
@@ -494,12 +504,12 @@ const JoinLeague: React.FC = () => {
           ) : publicLeagues.length === 0 ? (
             <div className="text-center py-8 lg:py-12 bg-white rounded-lg shadow-lg border-2 border-royalBlue">
               <Search className="h-8 w-8 lg:h-12 lg:w-12 text-neutral-400 mx-auto mb-4" />
-              <p className="text-neutral-600 text-sm lg:text-base">No upcoming public leagues available. Check back later or create your own league!</p>
+              <p className="text-neutral-600 text-sm lg:text-base">No public leagues with an open draft. A league leaves this list once its draft starts.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
               {publicLeagues.map((league) => {
-                if (!user) return null;
+                if (!user || draftHasStarted(league) || isLeagueJoinClosed(league)) return null;
                 const alreadyMember = league.member_ids.includes(user.id);
                 const maxMembers = league.max_members || 10;
                 const isFull = league.member_ids.length >= maxMembers;

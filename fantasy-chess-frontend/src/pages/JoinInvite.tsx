@@ -4,7 +4,7 @@ import { Calendar, Trophy, Users } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { League } from '../types'
-import { formatCalendarDate, isLeagueJoinClosed } from '../lib/leagueStatus'
+import { draftHasStarted, formatCalendarDate, isLeagueJoinClosed } from '../lib/leagueStatus'
 import { publicErrorMessage } from '../lib/publicError'
 import { isJoinCode, leagueJoinPath, PENDING_JOIN_KEY, rememberJoinPath } from '../lib/leagueJoinLink'
 
@@ -57,6 +57,10 @@ const JoinInvite: React.FC = () => {
     setJoining(true)
     setError('')
     try {
+      if (draftHasStarted(league)) {
+        setError('This league\'s draft has already started.')
+        return
+      }
       if (isLeagueJoinClosed(league)) {
         setError('You cannot join a league that is in progress or has already started.')
         return
@@ -149,6 +153,7 @@ const JoinInvite: React.FC = () => {
   const alreadyMember = !!league && (league.member_ids || []).includes(user.id)
   const maxMembers = league?.max_members || 10
   const isFull = !!league && (league.member_ids || []).length >= maxMembers
+  const draftStarted = !!league && draftHasStarted(league)
   const joinClosed = !!league && isLeagueJoinClosed(league)
 
   return (
@@ -196,7 +201,7 @@ const JoinInvite: React.FC = () => {
             onClick={() => void joinLeague()}
             className="w-full bg-[#1e293b] hover:bg-royalBlue disabled:bg-neutral-400 text-white py-3 px-4 rounded-lg font-semibold"
           >
-            {joining ? 'Joining...' : isFull ? 'League full' : joinClosed ? 'Closed' : `Join for ${league.buy_in} gems`}
+            {joining ? 'Joining...' : isFull ? 'League full' : draftStarted ? 'Draft started' : joinClosed ? 'Closed' : `Join for ${league.buy_in} gems`}
           </button>
         ) : null}
       </div>

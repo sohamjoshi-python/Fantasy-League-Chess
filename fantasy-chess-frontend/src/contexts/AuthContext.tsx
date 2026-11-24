@@ -9,7 +9,7 @@ interface AuthContextType {
   loading: boolean
   isNewUser: boolean
   signIn: (email: string, password: string) => Promise<void>
-  signUp: (email: string, password: string, displayName: string) => Promise<void>
+  signUp: (email: string, password: string, displayName: string) => Promise<{ needsEmailConfirmation: boolean }>
   signOut: () => Promise<void>
 }
 
@@ -218,7 +218,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         password,
         options: {
           data: { display_name: displayName },
-          emailRedirectTo: `${window.location.origin}/dashboard`
+          emailRedirectTo: `${window.location.origin}/join-league`
         }
       })
       
@@ -251,6 +251,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
 
+      return { needsEmailConfirmation: !data.session }
     } catch (error) {
       throw error
     }

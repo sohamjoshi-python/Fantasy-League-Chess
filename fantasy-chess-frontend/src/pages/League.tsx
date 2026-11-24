@@ -1936,13 +1936,35 @@ const LeaguePage: React.FC = () => {
             </div>
           </div>
 
-          {/* Bot Management Section - Only visible to league owner before the league starts */}
+          {league && !seasonEnded && !teamBuildingComplete && !league.marketplace_started && (
+            <div className="mb-6 rounded-lg border-2 border-royalBlue bg-blue-50 px-4 py-3">
+              <p className="font-semibold text-neutral-900">
+                {(league.member_ids?.length || 0) < 2
+                  ? 'Add a friend or a bot, then start the draft.'
+                  : 'Start the draft when you are ready.'}
+              </p>
+              <p className="mt-1 text-sm text-neutral-700">
+                {(league.member_ids?.length || 0) < 2
+                  ? isOwner
+                    ? 'The draft needs two players. Share the join code, or add a bot if you are playing alone.'
+                    : 'The draft needs two players. Share the join code with someone who wants to play.'
+                  : `Players take turns picking a roster. Points start ${formatCalendarDate(league.start_date)}.`}
+              </p>
+              {isOwner && (
+                <a href="#start-draft" className="mt-2 inline-block text-sm font-semibold text-royalBlue hover:underline">
+                  Go to the draft
+                </a>
+              )}
+            </div>
+          )}
+
+          {/* Bot section - owner only, before the draft starts */}
           {isOwner && !seasonStarted && !teamBuildingComplete && !league?.marketplace_started && (
             <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6 mb-6 lg:mb-8 border-2 border-royalBlue">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg lg:text-xl font-bold text-neutral-900 flex items-center">
                   <BotIcon className="w-5 h-5 mr-2 text-royalBlue" />
-                  Bot Management
+                  {bot ? 'Bot' : 'Add a bot'}
                 </h2>
                 {!bot && league && !seasonEnded && (
                   <button
@@ -2463,7 +2485,7 @@ const LeaguePage: React.FC = () => {
 
               {/* Turn-Based Marketplace Section */}
               {!seasonEnded && !teamBuildingComplete && !league.marketplace_completed && (
-                <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6 border-2 border-gold">
+                <div id="start-draft" className="bg-white rounded-lg shadow-lg p-4 lg:p-6 border-2 border-gold">
                   <TurnBasedMarketplace league={league} onUpdate={loadLeagueData} />
                 </div>
               )}

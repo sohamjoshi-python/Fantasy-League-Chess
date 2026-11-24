@@ -1355,9 +1355,9 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
     const canScheduleDate = scheduleMin <= scheduleMax
     return (
       <div className="bg-white rounded-lg shadow-lg p-6 border-2 border-blue-200">
-        <h3 className="text-xl font-bold mb-4 text-gray-900">Turn-Based Marketplace</h3>
+        <h3 className="text-xl font-bold mb-4 text-gray-900">Draft</h3>
         <p className="text-gray-600 mb-4">
-          The marketplace allows players to take turns buying chess players. Each player can have up to {league.max_players_per_team || 10} players on their team.
+          Players take turns picking chess players. Each roster can have up to {league.max_players_per_team || 10} players.
         </p>
         <p className="text-gray-600 mb-4">
           {scheduledLabel
@@ -1365,8 +1365,8 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
               ? `The draft was scheduled for ${scheduledLabel}. It will open as soon as this league has at least 2 members.`
               : `The draft is scheduled for ${scheduledLabel}. It opens once at least 2 people have joined.`
             : autoStartDue
-            ? 'The marketplace is due to start automatically now. It will open as soon as this league has at least 2 members.'
-            : `If the owner does not start it sooner or schedule a date, the marketplace will start automatically on ${formatCalendarDate(autoStartDate)} (one week before the league start date).`}
+            ? 'The draft is due to start automatically now. It will open as soon as this league has at least 2 members.'
+            : `The draft opens automatically on ${formatCalendarDate(autoStartDate)}, one week before the league starts, unless the owner starts it sooner.`}
         </p>
         
         {isOwner && (
@@ -1376,7 +1376,7 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
             disabled={loading || scheduling}
               className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
           >
-              {loading ? 'Starting Marketplace...' : 'Start Turn-Based Marketplace'}
+              {loading ? 'Starting the draft...' : 'Start the draft'}
           </button>
             <div className="border-t border-blue-100 pt-4">
               <h4 className="font-semibold text-gray-900 mb-1">Schedule the draft</h4>
@@ -1437,8 +1437,8 @@ export default function TurnBasedMarketplace({ league, onUpdate }: TurnBasedMark
                 ? 'The scheduled draft date has passed. Waiting for the draft to open...'
                 : `The draft is scheduled for ${scheduledLabel}.`
               : autoStartDue
-              ? 'Waiting for the marketplace to start automatically...'
-              : `Waiting for the league owner to start the marketplace, schedule a date, or it will start automatically on ${formatCalendarDate(autoStartDate)}.`}
+              ? 'Waiting for the draft to start automatically...'
+              : `Waiting for the league owner to start the draft. If they do not, it opens automatically on ${formatCalendarDate(autoStartDate)}.`}
           </div>
         )}
       </div>
